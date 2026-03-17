@@ -742,6 +742,19 @@ async function startServer() {
 }
 
 startServer().catch((error) => {
-  console.error('Failed to start API:', error)
+  if (error?.code === 'ECONNREFUSED' && process.env.MYSQL_HOST && process.env.MYSQL_PORT) {
+    console.error(
+      `Failed to start API: could not connect to MySQL at ${process.env.MYSQL_HOST}:${process.env.MYSQL_PORT}.`,
+    )
+    console.error('Make sure your MySQL service is running and that the server/.env credentials are correct.')
+    console.error('On this machine, the configured Windows service appears to be "MySQL80".')
+  } else if (error?.code === 'ER_ACCESS_DENIED_ERROR') {
+    console.error('Failed to start API: MySQL rejected the configured username or password in server/.env.')
+  } else if (error?.code === 'ER_BAD_DB_ERROR') {
+    console.error('Failed to start API: the configured MySQL database does not exist yet.')
+  } else {
+    console.error('Failed to start API:', error)
+  }
+
   process.exit(1)
 })
