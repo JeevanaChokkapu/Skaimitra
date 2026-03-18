@@ -5,7 +5,7 @@ const AdminHeader = () => {
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-card px-6">
       {/* Left */}
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
+        <h1 className="text-xl font-semibold text-foreground">Dash</h1>
         <p className="text-xs text-muted-foreground">Welcome back, Admin</p>
       </div>
 
