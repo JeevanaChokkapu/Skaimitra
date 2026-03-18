@@ -13,6 +13,7 @@ import {
   Pencil,
   PenLine,
   Plus,
+  Search,
   Send,
   Settings,
   Trash2,
@@ -141,9 +142,21 @@ const resources = [
   { id: 3, title: 'Assessment Rubrics', type: 'Rubric', audience: 'All Subjects' },
 ]
 
+const includesSearch = (value: string | number | null | undefined, query: string) =>
+  String(value ?? '')
+    .toLowerCase()
+    .includes(query.trim().toLowerCase())
+
 function TeacherDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TeacherTab>('Home')
+  const [homeSearchTerm, setHomeSearchTerm] = useState('')
+  const [lessonSearchTerm, setLessonSearchTerm] = useState('')
+  const [labSearchTerm, setLabSearchTerm] = useState('')
+  const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('')
+  const [gradeSearchTerm, setGradeSearchTerm] = useState('')
+  const [uploadSearchTerm, setUploadSearchTerm] = useState('')
+  const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [teacherName, setTeacherName] = useState('Teacher')
   const [question, setQuestion] = useState('')
   const [assistantReply, setAssistantReply] = useState('')
@@ -221,6 +234,144 @@ function TeacherDashboard() {
         .filter((item) => item.createdBy === 'teacher')
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [announcements],
+  )
+
+  const filteredPendingGrading = useMemo(
+    () =>
+      pendingGrading.filter((item) => {
+        const query = homeSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(item.assignment, query) ||
+          includesSearch(item.course, query) ||
+          includesSearch(item.student, query) ||
+          includesSearch(item.submitted, query)
+        )
+      }),
+    [homeSearchTerm],
+  )
+
+  const filteredRecentActivity = useMemo(
+    () =>
+      recentActivity.filter((item) => {
+        const query = homeSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return includesSearch(item.title, query) || includesSearch(item.desc, query) || includesSearch(item.time, query)
+      }),
+    [homeSearchTerm],
+  )
+
+  const filteredTeacherAnnouncements = useMemo(
+    () =>
+      teacherAnnouncements.filter((item) => {
+        const query = homeSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(item.id, query) ||
+          includesSearch(item.title, query) ||
+          includesSearch(item.message, query) ||
+          includesSearch(item.expiresAt, query) ||
+          includesSearch(formatAudienceIds(item.audienceIds), query)
+        )
+      }),
+    [homeSearchTerm, teacherAnnouncements],
+  )
+
+  const filteredLessonPlans = useMemo(
+    () =>
+      lessonPlans.filter((item) => {
+        const query = lessonSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(item.id, query) ||
+          includesSearch(item.title, query) ||
+          includesSearch(item.subject, query) ||
+          includesSearch(item.className, query) ||
+          includesSearch(item.date, query) ||
+          includesSearch(item.status, query)
+        )
+      }),
+    [lessonSearchTerm],
+  )
+
+  const filteredLabActivities = useMemo(
+    () =>
+      labActivities.filter((item) => {
+        const query = labSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(item.id, query) ||
+          includesSearch(item.title, query) ||
+          includesSearch(item.className, query) ||
+          includesSearch(item.duration, query) ||
+          includesSearch(item.status, query)
+        )
+      }),
+    [labSearchTerm],
+  )
+
+  const filteredAssignments = useMemo(
+    () =>
+      assignments.filter((item) => {
+        const query = assignmentSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(item.id, query) ||
+          includesSearch(item.title, query) ||
+          includesSearch(item.className, query) ||
+          includesSearch(item.dueDate, query) ||
+          includesSearch(item.submissions, query) ||
+          includesSearch(item.total, query)
+        )
+      }),
+    [assignmentSearchTerm],
+  )
+
+  const filteredGradeRows = useMemo(
+    () =>
+      gradeRows.filter((student) => {
+        const query = gradeSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(student.id, query) ||
+          includesSearch(student.name, query) ||
+          includesSearch(student.className, query) ||
+          includesSearch(student.math, query) ||
+          includesSearch(student.science, query) ||
+          includesSearch(student.english, query) ||
+          includesSearch(student.overall, query)
+        )
+      }),
+    [gradeSearchTerm],
+  )
+
+  const filteredUploads = useMemo(
+    () =>
+      uploads.filter((item) => {
+        const query = uploadSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return includesSearch(item.id, query) || includesSearch(item.title, query) || includesSearch(item.type, query) || includesSearch(item.updated, query)
+      }),
+    [uploadSearchTerm],
+  )
+
+  const filteredResources = useMemo(
+    () =>
+      resources.filter((item) => {
+        const query = resourceSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return includesSearch(item.id, query) || includesSearch(item.title, query) || includesSearch(item.type, query) || includesSearch(item.audience, query)
+      }),
+    [resourceSearchTerm],
   )
 
   const lineWidth = 420
@@ -500,8 +651,21 @@ function TeacherDashboard() {
         </div>
 
         <section className="role-card role-pending-card">
-          <h2>Pending Grading</h2>
-          <p className="role-muted">Recent submissions awaiting your review</p>
+          <div className="role-section-head role-admin-communications-head">
+            <div>
+              <h2>Pending Grading</h2>
+              <p className="role-muted">Recent submissions awaiting your review</p>
+            </div>
+            <div className="role-user-search-wrap role-user-search-inline">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search grading, activity, or announcements..."
+                value={homeSearchTerm}
+                onChange={(e) => setHomeSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="role-table-wrap">
             <table className="role-table">
               <thead>
@@ -514,7 +678,7 @@ function TeacherDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {pendingGrading.map((item) => (
+                {filteredPendingGrading.map((item) => (
                   <tr key={item.assignment}>
                     <td>{item.assignment}</td>
                     <td>{item.course}</td>
@@ -529,13 +693,14 @@ function TeacherDashboard() {
                 ))}
               </tbody>
             </table>
+            {filteredPendingGrading.length === 0 ? <p className="role-muted">No grading items match your search.</p> : null}
           </div>
         </section>
 
         <section className="role-card role-activity-card">
           <h2>Recent Activity</h2>
           <div className="role-activity-list">
-            {recentActivity.map((item) => (
+            {filteredRecentActivity.map((item) => (
               <div key={item.title} className="role-activity-item">
                 <div>
                   <p>{item.title}</p>
@@ -557,8 +722,8 @@ function TeacherDashboard() {
           </div>
 
           <div className="role-admin-announcement-list">
-            {teacherAnnouncements.length ? (
-              teacherAnnouncements.map((item) => (
+            {filteredTeacherAnnouncements.length ? (
+              filteredTeacherAnnouncements.map((item) => (
                 <article key={item.id} className="role-admin-announcement-row">
                   <div className="role-admin-announcement-copy">
                     <h4>{item.title}</h4>
@@ -586,7 +751,7 @@ function TeacherDashboard() {
                 </article>
               ))
             ) : (
-              <p className="role-muted">No teacher announcements posted yet.</p>
+              <p className="role-muted">No teacher announcements match your search.</p>
             )}
           </div>
         </section>
@@ -679,8 +844,20 @@ function TeacherDashboard() {
           </button>
         </section>
 
+        <div className="role-user-toolbar role-user-toolbar-search-only">
+          <div className="role-user-search-wrap role-user-search-inline">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search lesson plans by title, subject, class, or ID..."
+              value={lessonSearchTerm}
+              onChange={(e) => setLessonSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
         <section className="teacher-lesson-grid">
-          {lessonPlans.map((item) => (
+          {filteredLessonPlans.length ? filteredLessonPlans.map((item) => (
             <article key={item.id} className="role-card teacher-lesson-card">
               <div className="teacher-lesson-head">
                 <h3>{item.title}</h3>
@@ -710,7 +887,7 @@ function TeacherDashboard() {
                 </button>
               </div>
             </article>
-          ))}
+          )) : <p className="role-muted">No lesson plans match your search.</p>}
         </section>
       </section>
     </main>
@@ -730,8 +907,20 @@ function TeacherDashboard() {
           </button>
         </section>
 
+        <div className="role-user-toolbar role-user-toolbar-search-only">
+          <div className="role-user-search-wrap role-user-search-inline">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search lab activities by title, class, status, or ID..."
+              value={labSearchTerm}
+              onChange={(e) => setLabSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
         <section className="teacher-lab-grid">
-          {labActivities.map((item) => (
+          {filteredLabActivities.length ? filteredLabActivities.map((item) => (
             <article key={item.id} className="role-card teacher-lab-card">
               <div className="teacher-lab-head">
                 <h3>{item.title}</h3>
@@ -754,7 +943,7 @@ function TeacherDashboard() {
                 </button>
               </div>
             </article>
-          ))}
+          )) : <p className="role-muted">No lab activities match your search.</p>}
         </section>
       </section>
     </main>
@@ -764,6 +953,9 @@ function TeacherDashboard() {
     title: string,
     description: string,
     items: Array<{ id: number; title: string; meta: string; submeta?: string; badge?: string; action?: string }>,
+    searchValue?: string,
+    onSearchChange?: (value: string) => void,
+    searchPlaceholder?: string,
   ) => (
     <main className="role-main role-main-detail">
       <section className="role-primary">
@@ -774,8 +966,21 @@ function TeacherDashboard() {
               <p className="role-muted">{description}</p>
             </div>
           </div>
+          {onSearchChange ? (
+            <div className="role-user-toolbar role-user-toolbar-search-only">
+              <div className="role-user-search-wrap">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder || `Search ${title.toLowerCase()}...`}
+                  value={searchValue || ''}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="role-detail-grid">
-            {items.map((item) => (
+            {items.length ? items.map((item) => (
               <article key={item.id} className="role-card role-mini-card">
                 <div className="role-mini-card-head">
                   <h3>{item.title}</h3>
@@ -789,7 +994,7 @@ function TeacherDashboard() {
                   </button>
                 ) : null}
               </article>
-            ))}
+            )) : <p className="role-muted">No results found.</p>}
           </div>
         </section>
       </section>
@@ -816,8 +1021,19 @@ function TeacherDashboard() {
               <h3 className="role-section-title">Active Assignments</h3>
             </div>
           </div>
+          <div className="role-user-toolbar role-user-toolbar-search-only">
+            <div className="role-user-search-wrap">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search assignments by title, class, due date, or ID..."
+                value={assignmentSearchTerm}
+                onChange={(e) => setAssignmentSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="teacher-assignment-list">
-            {assignments.map((item) => (
+            {filteredAssignments.length ? filteredAssignments.map((item) => (
               <article key={item.id} className="teacher-assignment-row">
                 <div className="teacher-assignment-copy">
                   <h4>{item.title}</h4>
@@ -833,7 +1049,7 @@ function TeacherDashboard() {
                   </button>
                 </div>
               </article>
-            ))}
+            )) : <p className="role-muted">No assignments match your search.</p>}
           </div>
         </section>
       </section>
@@ -850,6 +1066,17 @@ function TeacherDashboard() {
               <p className="role-muted">View and manage student performance</p>
             </div>
           </div>
+          <div className="role-user-toolbar role-user-toolbar-search-only">
+            <div className="role-user-search-wrap">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search grades by student, class, marks, or ID..."
+                value={gradeSearchTerm}
+                onChange={(e) => setGradeSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="role-table-wrap">
             <table className="role-table teacher-grade-table">
               <thead>
@@ -863,7 +1090,7 @@ function TeacherDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {gradeRows.map((student) => (
+                {filteredGradeRows.map((student) => (
                   <tr key={student.id}>
                     <td>{student.name}</td>
                     <td>{student.className}</td>
@@ -882,6 +1109,7 @@ function TeacherDashboard() {
                 ))}
               </tbody>
             </table>
+            {filteredGradeRows.length === 0 ? <p className="role-muted">No students match your search.</p> : null}
           </div>
         </section>
       </section>
@@ -917,8 +1145,19 @@ function TeacherDashboard() {
               <h3 className="role-section-title">Recent Uploads</h3>
             </div>
           </div>
+          <div className="role-user-toolbar role-user-toolbar-search-only">
+            <div className="role-user-search-wrap">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search uploads by file name, type, date, or ID..."
+                value={uploadSearchTerm}
+                onChange={(e) => setUploadSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="teacher-upload-list">
-            {uploads.map((item) => (
+            {filteredUploads.length ? filteredUploads.map((item) => (
               <article key={item.id} className="teacher-upload-row">
                 <div className="teacher-upload-row-main">
                   <div className="teacher-upload-file-icon">
@@ -933,7 +1172,7 @@ function TeacherDashboard() {
                   View
                 </button>
               </article>
-            ))}
+            )) : <p className="role-muted">No uploads match your search.</p>}
           </div>
         </section>
       </section>
@@ -956,13 +1195,16 @@ function TeacherDashboard() {
     content = renderCards(
       'Resources',
       'Browse reusable templates, guides, and teaching packs.',
-      resources.map((item) => ({
+      filteredResources.map((item) => ({
         id: item.id,
         title: item.title,
         meta: item.type,
         submeta: item.audience,
         action: 'Open Resource',
       })),
+      resourceSearchTerm,
+      setResourceSearchTerm,
+      'Search resources by title, type, audience, or ID...',
     )
   }
 
@@ -972,7 +1214,7 @@ function TeacherDashboard() {
         <header className="role-header">
           <div className="role-brand-block">
             <span className="role-kicker-icon logo-image-only" aria-hidden>
-              <img src="/skaimitra-logo.png" alt="SkaiMitra logo" className="admin-logo-image" />
+              <img src="/skaimitra-logo.svg" alt="SkaiMitra logo" className="admin-logo-image" />
             </span>
             <div>
               <h1 className="role-brand-title">SkaiMitra</h1>

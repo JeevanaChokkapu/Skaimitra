@@ -452,9 +452,9 @@
   background: transparent;
   box-shadow: none;
   border-radius: 0;
-  width: 5.25rem;
-  height: 5.25rem;
-  margin-right: 0.75rem;
+  width: 6.5rem;
+  height: 6.5rem;
+  margin-right: 0.9rem;
 }
 
 .admin-logo-image {
@@ -468,9 +468,9 @@
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  width: 5.25rem !important;
-  height: 5.25rem !important;
-  margin-right: 0.75rem;
+  width: 6.5rem !important;
+  height: 6.5rem !important;
+  margin-right: 0.9rem;
 }
 
 .student-dashboard-page .role-topbar {
@@ -2727,6 +2727,22 @@
   padding: 0 10px;
   font-size: 0.92rem;
   color: #0f172a;
+}
+
+.role-user-toolbar-search-only {
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 0 18px;
+}
+
+.role-user-search-inline {
+  width: min(100%, 360px);
+}
+
+.role-admin-communications-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .role-user-add-btn {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Award,
@@ -12,6 +12,7 @@ import {
   Home,
   LogOut,
   Play,
+  Search,
   Send,
   Settings,
 } from 'lucide-react'
@@ -92,9 +93,17 @@ const resources = [
   { id: 3, title: 'English Writing Prompts', type: 'Worksheet set', subject: 'English' },
 ]
 
+const includesSearch = (value: string | number | null | undefined, query: string) =>
+  String(value ?? '')
+    .toLowerCase()
+    .includes(query.trim().toLowerCase())
+
 function StudentDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<StudentTab>('Home')
+  const [subjectSearchTerm, setSubjectSearchTerm] = useState('')
+  const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('')
+  const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [studentName, setStudentName] = useState('Aarav Mehta')
   const [studentClassSection, setStudentClassSection] = useState('Class 6A')
   const [question, setQuestion] = useState('')
@@ -149,7 +158,54 @@ function StudentDashboard() {
     return () => window.removeEventListener('skaimitra-calendar-refresh', loadCalendar)
   }, [studentClassSection])
 
-  const pendingAssignments = assignments.filter((assignment) => assignment.status === 'pending')
+  const filteredSubjects = useMemo(
+    () =>
+      mySubjects.filter((subject) => {
+        const query = subjectSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(subject.id, query) ||
+          includesSearch(subject.name, query) ||
+          includesSearch(subject.teacher, query) ||
+          includesSearch(subject.grade, query) ||
+          includesSearch(subject.progress, query)
+        )
+      }),
+    [subjectSearchTerm],
+  )
+
+  const filteredAssignments = useMemo(
+    () =>
+      assignments.filter((assignment) => {
+        const query = assignmentSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(assignment.id, query) ||
+          includesSearch(assignment.title, query) ||
+          includesSearch(assignment.subject, query) ||
+          includesSearch(assignment.dueDate, query) ||
+          includesSearch(assignment.status, query) ||
+          includesSearch(assignment.points, query) ||
+          includesSearch(assignment.score, query)
+        )
+      }),
+    [assignmentSearchTerm],
+  )
+
+  const filteredResources = useMemo(
+    () =>
+      resources.filter((resource) => {
+        const query = resourceSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return includesSearch(resource.id, query) || includesSearch(resource.title, query) || includesSearch(resource.type, query) || includesSearch(resource.subject, query)
+      }),
+    [resourceSearchTerm],
+  )
+
+  const pendingAssignments = filteredAssignments.filter((assignment) => assignment.status === 'pending')
 
   const handleAskQuestion = async () => {
     const trimmedQuestion = question.trim()
@@ -173,7 +229,7 @@ function StudentDashboard() {
         <header className="role-header">
           <div className="role-brand-block">
             <span className="role-kicker-icon logo-image-only" aria-hidden>
-              <img src="/skaimitra-logo.png" alt="SkaiMitra logo" className="admin-logo-image" />
+              <img src="/skaimitra-logo.svg" alt="SkaiMitra logo" className="admin-logo-image" />
             </span>
             <div>
               <h1 className="role-brand-title">SkaiMitra</h1>
@@ -310,8 +366,20 @@ function StudentDashboard() {
               <p className="role-muted">View all your enrolled subjects and track progress</p>
             </section>
 
+            <div className="role-user-toolbar role-user-toolbar-search-only">
+              <div className="role-user-search-wrap">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Search subjects by name, teacher, grade, or ID..."
+                  value={subjectSearchTerm}
+                  onChange={(e) => setSubjectSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
             <section className="student-subject-screen-grid">
-              {mySubjects.map((subject) => (
+              {filteredSubjects.length ? filteredSubjects.map((subject) => (
                 <article key={subject.id} className="role-card student-subject-screen-card">
                   <div className="student-subject-screen-head">
                     <div>
@@ -337,7 +405,7 @@ function StudentDashboard() {
                     </button>
                   </div>
                 </article>
-              ))}
+              )) : <p className="role-muted">No subjects match your search.</p>}
             </section>
           </section>
         </main>
@@ -350,6 +418,18 @@ function StudentDashboard() {
               <h2>Assignments</h2>
               <p className="role-muted">View and submit your assignments</p>
             </section>
+
+            <div className="role-user-toolbar role-user-toolbar-search-only">
+              <div className="role-user-search-wrap">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Search assignments by title, subject, status, or ID..."
+                  value={assignmentSearchTerm}
+                  onChange={(e) => setAssignmentSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
 
             <div className="student-assignment-overview-grid">
               <article className="role-card student-assignment-overview-card">
@@ -384,7 +464,7 @@ function StudentDashboard() {
             <section className="student-assignment-screen-list">
               <h3 className="role-section-title">All Assignments</h3>
               <div className="student-assignment-screen-items">
-                {assignments.map((assignment) => (
+                {filteredAssignments.length ? filteredAssignments.map((assignment) => (
                   <article key={assignment.id} className="role-card student-assignment-screen-row">
                     <div>
                       <h4>{assignment.title}</h4>
@@ -398,7 +478,7 @@ function StudentDashboard() {
                     </div>
                     <span className={`student-status-pill ${assignment.status}`}>{assignment.status}</span>
                   </article>
-                ))}
+                )) : <p className="role-muted">No assignments match your search.</p>}
               </div>
             </section>
           </section>
@@ -411,8 +491,19 @@ function StudentDashboard() {
             <section className="role-card">
               <h2>Resources</h2>
               <p className="role-muted">Open learning packs, worksheets, and subject support material.</p>
+              <div className="role-user-toolbar role-user-toolbar-search-only">
+                <div className="role-user-search-wrap">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search resources by title, subject, type, or ID..."
+                    value={resourceSearchTerm}
+                    onChange={(e) => setResourceSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
               <div className="student-subject-grid">
-                {resources.map((resource) => (
+                {filteredResources.length ? filteredResources.map((resource) => (
                   <article key={resource.id} className="role-card student-subject-card">
                     <div className="student-subject-head">
                       <div>
@@ -429,7 +520,7 @@ function StudentDashboard() {
                       </button>
                     </div>
                   </article>
-                ))}
+                )) : <p className="role-muted">No resources match your search.</p>}
               </div>
             </section>
           </section>

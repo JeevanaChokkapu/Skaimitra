@@ -144,6 +144,10 @@ const mapSyncedUser = (user: SyncedUser): UserRow => ({
   phone: user.phone,
   status: user.status as UserStatus,
 })
+const includesSearch = (value: string | number | null | undefined, query: string) =>
+  String(value ?? '')
+    .toLowerCase()
+    .includes(query.trim().toLowerCase())
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -151,6 +155,13 @@ function AdminDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [users, setUsers] = useState<UserRow[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState('')
+  const [studentSearchTerm, setStudentSearchTerm] = useState('')
+  const [courseSearchTerm, setCourseSearchTerm] = useState('')
+  const [reportSearchTerm, setReportSearchTerm] = useState('')
+  const [communicationSearchTerm, setCommunicationSearchTerm] = useState('')
+  const [resourceSearchTerm, setResourceSearchTerm] = useState('')
+  const [settingsSearchTerm, setSettingsSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<'All' | Role>('All')
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
   const [isUsersLoading, setIsUsersLoading] = useState(false)
@@ -259,6 +270,78 @@ function AdminDashboard() {
     return { totalUsers, students, teachers, activeUsers }
   }, [users])
 
+  const filteredUsers = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+
+    return users.filter((user) => {
+      const matchesRole = roleFilter === 'All' || user.role === roleFilter
+      const matchesSearch =
+        !normalizedSearch ||
+        includesSearch(user.id, normalizedSearch) ||
+        includesSearch(user.name, normalizedSearch) ||
+        includesSearch(user.email, normalizedSearch) ||
+        includesSearch(user.classSubject, normalizedSearch) ||
+        includesSearch(user.phone, normalizedSearch) ||
+        includesSearch(user.role, normalizedSearch)
+
+      return matchesRole && matchesSearch
+    })
+  }, [roleFilter, searchTerm, users])
+
+  const filteredTeachers = useMemo(
+    () =>
+      teacherOverview.filter((teacher) => {
+        const query = teacherSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(teacher.id, query) ||
+          includesSearch(teacher.name, query) ||
+          includesSearch(teacher.initials, query) ||
+          includesSearch(teacher.subject, query) ||
+          includesSearch(teacher.email, query) ||
+          includesSearch(teacher.phone, query) ||
+          includesSearch(teacher.students, query) ||
+          includesSearch(teacher.courses, query)
+        )
+      }),
+    [teacherSearchTerm],
+  )
+
+  const filteredStudents = useMemo(
+    () =>
+      studentOverview.filter((student) => {
+        const query = studentSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(student.id, query) ||
+          includesSearch(student.name, query) ||
+          includesSearch(student.className, query) ||
+          includesSearch(student.performance, query) ||
+          includesSearch(student.attendance, query)
+        )
+      }),
+    [studentSearchTerm],
+  )
+
+  const filteredCourses = useMemo(
+    () =>
+      courseOverview.filter((course) => {
+        const query = courseSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(course.id, query) ||
+          includesSearch(course.name, query) ||
+          includesSearch(course.teacher, query) ||
+          includesSearch(course.completion, query) ||
+          includesSearch(course.students, query)
+        )
+      }),
+    [courseSearchTerm],
+  )
+
   const communicationItems = useMemo(() => {
     const announcementMessages = announcements.map((announcement) => ({
       id: `announcement-${announcement.id}`,
@@ -294,6 +377,51 @@ function AdminDashboard() {
     )
   }, [announcements, calendarEvents])
 
+  const filteredCommunicationItems = useMemo(
+    () =>
+      communicationItems.filter((item) => {
+        const query = communicationSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(item.id, query) ||
+          includesSearch(item.title, query) ||
+          includesSearch(item.description, query) ||
+          includesSearch(item.date, query) ||
+          includesSearch(item.audience, query) ||
+          includesSearch(item.source, query)
+        )
+      }),
+    [communicationItems, communicationSearchTerm],
+  )
+
+  const filteredResourceItems = useMemo(
+    () =>
+      resourceItems.filter((item) => {
+        const query = resourceSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return (
+          includesSearch(item.id, query) ||
+          includesSearch(item.title, query) ||
+          includesSearch(item.type, query) ||
+          includesSearch(item.owner, query)
+        )
+      }),
+    [resourceSearchTerm],
+  )
+
+  const filteredSettingsItems = useMemo(
+    () =>
+      settingsItems.filter((item) => {
+        const query = settingsSearchTerm.trim().toLowerCase()
+        if (!query) return true
+
+        return includesSearch(item.id, query) || includesSearch(item.title, query) || includesSearch(item.desc, query)
+      }),
+    [settingsSearchTerm],
+  )
+
   const recentMessages = useMemo(() => communicationItems.slice(0, 2), [communicationItems])
   const unseenMessages = useMemo(
     () => communicationItems.filter((message) => !seenMessageIds.includes(message.id)),
@@ -324,7 +452,6 @@ function AdminDashboard() {
       setIsUsersLoading(true)
       setUserError('')
       const response = await fetchUsers(token, {
-        search: searchTerm,
         role: roleFilter === 'All' ? undefined : roleFilter,
       })
       setUsers(response.users.map(mapSyncedUser))
@@ -334,7 +461,7 @@ function AdminDashboard() {
     } finally {
       setIsUsersLoading(false)
     }
-  }, [getAuthToken, roleFilter, searchTerm])
+  }, [getAuthToken, roleFilter])
 
   const loadDashboardCounts = useCallback(async () => {
     const token = await getAuthToken()
@@ -885,6 +1012,9 @@ function AdminDashboard() {
     title: string,
     description: string,
     items: Array<{ id: number; title: string; meta: string; submeta?: string; metric?: string; action?: () => void; actionLabel?: string }>,
+    searchValue?: string,
+    onSearchChange?: (value: string) => void,
+    searchPlaceholder?: string,
   ) => (
     <main className="role-main role-main-detail">
       <section className="role-primary">
@@ -895,22 +1025,39 @@ function AdminDashboard() {
               <p className="role-muted">{description}</p>
             </div>
           </div>
+          {onSearchChange ? (
+            <div className="role-user-toolbar role-user-toolbar-search-only">
+              <div className="role-user-search-wrap">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder || `Search ${title.toLowerCase()}...`}
+                  value={searchValue || ''}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="role-detail-grid">
-            {items.map((item) => (
-              <article key={item.id} className="role-card role-mini-card">
-                <div className="role-mini-card-head">
-                  <h3>{item.title}</h3>
-                  {item.metric ? <span className="role-pill role-pill-student">{item.metric}</span> : null}
-                </div>
-                <p className="role-muted">{item.meta}</p>
-                {item.submeta ? <p className="role-muted">{item.submeta}</p> : null}
-                {item.action ? (
-                  <button type="button" className="role-inline-action" onClick={item.action}>
-                    {item.actionLabel || 'Open'}
-                  </button>
-                ) : null}
-              </article>
-            ))}
+            {items.length ? (
+              items.map((item) => (
+                <article key={item.id} className="role-card role-mini-card">
+                  <div className="role-mini-card-head">
+                    <h3>{item.title}</h3>
+                    {item.metric ? <span className="role-pill role-pill-student">{item.metric}</span> : null}
+                  </div>
+                  <p className="role-muted">{item.meta}</p>
+                  {item.submeta ? <p className="role-muted">{item.submeta}</p> : null}
+                  {item.action ? (
+                    <button type="button" className="role-inline-action" onClick={item.action}>
+                      {item.actionLabel || 'Open'}
+                    </button>
+                  ) : null}
+                </article>
+              ))
+            ) : (
+              <p className="role-muted">No results found.</p>
+            )}
           </div>
         </section>
       </section>
@@ -946,9 +1093,21 @@ function AdminDashboard() {
         </section>
 
         <section className="role-card role-admin-staff-card">
-          <h3 className="role-section-title">Teaching Staff</h3>
+          <div className="role-section-head role-admin-communications-head">
+            <h3 className="role-section-title">Teaching Staff</h3>
+            <div className="role-user-search-wrap role-user-search-inline">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search teachers by name, subject, email, or ID..."
+                value={teacherSearchTerm}
+                onChange={(e) => setTeacherSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="role-admin-staff-list">
-            {teacherOverview.map((teacher) => (
+            {filteredTeachers.length ? (
+              filteredTeachers.map((teacher) => (
               <article key={teacher.id} className="role-admin-staff-row">
                 <div className="role-admin-staff-main">
                   <div className="role-admin-avatar">{teacher.initials}</div>
@@ -982,7 +1141,10 @@ function AdminDashboard() {
                   </button>
                 </div>
               </article>
-            ))}
+              ))
+            ) : (
+              <p className="role-muted">No teachers match your search.</p>
+            )}
           </div>
         </section>
       </section>
@@ -1023,9 +1185,21 @@ function AdminDashboard() {
 
         <section className="role-admin-student-layout">
           <section className="role-card role-admin-student-card">
-            <h3 className="role-section-title">Top Performing Students</h3>
+            <div className="role-section-head role-admin-communications-head">
+              <h3 className="role-section-title">Top Performing Students</h3>
+              <div className="role-user-search-wrap role-user-search-inline">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Search students by name, class, score, or ID..."
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
             <div className="role-admin-student-list">
-              {studentOverview.map((student) => (
+              {filteredStudents.length ? (
+                filteredStudents.map((student) => (
                 <article key={student.id} className="role-admin-student-row">
                   <div>
                     <h4>{student.name}</h4>
@@ -1036,7 +1210,10 @@ function AdminDashboard() {
                     <span>{student.attendance} attendance</span>
                   </div>
                 </article>
-              ))}
+                ))
+              ) : (
+                <p className="role-muted">No students match your search.</p>
+              )}
             </div>
           </section>
 
@@ -1091,9 +1268,21 @@ function AdminDashboard() {
         </section>
 
         <section className="role-card role-admin-course-card">
-          <h3 className="role-section-title">All Courses</h3>
+          <div className="role-section-head role-admin-communications-head">
+            <h3 className="role-section-title">All Courses</h3>
+            <div className="role-user-search-wrap role-user-search-inline">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search courses by title, teacher, student count, or ID..."
+                value={courseSearchTerm}
+                onChange={(e) => setCourseSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="role-admin-course-list">
-            {courseOverview.map((course) => (
+            {filteredCourses.length ? (
+              filteredCourses.map((course) => (
               <article key={course.id} className="role-admin-course-row">
                 <div className="role-admin-course-copy">
                   <h4>{course.name}</h4>
@@ -1113,7 +1302,10 @@ function AdminDashboard() {
 
                 <span className="role-status-badge status-active">active</span>
               </article>
-            ))}
+              ))
+            ) : (
+              <p className="role-muted">No courses match your search.</p>
+            )}
           </div>
         </section>
       </section>
@@ -1133,13 +1325,25 @@ function AdminDashboard() {
         <section className="role-card role-admin-communications-card">
           <div className="role-section-head role-admin-communications-head">
             <h3 className="role-section-title">Recent Announcements</h3>
-            <button type="button" className="role-primary-btn" onClick={handleOpenNewAnnouncement}>
-              New Announcement
-            </button>
+            <div className="role-admin-communications-actions">
+              <div className="role-user-search-wrap role-user-search-inline">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Search communications by title, audience, date, or ID..."
+                  value={communicationSearchTerm}
+                  onChange={(e) => setCommunicationSearchTerm(e.target.value)}
+                />
+              </div>
+              <button type="button" className="role-primary-btn" onClick={handleOpenNewAnnouncement}>
+                New Announcement
+              </button>
+            </div>
           </div>
 
           <div className="role-admin-announcement-list">
-            {communicationItems.map((item) => (
+            {filteredCommunicationItems.length ? (
+              filteredCommunicationItems.map((item) => (
               <article key={item.id} className="role-admin-announcement-row">
                 <div className="role-admin-announcement-copy">
                   <h4>{item.title}</h4>
@@ -1190,7 +1394,10 @@ function AdminDashboard() {
                   </div>
                 ) : null}
               </article>
-            ))}
+              ))
+            ) : (
+              <p className="role-muted">No communications match your search.</p>
+            )}
           </div>
         </section>
       </section>
@@ -1216,7 +1423,17 @@ function AdminDashboard() {
           { id: 1, title: 'Academic Performance Report', meta: 'Class-wise score trends and benchmarks', submeta: 'Updated today' },
           { id: 2, title: 'Attendance Summary', meta: 'Monthly attendance by class and section', submeta: 'Updated yesterday' },
           { id: 3, title: 'Usage Analytics', meta: 'Logins, active courses, and platform activity', submeta: 'Updated 2 hours ago' },
-        ],
+        ].filter(
+          (item) =>
+            !reportSearchTerm.trim() ||
+            includesSearch(item.id, reportSearchTerm) ||
+            includesSearch(item.title, reportSearchTerm) ||
+            includesSearch(item.meta, reportSearchTerm) ||
+            includesSearch(item.submeta, reportSearchTerm),
+        ),
+        reportSearchTerm,
+        setReportSearchTerm,
+        'Search reports by title, summary, or ID...',
       )
     }
     if (activeTab === 'Communications') {
@@ -1226,22 +1443,28 @@ function AdminDashboard() {
       return renderOverviewCards(
         'Resources',
         'Open institutional documents, policy packs, and reusable admin assets.',
-        resourceItems.map((item) => ({
+        filteredResourceItems.map((item) => ({
           id: item.id,
           title: item.title,
           meta: item.type,
           submeta: item.owner,
         })),
+        resourceSearchTerm,
+        setResourceSearchTerm,
+        'Search resources by title, owner, type, or ID...',
       )
     }
     return renderOverviewCards(
       'System Settings',
       'Update permissions, security, and operational controls.',
-      settingsItems.map((item) => ({
+      filteredSettingsItems.map((item) => ({
         id: item.id,
         title: item.title,
         meta: item.desc,
       })),
+      settingsSearchTerm,
+      setSettingsSearchTerm,
+      'Search settings by title, description, or ID...',
     )
   }
 
@@ -1251,7 +1474,7 @@ function AdminDashboard() {
         <header className="role-header">
           <div className="role-brand-block">
             <span className="role-kicker-icon admin-logo-icon" aria-hidden>
-              <img src="/skaimitra-logo.png" alt="SkaiMitra logo" className="admin-logo-image" />
+              <img src="/skaimitra-logo.svg" alt="SkaiMitra logo" className="admin-logo-image" />
             </span>
             <div>
               <h1 className="role-brand-title">SkaiMitra</h1>
@@ -1353,7 +1576,7 @@ function AdminDashboard() {
               <Search size={16} />
               <input
                 type="text"
-                placeholder="Search users by name or email..."
+                placeholder="Search users by name, email, role, class, or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -1373,7 +1596,7 @@ function AdminDashboard() {
           </section>
 
           <section className="role-card">
-            <h2>All Users ({users.length})</h2>
+            <h2>All Users ({filteredUsers.length})</h2>
             {isUsersLoading && <p className="role-muted">Loading users...</p>}
             <div className="role-table-wrap">
               <table className="role-table role-user-table">
@@ -1389,7 +1612,7 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user.id}>
                       <td>{user.name}</td>
                       <td>{user.email}</td>
@@ -1417,6 +1640,7 @@ function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+              {!isUsersLoading && filteredUsers.length === 0 ? <p className="role-muted">No users match your search.</p> : null}
             </div>
           </section>
         </main>
