@@ -229,7 +229,7 @@ function StudentDashboard() {
         <header className="role-header">
           <div className="role-brand-block">
             <span className="role-kicker-icon logo-image-only" aria-hidden>
-              <img src="/skaimitra-logo.svg" alt="SkaiMitra logo" className="admin-logo-image" />
+              <img src="/SkaiMitra.jpg" alt="SkaiMitra logo" className="admin-logo-image" />
             </span>
             <div>
               <h1 className="role-brand-title">SkaiMitra</h1>

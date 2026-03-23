@@ -103,7 +103,7 @@ function LoginPage() {
         <section className="login-brand">
           <div className="brand-top">
             <div className="brand-icon" aria-hidden>
-              <img src="/skaimitra-logo.svg" alt="SkaiMitra logo" className="brand-icon-image" />
+              <img src="/SkaiMitra.jpg" alt="SkaiMitra logo" className="brand-icon-image" />
             </div>
             <span className="brand-title">SkaiMitra</span>
           </div>
