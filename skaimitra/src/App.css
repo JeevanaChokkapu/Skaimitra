@@ -54,8 +54,9 @@
 }
 
 .brand-title {
-  font-size: 1.7rem;
+  font-size: 2.15rem;
   font-weight: 700;
+  line-height: 1.05;
 }
 
 .brand-copy {
