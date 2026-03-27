@@ -34,57 +34,13 @@ export function SkaiMitraLogo({
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      {/* Logo Icon - Hexagonal Brain/Network Design */}
-      <div className={`${sizeMap[size].container} relative flex items-center justify-center`}>
-        <svg 
-          viewBox="0 0 48 48" 
-          fill="none" 
-          className="w-full h-full"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Outer Hexagon with Gradient */}
-          <defs>
-            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#1e40af" />
-              <stop offset="50%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#60a5fa" />
-            </linearGradient>
-          </defs>
-          
-          {/* Main Hexagon Background */}
-          <path 
-            d="M24 2L42 13V35L24 46L6 35V13L24 2Z" 
-            fill="url(#logoGradient)"
-          />
-          
-          {/* Inner Network Pattern - Representing AI/Learning */}
-          {/* Center Node */}
-          <circle cx="24" cy="24" r="3" fill="white" opacity="0.95" />
-          
-          {/* Top Node */}
-          <circle cx="24" cy="12" r="2.5" fill="white" opacity="0.85" />
-          <line x1="24" y1="15" x2="24" y2="21" stroke="white" strokeWidth="1.5" opacity="0.7" />
-          
-          {/* Top Right Node */}
-          <circle cx="32" cy="16" r="2.5" fill="white" opacity="0.85" />
-          <line x1="30" y1="17.5" x2="26" y2="22.5" stroke="white" strokeWidth="1.5" opacity="0.7" />
-          
-          {/* Bottom Right Node */}
-          <circle cx="32" cy="32" r="2.5" fill="white" opacity="0.85" />
-          <line x1="30" y1="30.5" x2="26" y2="25.5" stroke="white" strokeWidth="1.5" opacity="0.7" />
-          
-          {/* Bottom Node */}
-          <circle cx="24" cy="36" r="2.5" fill="white" opacity="0.85" />
-          <line x1="24" y1="33" x2="24" y2="27" stroke="white" strokeWidth="1.5" opacity="0.7" />
-          
-          {/* Bottom Left Node */}
-          <circle cx="16" cy="32" r="2.5" fill="white" opacity="0.85" />
-          <line x1="18" y1="30.5" x2="22" y2="25.5" stroke="white" strokeWidth="1.5" opacity="0.7" />
-          
-          {/* Top Left Node */}
-          <circle cx="16" cy="16" r="2.5" fill="white" opacity="0.85" />
-          <line x1="18" y1="17.5" x2="22" y2="22.5" stroke="white" strokeWidth="1.5" opacity="0.7" />
-        </svg>
+      {/* Logo Image from Public Folder */}
+      <div className={`${sizeMap[size].container} relative flex items-center justify-center flex-shrink-0`}>
+        <img 
+          src="/SkaiMitra_LogoV2.0.jpg" 
+          alt="SkaiMitra Logo"
+          className={`w-full h-full object-cover rounded-lg`}
+        />
       </div>
       
       {/* SkaiMitra Text with Styling */}

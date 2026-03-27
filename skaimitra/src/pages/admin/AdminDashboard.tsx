@@ -1474,7 +1474,7 @@ function AdminDashboard() {
         <header className="role-header">
           <div className="role-brand-block">
             <span className="role-kicker-icon admin-logo-icon" aria-hidden>
-              <img src="/skaimitra-logo.png" alt="SkaiMitra logo" className="admin-logo-image" />
+              <img src="/SkaiMitra_LogoV2.0.jpg" alt="SkaiMitra logo" className="admin-logo-image" />
             </span>
             <div>
               <h1 className="role-brand-title">SkaiMitra</h1>
