@@ -83,6 +83,7 @@ function RoleCalendar({
     return { month: now.getMonth(), year: now.getFullYear() }
   })
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null)
+  const [isEventsOpen, setIsEventsOpen] = useState(false)
 
   const today = new Date()
   const isCurrentMonth = today.getMonth() === calendarDate.month && today.getFullYear() === calendarDate.year
@@ -103,30 +104,15 @@ function RoleCalendar({
   }, [events])
 
   const selectedDateEvents = selectedDateKey ? eventsByDate.get(selectedDateKey) || [] : []
-  const visibleMonthEvents = useMemo(
-    () =>
-      events
-        .filter((event) => {
-          const eventDate = new Date(`${event.date}T00:00:00`)
-          return eventDate.getFullYear() === calendarDate.year && eventDate.getMonth() === calendarDate.month
-        })
-        .sort((a, b) => {
-          const left = new Date(`${a.date}T${a.time || '00:00'}`).getTime()
-          const right = new Date(`${b.date}T${b.time || '00:00'}`).getTime()
-          return left - right
-        }),
-    [calendarDate.month, calendarDate.year, events],
-  )
 
-  const eventsGroupedByDate = useMemo(() => {
-    const grouped = new Map<string, CalendarEventRecord[]>()
-    visibleMonthEvents.forEach((event) => {
-      const existing = grouped.get(event.date) || []
-      existing.push(event)
-      grouped.set(event.date, existing)
+  const allEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      const left = new Date(`${a.date}T${a.time || '00:00'}`).getTime()
+      const right = new Date(`${b.date}T${b.time || '00:00'}`).getTime()
+      return left - right
     })
-    return Array.from(grouped.entries()).sort((a, b) => new Date(`${a[0]}T00:00:00`).getTime() - new Date(`${b[0]}T00:00:00`).getTime())
-  }, [visibleMonthEvents])
+  }, [events])
+
 
   return (
     <>
@@ -215,49 +201,56 @@ function RoleCalendar({
           })}
         </div>
 
-        {eventsGroupedByDate.length ? (
+        <div className="role-calendar-events-toggle">
+          <button
+            type="button"
+            className="role-secondary-btn"
+            onClick={() => setIsEventsOpen((prev) => !prev)}
+          >
+            {isEventsOpen ? 'Hide all events' : 'Show all events'}
+          </button>
+        </div>
+        {isEventsOpen ? (
           <div className="role-calendar-events-list">
-            <h4>Events this month</h4>
-            {eventsGroupedByDate.map(([date, events]) => (
-              <div key={date} className="role-calendar-events-date-group">
-                <h5>{date}</h5>
-                {events.map((event) => (
-                  <article key={event.eventId} className="role-calendar-event-item">
-                    <div>
-                      <strong>{event.title}</strong>
-                      <span>
-                        {event.time ? `${event.time} • ${event.eventType}` : event.eventType}
-                      </span>
-                      <span>{event.description}</span>
+            <h4>All events</h4>
+            {allEvents.length ? (
+              allEvents.map((event) => (
+                <article key={event.eventId} className="role-calendar-event-item">
+                  <div>
+                    <strong>{event.title}</strong>
+                    <span>{formatEventMeta(event)}</span>
+                    <span>{event.date}</span>
+                    <p>{event.description}</p>
+                  </div>
+                  {event.canEdit && (onEditEvent || onDeleteEvent) ? (
+                    <div className="role-calendar-event-actions">
+                      {onEditEvent ? (
+                        <button
+                          type="button"
+                          className="role-icon-action"
+                          onClick={() => onEditEvent(event)}
+                          aria-label={`Edit ${event.title}`}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      ) : null}
+                      {onDeleteEvent ? (
+                        <button
+                          type="button"
+                          className="role-icon-action is-danger"
+                          onClick={() => onDeleteEvent(event)}
+                          aria-label={`Delete ${event.title}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      ) : null}
                     </div>
-                    {event.canEdit && (onEditEvent || onDeleteEvent) ? (
-                      <div className="role-calendar-event-actions">
-                        {onEditEvent ? (
-                          <button
-                            type="button"
-                            className="role-icon-action"
-                            onClick={() => onEditEvent(event)}
-                            aria-label={`Edit ${event.title}`}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        ) : null}
-                        {onDeleteEvent ? (
-                          <button
-                            type="button"
-                            className="role-icon-action is-danger"
-                            onClick={() => onDeleteEvent(event)}
-                            aria-label={`Delete ${event.title}`}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            ))}
+                  ) : null}
+                </article>
+              ))
+            ) : (
+              <p className="role-muted">{emptyMessage}</p>
+            )}
           </div>
         ) : null}
       </section>
