@@ -342,6 +342,7 @@ function TeacherDashboard() {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
   const [announcements, setAnnouncements] = useState<DashboardAnnouncement[]>(() => loadAnnouncements())
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false)
+  const [showAllAnnouncements, setShowAllAnnouncements] = useState(false)
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<number | null>(null)
   const [isEventOpen, setIsEventOpen] = useState(false)
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
@@ -1069,15 +1070,16 @@ function TeacherDashboard() {
 
           <div className="role-admin-announcement-list">
             {filteredTeacherAnnouncements.length ? (
-              filteredTeacherAnnouncements.map((item) => (
-                <article key={item.id} className="role-admin-announcement-row">
-                  <div className="role-admin-announcement-copy">
-                    <h4>{item.title}</h4>
-                    <p className="role-muted">{`${item.date} - ${formatAudienceIds(item.audienceIds)} - Expires ${item.expiresAt}`}</p>
-                    <p className="role-muted">{item.message}</p>
-                  </div>
-                  <div className="role-admin-announcement-actions">
-                    <button
+              <>
+                {(showAllAnnouncements ? filteredTeacherAnnouncements : filteredTeacherAnnouncements.slice(0, 2)).map((item) => (
+                  <article key={item.id} className="role-admin-announcement-row">
+                    <div className="role-admin-announcement-copy">
+                      <h4>{item.title}</h4>
+                      <p className="role-muted">{`${item.date} - ${formatAudienceIds(item.audienceIds)} - Expires ${item.expiresAt}`}</p>
+                      <p className="role-muted">{item.message}</p>
+                    </div>
+                    <div className="role-admin-announcement-actions">
+                      <button
                       type="button"
                       className="role-icon-square-btn"
                       aria-label={`Edit ${item.title}`}
@@ -1095,10 +1097,18 @@ function TeacherDashboard() {
                     </button>
                   </div>
                 </article>
-              ))
+              ))}
+            </>
             ) : (
               <p className="role-muted">No teacher announcements match your search.</p>
             )}
+            {filteredTeacherAnnouncements.length > 2 ? (
+              <div className="role-announce-view-more" style={{marginTop: '0.75rem', textAlign: 'center'}}>
+                <button type="button" className="role-secondary-btn" onClick={() => setShowAllAnnouncements((prev) => !prev)}>
+                  {showAllAnnouncements ? 'Show Less' : 'View More'}
+                </button>
+              </div>
+            ) : null}
           </div>
         </section>
 
