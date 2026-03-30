@@ -804,6 +804,7 @@ function AdminDashboard() {
         message: editingEventId ? 'Calendar event updated successfully.' : 'Calendar event added successfully.',
       })
     } catch (error) {
+      console.error(error)
       applyLocalCalendarSave()
     }
   }

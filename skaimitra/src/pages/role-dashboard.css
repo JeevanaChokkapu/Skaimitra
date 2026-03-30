@@ -12,13 +12,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  gap: 0.8rem;
+  padding: 0.72rem 1rem;
   border: 1px solid #dbe4ec;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #FFFFFF;
-  margin: 1rem 1rem 0;
-  width: calc(100% - 2rem);
+  margin: 0.65rem 0.75rem 0;
+  width: calc(100% - 1.5rem);
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
 
@@ -159,9 +159,9 @@
   width: 100%;
   display: flex;
   align-items: flex-end;
-  gap: 0.5rem;
+  gap: 0.4rem;
   overflow-x: auto;
-  padding:  1rem 0.5rem;
+  padding: 0.6rem 0.5rem;
   border-radius: 1;
   background: #F5F6FA;
   border: 1;
@@ -1063,13 +1063,195 @@
   margin-bottom: auto;
 }
 
+.teacher-lesson-outline {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.teacher-lesson-outline p {
+  margin: 0;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.teacher-lesson-stats {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-bottom: 0.75rem;
+  align-items: center;
+  overflow-x: auto;
+  padding-bottom: 3px;
+}
+
+.teacher-lesson-stats .role-stat-card,
+.teacher-lesson-stats .role-mini-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  min-width: 100px;
+  max-width: 150px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.teacher-lesson-stats .role-stat-card h4,
+.teacher-lesson-stats .role-mini-card h4 {
+  font-size: 0.72rem;
+}
+
+.teacher-lesson-stats .role-stat-card p,
+.teacher-lesson-stats .role-mini-card p {
+  font-size: 0.95rem;
+}
+
+
+.teacher-lesson-stats .role-stat-card h4,
+.teacher-lesson-stats .role-mini-card h4 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teacher-lesson-stats .role-stat-card p,
+.teacher-lesson-stats .role-mini-card p {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.role-mini-card h4 {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.role-mini-card p {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.teacher-lesson-table-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.teacher-lesson-table-actions .role-secondary-btn,
+.teacher-lesson-table-actions .role-primary-btn {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+  border-radius: 0.55rem;
+  min-width: auto;
+}
+
+.teacher-lesson-table-container {
+  width: min(100%, 1800px);
+  margin: 0 auto;
+  overflow: auto;
+}
+
+.teacher-lesson-table {
+  width: 100%;
+  min-width: 1200px;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.teacher-lesson-table th,
+.teacher-lesson-table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.7rem;
+  text-align: left;
+}
+
+.teacher-lesson-table th {
+  background: #f9fafb;
+}
+
+.teacher-lesson-table .role-status-badge {
+  transform: translateY(0);
+}
+
+.teacher-lesson-card {
+  flex-direction: column;
+  min-height: 270px;
+  padding: 1.4rem 1.35rem 1.25rem;
+  display: flex;
+}
+
+.teacher-lesson-head {
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.45rem;
+  display: flex;
+}
+
+.teacher-lesson-head h3 {
+  color: #111827;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.status-draft {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.teacher-lesson-meta {
+  gap: 0.6rem;
+  margin-bottom: auto;
+  display: grid;
+}
+
 .teacher-lesson-meta p {
+  color: #111827;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.teacher-lesson-meta strong {
+  font-weight: 700;
+}
+
+.teacher-lesson-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  margin-top: 1.35rem;
+}
+
+.teacher-lab-grid {
   margin: 0;
   font-size: 0.95rem;
   color: #111827;
 }
 
 .teacher-lesson-meta strong {
+  font-weight: 700;
+}
+
+.teacher-lesson-outline {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.teacher-lesson-outline p {
+  margin: 0;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.teacher-lesson-outline strong {
   font-weight: 700;
 }
 
@@ -2846,11 +3028,15 @@
 }
 
 .role-modal {
-  width: min(100%, 560px);
+  width: min(100%, 640px);
   border-radius: 14px;
   border: 1px solid #cbd5e1;
   background: #ffffff;
   padding: 20px;
+}
+
+.teacher-lesson-modal {
+  width: min(100%, 760px);
 }
 
 .role-modal-head {
@@ -3171,11 +3357,13 @@
 .role-modal-actions {
   margin-top: 6px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  align-items: center;
 }
 
 .role-modal-actions button {
+  min-width: 110px;
   height: 44px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;

@@ -118,6 +118,16 @@ function RoleCalendar({
     [calendarDate.month, calendarDate.year, events],
   )
 
+  const eventsGroupedByDate = useMemo(() => {
+    const grouped = new Map<string, CalendarEventRecord[]>()
+    visibleMonthEvents.forEach((event) => {
+      const existing = grouped.get(event.date) || []
+      existing.push(event)
+      grouped.set(event.date, existing)
+    })
+    return Array.from(grouped.entries()).sort((a, b) => new Date(`${a[0]}T00:00:00`).getTime() - new Date(`${b[0]}T00:00:00`).getTime())
+  }, [visibleMonthEvents])
+
   return (
     <>
       <section className="role-card role-calendar-card">
@@ -205,33 +215,48 @@ function RoleCalendar({
           })}
         </div>
 
-        {visibleMonthEvents.length ? (
+        {eventsGroupedByDate.length ? (
           <div className="role-calendar-events-list">
-            {visibleMonthEvents.map((event) => (
-              <article key={event.eventId} className="role-calendar-event-item">
-                <div>
-                  <strong>{event.title}</strong>
-                  <span>
-                    {event.date}
-                    {event.time ? ` • ${event.time}` : ''}
-                  </span>
-                  <span>{event.description}</span>
-                </div>
-                {event.canEdit && (onEditEvent || onDeleteEvent) ? (
-                  <div className="role-calendar-event-actions">
-                    {onEditEvent ? (
-                      <button type="button" className="role-icon-action" onClick={() => onEditEvent(event)} aria-label={`Edit ${event.title}`}>
-                        <Pencil size={14} />
-                      </button>
+            <h4>Events this month</h4>
+            {eventsGroupedByDate.map(([date, events]) => (
+              <div key={date} className="role-calendar-events-date-group">
+                <h5>{date}</h5>
+                {events.map((event) => (
+                  <article key={event.eventId} className="role-calendar-event-item">
+                    <div>
+                      <strong>{event.title}</strong>
+                      <span>
+                        {event.time ? `${event.time} • ${event.eventType}` : event.eventType}
+                      </span>
+                      <span>{event.description}</span>
+                    </div>
+                    {event.canEdit && (onEditEvent || onDeleteEvent) ? (
+                      <div className="role-calendar-event-actions">
+                        {onEditEvent ? (
+                          <button
+                            type="button"
+                            className="role-icon-action"
+                            onClick={() => onEditEvent(event)}
+                            aria-label={`Edit ${event.title}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        ) : null}
+                        {onDeleteEvent ? (
+                          <button
+                            type="button"
+                            className="role-icon-action is-danger"
+                            onClick={() => onDeleteEvent(event)}
+                            aria-label={`Delete ${event.title}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
-                    {onDeleteEvent ? (
-                      <button type="button" className="role-icon-action is-danger" onClick={() => onDeleteEvent(event)} aria-label={`Delete ${event.title}`}>
-                        <Trash2 size={14} />
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </article>
+                  </article>
+                ))}
+              </div>
             ))}
           </div>
         ) : null}
