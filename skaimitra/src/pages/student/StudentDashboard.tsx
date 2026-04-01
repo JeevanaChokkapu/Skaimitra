@@ -17,6 +17,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { askAssistant, fetchCalendarEvents, type CalendarEventRecord } from '../../lib/api'
+import AIChat from '../../components/dashboard/AIChat'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import MessageCenter from '../../components/dashboard/MessageCenter'
 import { getInboxMessages, type InboxMessage } from '../../lib/dashboardData'
@@ -534,6 +535,7 @@ function StudentDashboard() {
         onClose={() => setIsMessagesOpen(false)}
         onSelect={setSelectedMessageId}
       />
+      <AIChat role="student" />
     </div>
   )
 }

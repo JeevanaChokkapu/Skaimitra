@@ -5,6 +5,8 @@ import {
   BarChart,
   BookOpen,
   ClipboardList,
+  Copy,
+  Eye,
   FlaskConical,
   FolderOpen,
   GraduationCap,
@@ -14,6 +16,9 @@ import {
   Pencil,
   PenLine,
   Plus,
+  Printer,
+  Download,
+  CheckCircle,
   Search,
   Send,
   Settings,
@@ -31,8 +36,10 @@ import {
   type CalendarEventRecord,
 } from '../../lib/api'
 import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
+import AIChat from '../../components/dashboard/AIChat'
 import MessageCenter from '../../components/dashboard/MessageCenter'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
+import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
 import {
   createFallbackCalendarEvent,
   deleteFallbackCalendarEvent,
@@ -52,9 +59,10 @@ import '../role-dashboard.css'
 type TeacherTab =
   | 'Home'
   | 'Lesson Planning'
-  | 'Lab Activity Designer'
+  | 'Lab Activity Planning'
   | 'Assignments'
   | 'Grades'
+  | 'Communications'
   | 'Reports'
   | 'Content Upload'
   | 'Content Library'
@@ -70,9 +78,10 @@ type TeacherAnnouncement = {
 const navTabs: Array<{ label: TeacherTab; icon: typeof Home }> = [
   { label: 'Home', icon: Home },
   { label: 'Lesson Planning', icon: BookOpen },
-  { label: 'Lab Activity Designer', icon: FlaskConical },
+  { label: 'Lab Activity Planning', icon: FlaskConical },
   { label: 'Assignments', icon: ClipboardList },
   { label: 'Grades', icon: PenLine },
+  { label: 'Communications', icon: MessageSquare },
   { label: 'Reports', icon: BarChart },
   { label: 'Content Library', icon: Upload },
   { label: 'Resources', icon: FolderOpen },
@@ -284,6 +293,21 @@ const resources = [
   { id: 3, title: 'Assessment Rubrics', type: 'Rubric', audience: 'All Subjects' },
 ]
 
+const getLessonStatusColor = (status: LessonPlanStatus | string) => {
+  switch (status) {
+    case 'Active':
+      return '#16a34a'
+    case 'Draft':
+      return '#0f172a'
+    case 'Incomplete':
+      return '#dc2626'
+    case 'Inactive':
+      return '#6b7280'
+    default:
+      return '#0f172a'
+  }
+}
+
 const includesSearch = (value: string | number | null | undefined, query: string) =>
   String(value ?? '')
     .toLowerCase()
@@ -340,6 +364,21 @@ function TeacherDashboard() {
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
+
+  const selectedMessageIndex = selectedMessageId ? messages.findIndex((m) => m.id === selectedMessageId) : -1
+
+  const goToPreviousMessage = () => {
+    if (selectedMessageIndex > 0) {
+      setSelectedMessageId(messages[selectedMessageIndex - 1].id)
+    }
+  }
+
+  const goToNextMessage = () => {
+    if (selectedMessageIndex >= 0 && selectedMessageIndex < messages.length - 1) {
+      setSelectedMessageId(messages[selectedMessageIndex + 1].id)
+    }
+  }
+
   const [announcements, setAnnouncements] = useState<DashboardAnnouncement[]>(() => loadAnnouncements())
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false)
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false)
@@ -1063,8 +1102,8 @@ function TeacherDashboard() {
           <div className="role-section-head role-admin-communications-head">
             <h3 className="role-section-title">Notifications</h3>
             <button type="button" className="role-primary-btn teacher-announcement-btn" onClick={handleOpenAnnouncementModal}>
-              <MessageSquare size={16} />
-              New Notification
+      
+              +
             </button>
           </div>
 
@@ -1234,7 +1273,7 @@ function TeacherDashboard() {
                   <th>Classes</th>
                   <th>Sections</th>
                   <th>Subject</th>
-                  <th>Date</th>
+                  <th>Published Date</th>
                   <th>Status</th>
                   <th>Standards</th>
                   <th>Actions</th>
@@ -1251,34 +1290,76 @@ function TeacherDashboard() {
                       <td>{item.subject}</td>
                       <td>{item.date}</td>
                       <td>
-                        <span className={`role-status-badge ${item.status === 'Draft' ? 'status-draft' : 'status-active'}`}>
-                          {item.status.toLowerCase()}
+                        <span className="lesson-status-text" style={{ color: getLessonStatusColor(item.status) }}>
+                          {item.status}
                         </span>
                       </td>
                       <td>{item.standards}</td>
                       <td className="teacher-lesson-table-actions">
-                        <button type="button" className="role-secondary-btn" onClick={() => openEditLessonPlanModal(item)}>
-                          Edit
+                        <button
+                          type="button"
+                          className="role-icon-square-btn"
+                          onClick={() => openEditLessonPlanModal(item)}
+                          title="Edit lesson plan"
+                          aria-label={`Edit lesson plan ${item.title}`}
+                        >
+                          <Pencil size={16} />
                         </button>
-                        <button type="button" className="role-secondary-btn" onClick={() => setSelectedLessonId(item.id)}>
-                          View
+                        <button
+                          type="button"
+                          className="role-icon-square-btn"
+                          onClick={() => setSelectedLessonId(item.id)}
+                          title="View lesson plan"
+                          aria-label={`View lesson plan ${item.title}`}
+                        >
+                          <Eye size={16} />
                         </button>
-                        <button type="button" className="role-secondary-btn" onClick={() => duplicateLessonPlan(item)}>
-                          Duplicate
+                        <button
+                          type="button"
+                          className="role-icon-square-btn"
+                          onClick={() => duplicateLessonPlan(item)}
+                          title="Duplicate lesson plan"
+                          aria-label={`Duplicate lesson plan ${item.title}`}
+                        >
+                          <Copy size={16} />
                         </button>
-                        <button type="button" className="role-secondary-btn" onClick={() => printLessonPlan(item)}>
-                          Print
+                        <button
+                          type="button"
+                          className="role-icon-square-btn"
+                          onClick={() => printLessonPlan(item)}
+                          title="Print lesson plan"
+                          aria-label={`Print lesson plan ${item.title}`}
+                        >
+                          <Printer size={16} />
                         </button>
-                        <button type="button" className="role-secondary-btn" onClick={() => downloadLessonPlan(item)}>
-                          Download
+                        <button
+                          type="button"
+                          className="role-icon-square-btn"
+                          onClick={() => downloadLessonPlan(item)}
+                          title="Download lesson plan"
+                          aria-label={`Download lesson plan ${item.title}`}
+                        >
+                          <Download size={16} />
                         </button>
                         {item.createdBy === 'external' && item.assignedApprover === teacherName ? (
-                          <button type="button" className="role-secondary-btn role-primary-btn" onClick={() => approveLessonPlan(item.id)}>
-                            Approve
+                          <button
+                            type="button"
+                            className="role-icon-square-btn"
+                            onClick={() => approveLessonPlan(item.id)}
+                            title="Approve lesson plan"
+                            aria-label={`Approve lesson plan ${item.title}`}
+                          >
+                            <CheckCircle size={16} />
                           </button>
                         ) : null}
-                        <button type="button" className="role-secondary-btn role-icon-square-btn-danger" onClick={() => deleteLessonPlan(item.id)}>
-                          Delete
+                        <button
+                          type="button"
+                          className="role-icon-square-btn role-icon-square-btn-danger"
+                          onClick={() => deleteLessonPlan(item.id)}
+                          title="Delete lesson plan"
+                          aria-label={`Delete lesson plan ${item.title}`}
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -1347,18 +1428,42 @@ function TeacherDashboard() {
                 </div>
               ) : null}
               <div className="teacher-lesson-table-actions">
-                <button type="button" className="role-secondary-btn" onClick={() => openEditLessonPlanModal(selectedPlan)}>
-                  Edit Selected Plan
+                <button
+                  type="button"
+                  className="role-icon-square-btn"
+                  onClick={() => openEditLessonPlanModal(selectedPlan)}
+                  title="Edit selected lesson plan"
+                  aria-label={`Edit selected lesson plan ${selectedPlan.title}`}
+                >
+                  <Pencil size={16} />
                 </button>
-                <button type="button" className="role-secondary-btn" onClick={() => printLessonPlan(selectedPlan)}>
-                  Print
+                <button
+                  type="button"
+                  className="role-icon-square-btn"
+                  onClick={() => printLessonPlan(selectedPlan)}
+                  title="Print selected lesson plan"
+                  aria-label={`Print selected lesson plan ${selectedPlan.title}`}
+                >
+                  <Printer size={16} />
                 </button>
-                <button type="button" className="role-secondary-btn" onClick={() => downloadLessonPlan(selectedPlan)}>
-                  Download
+                <button
+                  type="button"
+                  className="role-icon-square-btn"
+                  onClick={() => downloadLessonPlan(selectedPlan)}
+                  title="Download selected lesson plan"
+                  aria-label={`Download selected lesson plan ${selectedPlan.title}`}
+                >
+                  <Download size={16} />
                 </button>
                 {selectedPlan.createdBy === 'external' && selectedPlan.assignedApprover === teacherName ? (
-                  <button type="button" className="role-secondary-btn role-primary-btn" onClick={() => approveLessonPlan(selectedPlan.id)}>
-                    Approve
+                  <button
+                    type="button"
+                    className="role-icon-square-btn"
+                    onClick={() => approveLessonPlan(selectedPlan.id)}
+                    title="Approve selected lesson plan"
+                    aria-label={`Approve selected lesson plan ${selectedPlan.title}`}
+                  >
+                    <CheckCircle size={16} />
                   </button>
                 ) : null}
               </div>
@@ -1554,7 +1659,7 @@ function TeacherDashboard() {
       <section className="role-primary">
         <section className="role-section-head role-admin-page-head">
           <div>
-            <h2>Lab Activity Designer</h2>
+            <h2>Lab Activity Planning</h2>
             <p className="role-muted">Design engaging laboratory activities</p>
           </div>
           <button type="button" className="role-primary-btn">
@@ -1835,16 +1940,20 @@ function TeacherDashboard() {
     </main>
   )
 
+  const renderCommunications = () => <CommunicationsHub role="teacher" />
+
   let content = renderHome()
 
   if (activeTab === 'Lesson Planning') {
     content = renderLessonPlanning()
-  } else if (activeTab === 'Lab Activity Designer') {
+  } else if (activeTab === 'Lab Activity Planning') {
     content = renderLabActivityDesigner()
   } else if (activeTab === 'Assignments') {
     content = renderAssignments()
   } else if (activeTab === 'Grades') {
     content = renderGrades()
+  } else if (activeTab === 'Communications') {
+    content = renderCommunications()
   } else if (activeTab === 'Content Library') {
     content = renderContentUpload()
   } else if (activeTab === 'Reports') {
@@ -2102,7 +2211,10 @@ function TeacherDashboard() {
         selectedMessageId={selectedMessageId}
         onClose={() => setIsMessagesOpen(false)}
         onSelect={setSelectedMessageId}
+        onPrev={goToPreviousMessage}
+        onNext={goToNextMessage}
       />
+      <AIChat role="teacher" />
     </div>
   )
 }

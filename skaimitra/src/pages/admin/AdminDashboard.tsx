@@ -23,6 +23,8 @@ import {
   Users,
   X,
 } from 'lucide-react'
+import AIChat from '../../components/dashboard/AIChat'
+import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
 import {
   askAssistant,
   createCalendarEvent,
@@ -41,7 +43,6 @@ import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
 import MessageCenter from '../../components/dashboard/MessageCenter'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import {
-  classAttendanceData,
   createFallbackCalendarEvent,
   deleteFallbackCalendarEvent,
   formatAudienceIds,
@@ -84,7 +85,7 @@ const navTabs = [
 const statCards = [
   { title: 'Total Students', value: '0', change: 'Live', icon: Users, iconClass: 'role-stat-icon-1' },
   { title: 'Total Teachers', value: '0', change: 'Live', icon: UserCheck, iconClass: 'role-stat-icon-2' },
-  { title: 'Learning Modules', value: '156', change: '+8%', icon: BookOpen, iconClass: 'role-stat-icon-3' },
+  { title: 'Courses', value: '156', change: '+8%', icon: BookOpen, iconClass: 'role-stat-icon-3' },
   { title: 'Avg. Performance', value: '78.5%', change: '+3.2%', icon: BarChart3, iconClass: 'role-stat-icon-4' },
 ]
 
@@ -93,12 +94,6 @@ const quickActions = [
   { title: 'Role Permissions', desc: 'Manage user roles and access', icon: Settings },
   { title: 'Course Management', desc: 'Create and manage courses', icon: BookOpen },
   { title: 'View Reports', desc: 'Access analytics and insights', icon: BarChart3 },
-]
-
-const performanceData = [
-  { name: 'Class 6', score: 72 },
-  { name: 'Class 7', score: 68 },
-  { name: 'Class 8', score: 75 },
 ]
 
 const teacherOverview = [
@@ -159,7 +154,6 @@ function AdminDashboard() {
   const [studentSearchTerm, setStudentSearchTerm] = useState('')
   const [courseSearchTerm, setCourseSearchTerm] = useState('')
   const [reportSearchTerm, setReportSearchTerm] = useState('')
-  const [communicationSearchTerm, setCommunicationSearchTerm] = useState('')
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [settingsSearchTerm, setSettingsSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<'All' | Role>('All')
@@ -270,6 +264,37 @@ function AdminDashboard() {
     return { totalUsers, students, teachers, activeUsers }
   }, [users])
 
+  const classPerformanceData = useMemo(() => {
+    const rawByClass = new Map<string, number[]>()
+
+    const add = (className: string, score: number) => {
+      const key = className.trim()
+      if (!rawByClass.has(key)) rawByClass.set(key, [])
+      rawByClass.get(key)?.push(score)
+    }
+
+    studentOverview.forEach((student) => {
+      const score = Number(String(student.performance).replace('%', ''))
+      if (!Number.isNaN(score)) add(student.className, score)
+    })
+
+    users.forEach((user) => {
+      if (user.role === 'student' && user.classSubject.startsWith('Class')) {
+        const userPerf = studentOverview.find((item) => item.name === user.name && item.className === user.classSubject)
+        if (userPerf) {
+          const score = Number(String(userPerf.performance).replace('%', ''))
+          if (!Number.isNaN(score)) add(user.classSubject, score)
+        }
+      }
+    })
+
+    return gradeOptions.map((className) => {
+      const scores = rawByClass.get(className) || []
+      const avg = scores.length ? scores.reduce((sum, current) => sum + current, 0) / scores.length : 0
+      return { className, score: Number(avg.toFixed(1)) }
+    })
+  }, [users])
+
   const filteredUsers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
@@ -376,24 +401,6 @@ function AdminDashboard() {
       (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime(),
     )
   }, [announcements, calendarEvents])
-
-  const filteredCommunicationItems = useMemo(
-    () =>
-      communicationItems.filter((item) => {
-        const query = communicationSearchTerm.trim().toLowerCase()
-        if (!query) return true
-
-        return (
-          includesSearch(item.id, query) ||
-          includesSearch(item.title, query) ||
-          includesSearch(item.description, query) ||
-          includesSearch(item.date, query) ||
-          includesSearch(item.audience, query) ||
-          includesSearch(item.source, query)
-        )
-      }),
-    [communicationItems, communicationSearchTerm],
-  )
 
   const filteredResourceItems = useMemo(
     () =>
@@ -619,24 +626,6 @@ function AdminDashboard() {
     setEditingEventId(null)
   }
 
-  const handleOpenNewAnnouncement = () => {
-    resetAnnouncementForm()
-    setIsAnnouncementOpen(true)
-    setUiNotice(null)
-  }
-
-  const handleEditAnnouncement = (announcement: DashboardAnnouncement) => {
-    setEditingAnnouncementId(announcement.id)
-    setAnnouncementForm({
-      title: announcement.title,
-      date: announcement.date,
-      audienceIds: announcement.audienceIds,
-      message: announcement.message,
-      expiresAt: announcement.expiresAt,
-    })
-    setIsAnnouncementOpen(true)
-  }
-
   const handleSaveAnnouncement = () => {
     if (
       !announcementForm.title.trim() ||
@@ -683,12 +672,6 @@ function AdminDashboard() {
       type: 'success',
       message: editingAnnouncementId ? 'Announcement updated successfully.' : 'Announcement posted successfully.',
     })
-  }
-
-  const handleDeleteAnnouncement = (id: number) => {
-    const nextAnnouncements = announcements.filter((item) => item.id !== id)
-    setAnnouncements(nextAnnouncements)
-    saveAnnouncements(nextAnnouncements)
   }
 
   const markMessagesSeen = useCallback((messageIds: string[]) => {
@@ -919,16 +902,16 @@ function AdminDashboard() {
         </section>
 
         <section className="role-card">
-          <h3 className="role-section-title">Average Performance by Class</h3>
-          <p className="role-muted">Overall student performance metrics</p>
-          <div className="role-vertical-chart">
-            {performanceData.map((item) => (
-              <div key={item.name} className="role-vbar-item">
+          <h3 className="role-section-title">Class Performance Overview</h3>
+          <p className="role-muted">Average performance metrics for Class 6 to Class 12</p>
+          <div className="role-vertical-chart role-vertical-chart-admin">
+            {classPerformanceData.map((item) => (
+              <div key={item.className} className="role-vbar-item">
                 <div className="role-vbar-track">
                   <div className="role-vbar-fill" style={{ height: `${item.score}%` }} />
                 </div>
                 <strong>{item.score}%</strong>
-                <span>{item.name}</span>
+                <span>{item.className}</span>
               </div>
             ))}
           </div>
@@ -936,29 +919,10 @@ function AdminDashboard() {
       </section>
 
       <aside className="role-secondary">
-        <section className="role-card">
-          <h3 className="role-section-title">Attendance Module</h3>
-          <p className="role-muted">Attendance overview for classes 6 to 12</p>
-          <div className="role-attendance-grid">
-            {classAttendanceData.map((item) => (
-              <div key={item.className} className="role-attendance-card">
-                <div className="role-attendance-copy">
-                  <strong>{item.className}</strong>
-                  <span>{item.attendance}% present</span>
-                </div>
-                <div className="role-attendance-track">
-                  <div className="role-attendance-fill" style={{ width: `${item.attendance}%` }} />
-                </div>
-                <p className="role-attendance-note">{item.attendance >= 92 ? 'Healthy attendance trend' : 'Needs closer follow-up'}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
         <RoleCalendar
           title="School Calendar"
           events={calendarEvents}
-          addButtonLabel="Add Event"
+          addButtonLabel="+"
           onAddEvent={handleOpenEventModal}
           onEditEvent={handleEditEvent}
           onDeleteEvent={handleDeleteEvent}
@@ -1313,97 +1277,7 @@ function AdminDashboard() {
     </main>
   )
 
-  const renderCommunicationsTab = () => (
-    <main className="role-main role-main-detail">
-      <section className="role-primary">
-        <section className="role-section-head role-admin-page-head">
-          <div>
-            <h2>Communications</h2>
-            <p className="role-muted">Manage announcements and system messages</p>
-          </div>
-        </section>
-
-        <section className="role-card role-admin-communications-card">
-          <div className="role-section-head role-admin-communications-head">
-            <h3 className="role-section-title">Recent Announcements</h3>
-            <div className="role-admin-communications-actions">
-              <div className="role-user-search-wrap role-user-search-inline">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Search communications by title, audience, date, or ID..."
-                  value={communicationSearchTerm}
-                  onChange={(e) => setCommunicationSearchTerm(e.target.value)}
-                />
-              </div>
-              <button type="button" className="role-primary-btn" onClick={handleOpenNewAnnouncement}>
-                New Announcement
-              </button>
-            </div>
-          </div>
-
-          <div className="role-admin-announcement-list">
-            {filteredCommunicationItems.length ? (
-              filteredCommunicationItems.map((item) => (
-              <article key={item.id} className="role-admin-announcement-row">
-                <div className="role-admin-announcement-copy">
-                  <h4>{item.title}</h4>
-                  <p className="role-muted">
-                    {item.source === 'announcement'
-                      ? `${item.date} - ${item.audience} - Expires ${item.relatedAnnouncement?.expiresAt || 'N/A'}`
-                      : `${item.date}${item.relatedEvent?.time ? ` - ${item.relatedEvent.time}` : ''} - ${item.audience}`}
-                  </p>
-                  <p className="role-muted">{item.description}</p>
-                </div>
-                {item.source === 'announcement' && item.relatedAnnouncement ? (
-                  <div className="role-admin-announcement-actions">
-                    <button
-                      type="button"
-                      className="role-icon-square-btn"
-                      aria-label={`Edit ${item.title}`}
-                      onClick={() => handleEditAnnouncement(item.relatedAnnouncement)}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="role-icon-square-btn role-icon-square-btn-danger"
-                      aria-label={`Delete ${item.title}`}
-                      onClick={() => handleDeleteAnnouncement(item.relatedAnnouncement.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ) : item.source === 'event' && item.relatedEvent ? (
-                  <div className="role-admin-announcement-actions">
-                    <button
-                      type="button"
-                      className="role-icon-square-btn"
-                      aria-label={`Edit ${item.title}`}
-                      onClick={() => handleEditEvent(item.relatedEvent)}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="role-icon-square-btn role-icon-square-btn-danger"
-                      aria-label={`Delete ${item.title}`}
-                      onClick={() => void handleDeleteEvent(item.relatedEvent)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ) : null}
-              </article>
-              ))
-            ) : (
-              <p className="role-muted">No communications match your search.</p>
-            )}
-          </div>
-        </section>
-      </section>
-    </main>
-  )
+  const renderCommunicationsTab = () => <CommunicationsHub role="admin" />
 
   const renderTabContent = () => {
     if (activeTab === 'Home') return renderDashboardHome()
@@ -1923,7 +1797,7 @@ function AdminDashboard() {
 
               <div className="role-modal-actions">
                 <button type="button" className="primary" onClick={handleSaveEvent}>
-                  {editingEventId ? 'Save Event' : 'Add Event'}
+                  {editingEventId ? 'Save Event' : '+'}
                 </button>
                 <button
                   type="button"
@@ -1947,6 +1821,7 @@ function AdminDashboard() {
         onClose={handleCloseNotifications}
         onSelect={handleSelectNotification}
       />
+      <AIChat role="admin" />
     </div>
   )
 }

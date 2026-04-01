@@ -86,7 +86,13 @@ function RoleCalendar({
   const [isEventsOpen, setIsEventsOpen] = useState(false)
 
   const today = new Date()
+  const todayKey = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate())
   const isCurrentMonth = today.getMonth() === calendarDate.month && today.getFullYear() === calendarDate.year
+
+  const navigateToToday = () => {
+    setCalendarDate({ month: today.getMonth(), year: today.getFullYear() })
+    setSelectedDateKey(todayKey)
+  }
   const calendarCells = useMemo(
     () => getCalendarCells(calendarDate.year, calendarDate.month),
     [calendarDate.year, calendarDate.month],
@@ -119,11 +125,16 @@ function RoleCalendar({
       <section className="role-card role-calendar-card">
         <div className="role-section-head role-calendar-title-row">
           <h3 className="role-section-title">{title}</h3>
-          {onAddEvent && addButtonLabel ? (
-            <button type="button" className="role-primary-btn role-calendar-add-btn" onClick={onAddEvent}>
-              {addButtonLabel}
+          <div className="role-calendar-action-group">
+            <button type="button" className="role-secondary-btn role-calendar-today-btn" onClick={navigateToToday} aria-label="Go to today">
+              Today
             </button>
-          ) : null}
+            {onAddEvent && addButtonLabel ? (
+              <button type="button" className="role-primary-btn role-calendar-add-btn" onClick={onAddEvent} aria-label="Add event">
+                {addButtonLabel}
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="role-calendar-head">
@@ -177,10 +188,10 @@ function RoleCalendar({
                 key={dateKey}
                 type="button"
                 className={`role-calendar-event-cell ${isToday ? 'is-today' : ''} ${hasEvents ? 'has-events' : ''} ${
-                  dayEvents.length > 1 ? 'has-multiple' : ''
-                }`}
-                onClick={() => hasEvents && setSelectedDateKey(dateKey)}
-                title={hasEvents ? dayEvents.map((event) => event.title).join(', ') : ''}
+                  selectedDateKey === dateKey ? 'is-selected' : ''
+                } ${dayEvents.length > 1 ? 'has-multiple' : ''}`}
+                onClick={() => setSelectedDateKey(dateKey)}
+                title={hasEvents ? dayEvents.map((event) => event.title).join(', ') : 'No events for this date'}
               >
                 <span
                   className={`role-calendar-date-number ${hasEvents ? 'is-event-date' : ''} ${

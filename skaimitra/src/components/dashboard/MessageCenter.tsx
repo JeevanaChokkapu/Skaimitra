@@ -6,6 +6,8 @@ type MessageCenterProps = {
   selectedMessageId: string | null
   onClose: () => void
   onSelect: (messageId: string) => void
+  onPrev?: () => void
+  onNext?: () => void
 }
 
 function MessageCenter({
@@ -14,11 +16,17 @@ function MessageCenter({
   selectedMessageId,
   onClose,
   onSelect,
+  onPrev,
+  onNext,
 }: MessageCenterProps) {
   if (!isOpen) return null
 
   const selectedMessage =
     messages.find((message) => message.id === selectedMessageId) ?? messages[0] ?? null
+
+  const selectedMessageIndex = selectedMessage ? messages.findIndex((message) => message.id === selectedMessage.id) : -1
+  const hasPrev = selectedMessageIndex > 0
+  const hasNext = selectedMessageIndex >= 0 && selectedMessageIndex < messages.length - 1
 
   return (
     <div className="role-modal-backdrop" role="presentation" onClick={onClose}>
@@ -53,6 +61,18 @@ function MessageCenter({
           <div className="role-message-detail">
             {selectedMessage ? (
               <>
+                <div className="role-message-detail-nav">
+                  {hasPrev && (
+                    <button type="button" onClick={onPrev} aria-label="Previous message">
+                      &lt;
+                    </button>
+                  )}
+                  {hasNext && (
+                    <button type="button" onClick={onNext} aria-label="Next message">
+                      &gt;
+                    </button>
+                  )}
+                </div>
                 <h3>{selectedMessage.title}</h3>
                 <p className="role-muted">{`${selectedMessage.date} • ${selectedMessage.audience}`}</p>
                 <div className="role-message-body">{selectedMessage.description}</div>
