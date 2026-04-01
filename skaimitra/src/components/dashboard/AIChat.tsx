@@ -79,7 +79,12 @@ const AIChat: React.FC<AIChatProps> = ({ role }) => {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, prompt: userText, history: messages.map((item) => ({ role: item.role, content: item.text })) }),
+        body: JSON.stringify({
+          role,
+          prompt: userText,
+          context: roleSystemPrompt[role],
+          history: messages.map((item) => ({ role: item.role, content: item.text })),
+        }),
       })
 
       if (!response.ok) {
