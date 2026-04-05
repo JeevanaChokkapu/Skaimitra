@@ -20,7 +20,6 @@ import {
   Download,
   CheckCircle,
   Search,
-  Send,
   Settings,
   Trash2,
   Upload,
@@ -28,14 +27,27 @@ import {
   X,
 } from 'lucide-react'
 import {
-  askAssistant,
+  Bar,
+  BarChart as RechartsBarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import {
   createCalendarEvent,
   deleteCalendarEvent,
   fetchCalendarEvents,
+  fetchLessonPlans,
   updateCalendarEvent,
   type CalendarEventRecord,
 } from '../../lib/api'
 import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
+import ActionIconButton from '../../components/dashboard/ActionIconButton'
 import AIChat from '../../components/dashboard/AIChat'
 import MessageCenter from '../../components/dashboard/MessageCenter'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
@@ -58,8 +70,8 @@ import '../role-dashboard.css'
 
 type TeacherTab =
   | 'Home'
+
   | 'Lesson Planning'
-  | 'Lab Activity Planning'
   | 'Assignments'
   | 'Grades'
   | 'Communications'
@@ -75,10 +87,203 @@ type TeacherAnnouncement = {
   expiresAt: string
 }
 
+type LessonPlanSource = 'Custom' | 'External' | 'AI'
+
+type LessonPlanStatus = 'Draft' | 'Active' | 'Inactive' | 'Deleted'
+
+type LessonPlanAsset = {
+  id: string
+  name: string
+  type: string
+  url: string
+  size?: number
+}
+
+type LessonPlanCreator = 'internal' | 'external' | 'ai'
+
+type LessonPlan = {
+  id: number
+  title: string
+  course: string
+  module: string
+  className: string
+  classNames?: string[]
+  classSections?: string[]
+  grade: string
+  subject: string
+  type: 'Lesson' | 'Project' | 'Discussion' | 'Custom'
+  status: LessonPlanStatus
+  description: string
+  complianceCode: string
+  standards: string
+  objectives: string
+  materials: string
+  activities: string
+  assessment: string
+  source: LessonPlanSource
+  createdBy: LessonPlanCreator
+  assignedApprover?: string
+  date: string
+  author?: string
+  createdAt?: string
+  updatedAt?: string
+  publishedAt?: string
+  externalUrl?: string
+  aiPrompt?: string
+  shareScope?: 'Private' | 'Global' | 'Selected Users'
+  sharedWith?: string[]
+  assets?: LessonPlanAsset[]
+}
+
+type PlannerWorkspaceTab = 'lesson' | 'lab'
+
+type PlannerView = 'summary' | 'builder'
+
+type ShareVisibility = 'private' | 'global' | 'users'
+
+type LabActivity = {
+  id: number
+  title: string
+  course: string
+  module: string
+  grade: string
+  type: 'Experiment' | 'Demonstration' | 'Observation'
+  status: LessonPlanStatus
+  description: string
+  objective: string
+  materials: string
+  procedureSteps: string[]
+  observations: string
+  result: string
+  source: LessonPlanSource
+  complianceCode: string
+  scheduleDate: string
+  date: string
+  author?: string
+  createdBy: LessonPlanCreator
+  createdAt?: string
+  updatedAt?: string
+  publishedAt?: string
+  externalUrl?: string
+  aiPrompt?: string
+  shareScope?: 'Private' | 'Global' | 'Selected Users'
+  sharedWith?: string[]
+  assets?: LessonPlanAsset[]
+}
+
+type LessonPlanFormState = {
+  course: string
+  module: string
+  grade: string
+  type: LessonPlan['type']
+  status: LessonPlanStatus
+  title: string
+  description: string
+  scheduleDate: string
+  complianceCode: string
+  source: LessonPlanSource
+  className: string
+  objectives: string
+  materials: string
+  activities: string
+  assessment: string
+  externalUrl: string
+  aiTopic: string
+  aiObjective: string
+  aiPrompt: string
+  assets: LessonPlanAsset[]
+  shareEnabled: boolean
+  shareScope: ShareVisibility
+  shareUsers: string
+}
+
+type LabActivityFormState = {
+  course: string
+  module: string
+  grade: string
+  type: LabActivity['type']
+  status: LessonPlanStatus
+  title: string
+  description: string
+  scheduleDate: string
+  complianceCode: string
+  source: LessonPlanSource
+  objective: string
+  materials: string
+  procedureSteps: string[]
+  observations: string
+  result: string
+  externalUrl: string
+  aiPrompt: string
+  assets: LessonPlanAsset[]
+  shareEnabled: boolean
+  shareScope: ShareVisibility
+  shareUsers: string
+}
+
+type AssignmentType = 'Quiz' | 'Paper' | 'Homework' | 'Project'
+
+type AssignmentRecord = {
+  id: number
+  assignmentName: string
+  className: string
+  section: string
+  assignmentType: AssignmentType
+  assignmentDue: string
+  subject: string
+  date: string
+  status: LessonPlanStatus
+  source: LessonPlanSource
+  description: string
+  instructions: string
+  rubric: string
+  externalUrl?: string
+  aiPrompt?: string
+  assets: LessonPlanAsset[]
+}
+
+type AssignmentFormState = {
+  assignmentName: string
+  className: string
+  section: string
+  assignmentType: AssignmentType
+  assignmentDue: string
+  subject: string
+  date: string
+  status: LessonPlanStatus
+  source: LessonPlanSource
+  description: string
+  instructions: string
+  rubric: string
+  externalUrl: string
+  aiPrompt: string
+  assets: LessonPlanAsset[]
+}
+
+type SubmissionRecord = {
+  id: number
+  studentName: string
+  className: string
+  section: string
+  assignmentName: string
+  assignmentType: string
+  subject: string
+  submittedOn: string
+  status: 'Submitted' | 'Reviewed'
+  score: string
+}
+
+type GradeEvaluationForm = {
+  score: string
+  feedback: string
+  strengths: string
+  improvements: string
+  rubricNotes: string
+}
+
 const navTabs: Array<{ label: TeacherTab; icon: typeof Home }> = [
   { label: 'Home', icon: Home },
-  { label: 'Lesson Planning', icon: BookOpen },
-  { label: 'Lab Activity Planning', icon: FlaskConical },
+  { label: 'Lesson Planning', icon: FlaskConical },
   { label: 'Assignments', icon: ClipboardList },
   { label: 'Grades', icon: PenLine },
   { label: 'Communications', icon: MessageSquare },
@@ -87,20 +292,33 @@ const navTabs: Array<{ label: TeacherTab; icon: typeof Home }> = [
   { label: 'Resources', icon: FolderOpen },
 ]
 
-// Data needed for Reports tab (student performance details)
-const submissionData = [
-  { name: 'Class 6', onTime: 80, late: 10, missing: 10 },
-  { name: 'Class 7', onTime: 70, late: 15, missing: 15 },
-  { name: 'Class 8', onTime: 85, late: 8, missing: 7 },
+const analyticsSummaryCards = [
+  { label: 'Total Students', value: '145', icon: Users, note: 'Across 4 active classes' },
+  { label: 'Average Score', value: '81%', icon: GraduationCap, note: 'Steady month-over-month growth' },
+  { label: 'Assignments Completed', value: '126', icon: ClipboardList, note: '92% completion this month' },
+  { label: 'Pending Tasks', value: '18', icon: PenLine, note: 'Needs teacher follow-up' },
+  { label: 'Overall Performance', value: '87%', icon: BarChart, note: 'Up 5% since January' },
 ]
 
-const performanceTrend = [
-  { week: 'Week 1', score: 72 },
-  { week: 'Week 2', score: 75 },
-  { week: 'Week 3', score: 68 },
-  { week: 'Week 4', score: 78 },
-  { week: 'Week 5', score: 76 },
-  { week: 'Week 6', score: 80 },
+const analyticsTrendData = [
+  { month: 'Jan', averageScore: 74, submissionRate: 79, completionRate: 76 },
+  { month: 'Feb', averageScore: 76, submissionRate: 82, completionRate: 80 },
+  { month: 'Mar', averageScore: 79, submissionRate: 84, completionRate: 83 },
+  { month: 'Apr', averageScore: 81, submissionRate: 88, completionRate: 86 },
+  { month: 'May', averageScore: 84, submissionRate: 90, completionRate: 88 },
+  { month: 'Jun', averageScore: 87, submissionRate: 92, completionRate: 91 },
+]
+
+const classPerformanceData = [
+  { className: 'Class 6', avgScore: 76, submissionRate: 72, completionRate: 74, pendingTasks: 9, topStrength: 'Concept retention' },
+  { className: 'Class 7', avgScore: 89, submissionRate: 94, completionRate: 91, pendingTasks: 4, topStrength: 'Consistent submissions' },
+  { className: 'Class 8', avgScore: 83, submissionRate: 86, completionRate: 88, pendingTasks: 5, topStrength: 'Strong project work' },
+]
+
+const analyticsInsights = [
+  'Class 7 has highest performance across score, submission, and completion metrics.',
+  'Class 6 needs improvement in assignment submissions and pending task closure.',
+  'Overall performance increased by 5% over the last six months.',
 ]
 
 const statCards = [
@@ -120,165 +338,250 @@ const recentActivity = [
   { title: 'Assignment graded', desc: 'Completed grading for 5 students', time: '4 hours ago' },
 ]
 
-type LessonPlanStatus = 'Draft' | 'Active' | 'Inactive' | 'Deleted'
-
-type LessonPlanCreator = 'teacher' | 'external'
-
-type LessonPlanSource = 'Custom' | 'External' | 'AI'
-
-type LessonPlanAsset = {
-  id: string
-  name: string
-  size: number
-  uploadedAt: string
-}
-
-type LessonPlan = {
-  id: number
-  course: string
-  module: string
-  source: LessonPlanSource
-  externalUrl?: string
-  aiPrompt?: string
-  assets: LessonPlanAsset[]
-  shareOption: 'None' | 'Global' | 'Users'
-  sharedWithUserEmails: string[]
-  className: string
-  classNames: string[]
-  classSections: string[]
-  grade: string
-  title: string
-  subject: string
-  date: string
-  status: LessonPlanStatus
-  type: 'Lesson' | 'Project' | 'Discussion' | 'Custom'
-  complianceCode: string
-  objectives: string
-  materials: string
-  activities: string
-  assessment: string
-  standards: string
-  author: string
-  createdBy: LessonPlanCreator
-  assignedApprover?: string
-  createdAt: string
-  updatedAt: string
-  publishedAt?: string
-}
-
-const initialLessonPlans: LessonPlan[] = [
+const initialLabActivities: LabActivity[] = [
   {
     id: 1,
-    course: 'Mathematics',
-    module: 'Algebra',
-    className: 'Class 6',
-    classNames: ['Class 6'],
-    classSections: ['A'],
-    grade: 'Grade 6',
-    title: 'Introduction to Algebra',
-    subject: 'Mathematics',
-    date: '2026-02-18',
+    title: 'Chemistry Lab: Acid-Base Reactions',
+    course: 'Science',
+    module: 'Chemistry Fundamentals',
+    grade: '8',
+    type: 'Experiment',
     status: 'Active',
-    type: 'Lesson',
+    description: 'Investigate how acids and bases react using common indicators.',
+    objective: 'Help learners identify pH behavior and reaction outcomes.',
+    materials: 'Litmus paper, beakers, vinegar, baking soda',
+    procedureSteps: ['Review safety instructions', 'Mix solution samples', 'Record indicator changes'],
+    observations: 'Students observed immediate color changes.',
+    result: 'Learners successfully classified acids and bases.',
     source: 'Custom',
-    externalUrl: '',
-    aiPrompt: '',
-    complianceCode: 'CBSE901A',
-    objectives: 'Understand variables, expressions, and solving basic equations.',
+    complianceCode: 'SCI-LAB-104',
+    scheduleDate: '2026-04-15',
+    date: '2026-03-25',
+    author: 'Skaimitra Science Team',
+    createdBy: 'internal',
+    createdAt: '2026-03-25',
+    updatedAt: '2026-03-27',
+    shareScope: 'Global',
+    sharedWith: ['All science teachers'],
     assets: [],
-    shareOption: 'None',
-    sharedWithUserEmails: [],
-    materials: 'Textbook, whiteboard, markers, practice worksheet.',
-    activities: 'Warm-up quiz, guided practice, independent practice, peer review.',
-    assessment: 'Exit ticket quiz + homework problems.',
-    standards: 'CBSE Math 6.1, 6.2, 6.3',
-    author: 'Mr. Sharma',
-    createdBy: 'teacher',
-    assignedApprover: 'Mrs. Agarwal',
-    createdAt: '2026-02-15T10:00:00Z',
-    updatedAt: '2026-02-18T09:00:00Z',
-    publishedAt: '2026-02-18T09:15:00Z',
   },
   {
     id: 2,
+    title: 'Physics Lab: Simple Pendulum',
     course: 'Science',
-    module: 'Biology',
-    className: 'Class 7',
-    classNames: ['Class 7'],
-    classSections: ['B'],
-    grade: 'Grade 7',
-    title: 'Photosynthesis Process',
-    subject: 'Science',
-    date: '2026-02-19',
+    module: 'Motion and Measurement',
+    grade: '7',
+    type: 'Demonstration',
     status: 'Draft',
-    type: 'Lesson',
+    description: 'Measure time period variation using different string lengths.',
+    objective: 'Connect pendulum length with oscillation time.',
+    materials: 'Thread, bob, timer, measuring tape',
+    procedureSteps: ['Set three pendulum lengths', 'Time 10 oscillations', 'Compare findings'],
+    observations: 'Longer strings increased the time period.',
+    result: 'Students linked pattern recognition to practical observation.',
     source: 'External',
-    externalUrl: 'https://example.com/photosynthesis-plan',
-    aiPrompt: '',
-    complianceCode: 'CBSE417',
-    objectives: 'Explain the process of photosynthesis and identify reactants/products.',
-    assets: [],
-    shareOption: 'Users',
-    sharedWithUserEmails: ['student@school.edu'],
-    materials: 'Plant samples, sunlight, lab journal, videos.',
-    activities: 'Lab observation, group discussion, diagram labeling.',
-    assessment: 'Short quiz and lab report.',
-    standards: 'CBSE Science 7.4',
-    author: 'External Contributor',
+    complianceCode: 'PHY-LAB-212',
+    scheduleDate: '2026-04-21',
+    date: '2026-03-26',
+    author: 'External Curriculum Partner',
     createdBy: 'external',
-    assignedApprover: 'Mr. Sharma',
-    createdAt: '2026-02-17T14:00:00Z',
-    updatedAt: '2026-02-18T15:30:00Z',
+    createdAt: '2026-03-26',
+    updatedAt: '2026-03-28',
+    externalUrl: 'https://curriculum.example.com/pendulum-lab',
+    shareScope: 'Selected Users',
+    sharedWith: ['Rahul Sharma', 'Anita Rao'],
+    assets: [],
+  },
+]
+
+const lessonTypeOptions: LessonPlan['type'][] = ['Lesson', 'Project', 'Discussion']
+const lessonStatusOptions: LessonPlanStatus[] = ['Draft', 'Active', 'Inactive', 'Deleted']
+const labTypeOptions: LabActivity['type'][] = ['Experiment', 'Demonstration', 'Observation']
+
+const createEmptyLessonPlanForm = (): LessonPlanFormState => ({
+  course: '',
+  module: '',
+  grade: '',
+  type: 'Lesson',
+  status: 'Draft',
+  title: '',
+  description: '',
+  scheduleDate: '',
+  complianceCode: '',
+  source: 'Custom',
+  className: '',
+  objectives: '',
+  materials: '',
+  activities: '',
+  assessment: '',
+  externalUrl: '',
+  aiTopic: '',
+  aiObjective: '',
+  aiPrompt: '',
+  assets: [],
+  shareEnabled: false,
+  shareScope: 'private',
+  shareUsers: '',
+})
+
+const createEmptyLabActivityForm = (): LabActivityFormState => ({
+  course: '',
+  module: '',
+  grade: '',
+  type: 'Experiment',
+  status: 'Draft',
+  title: '',
+  description: '',
+  scheduleDate: '',
+  complianceCode: '',
+  source: 'Custom',
+  objective: '',
+  materials: '',
+  procedureSteps: [''],
+  observations: '',
+  result: '',
+  externalUrl: '',
+  aiPrompt: '',
+  assets: [],
+  shareEnabled: false,
+  shareScope: 'private',
+  shareUsers: '',
+})
+
+const assignmentTypeOptions: AssignmentType[] = ['Quiz', 'Paper', 'Homework', 'Project']
+
+const createEmptyAssignmentForm = (): AssignmentFormState => ({
+  assignmentName: '',
+  className: '',
+  section: '',
+  assignmentType: 'Quiz',
+  assignmentDue: '',
+  subject: '',
+  date: '',
+  status: 'Draft',
+  source: 'Custom',
+  description: '',
+  instructions: '',
+  rubric: '',
+  externalUrl: '',
+  aiPrompt: '',
+  assets: [],
+})
+
+const initialAssignments: AssignmentRecord[] = [
+  {
+    id: 1,
+    assignmentName: 'Algebra Quiz',
+    className: 'Class 6',
+    section: 'A',
+    assignmentType: 'Quiz',
+    assignmentDue: '2026-04-20',
+    subject: 'Mathematics',
+    date: '2026-04-12',
+    status: 'Active',
+    source: 'Custom',
+    description: 'Assess understanding of algebra basics and equations.',
+    instructions: 'Attempt all questions and submit within 30 minutes.',
+    rubric: 'Accuracy, steps shown, and completion.',
+    assets: [],
+  },
+  {
+    id: 2,
+    assignmentName: 'Science Research Paper',
+    className: 'Class 7',
+    section: 'B',
+    assignmentType: 'Paper',
+    assignmentDue: '2026-04-22',
+    subject: 'Science',
+    date: '2026-04-14',
+    status: 'Draft',
+    source: 'External',
+    description: 'Summarize a renewable energy topic using external references.',
+    instructions: 'Use the provided source link and cite two additional references.',
+    rubric: 'Research quality, structure, originality, and citation accuracy.',
+    externalUrl: 'https://curriculum.example.com/renewable-energy-paper',
+    assets: [],
   },
   {
     id: 3,
-    course: 'English',
-    module: 'Grammar',
-    className: 'Class 6',
-    classNames: ['Class 6'],
-    classSections: ['A'],
-    grade: 'Grade 6',
-    title: 'English Grammar Basics',
+    assignmentName: 'Essay Writing',
+    className: 'Class 8',
+    section: 'C',
+    assignmentType: 'Project',
+    assignmentDue: '2026-04-25',
     subject: 'English',
-    date: '2026-02-20',
+    date: '2026-04-16',
     status: 'Active',
-    type: 'Lesson',
     source: 'AI',
-    externalUrl: '',
-    aiPrompt: 'Generate a 45-minute grammar lesson plan for grade 6 focused on nouns, verbs, and adjectives.',
-    complianceCode: 'CBSE901B',
-    objectives: 'Identify nouns, verbs, adjectives, and build simple sentences.',
+    description: 'Create a persuasive essay on environmental responsibility.',
+    instructions: 'Prepare a first draft, peer review, and final submission.',
+    rubric: 'Clarity, grammar, evidence, and argument structure.',
+    aiPrompt: 'Create a persuasive writing assignment for grade 8 on environmental responsibility.',
     assets: [],
-    shareOption: 'Global',
-    sharedWithUserEmails: [],
-    materials: 'Worksheets, flashcards, projector.',
-    activities: 'Sentence construction game, group exercises, peer editing.',
-    assessment: 'Grammar worksheet and oral questioning.',
-    standards: 'CBSE English 6',
-    author: 'Ms. Khanna',
-    createdBy: 'teacher',
-    createdAt: '2026-02-18T08:00:00Z',
-    updatedAt: '2026-02-20T08:30:00Z',
-    publishedAt: '2026-02-20T09:00:00Z',
   },
 ]
 
-const labActivities = [
-  { id: 1, title: 'Chemistry Lab: Acid-Base Reactions', className: 'Class 8', duration: '45 min', status: 'Active' },
-  { id: 2, title: 'Physics Lab: Simple Pendulum', className: 'Class 7', duration: '60 min', status: 'Scheduled' },
-  { id: 3, title: 'Biology Lab: Cell Structure', className: 'Class 6', duration: '50 min', status: 'Completed' },
-]
-
-const assignments = [
-  { id: 1, title: 'Algebra Quiz', className: 'Class 6', dueDate: '20 Feb 2026', submissions: 35, total: 40 },
-  { id: 2, title: 'Science Project', className: 'Class 7', dueDate: '22 Feb 2026', submissions: 28, total: 38 },
-  { id: 3, title: 'Essay Writing', className: 'Class 8', dueDate: '25 Feb 2026', submissions: 30, total: 42 },
-]
-
-const gradeRows = [
-  { id: 1, name: 'Aarav Mehta', className: 'Class 6', math: 95, science: 92, english: 88, overall: 92 },
-  { id: 2, name: 'Diya Sharma', className: 'Class 7', math: 88, science: 90, english: 92, overall: 90 },
-  { id: 3, name: 'Rohan Verma', className: 'Class 8', math: 82, science: 85, english: 80, overall: 82 },
+const initialSubmittedAssignments: SubmissionRecord[] = [
+  {
+    id: 1,
+    studentName: 'Aarav Mehta',
+    className: 'Class 6',
+    section: 'A',
+    assignmentName: 'Algebra Quiz',
+    assignmentType: 'Quiz',
+    subject: 'Mathematics',
+    submittedOn: '2026-04-18',
+    status: 'Submitted',
+    score: 'Pending',
+  },
+  {
+    id: 2,
+    studentName: 'Ishita Rao',
+    className: 'Class 6',
+    section: 'B',
+    assignmentName: 'Fractions Worksheet',
+    assignmentType: 'Homework',
+    subject: 'Mathematics',
+    submittedOn: '2026-04-19',
+    status: 'Submitted',
+    score: 'Pending',
+  },
+  {
+    id: 3,
+    studentName: 'Diya Sharma',
+    className: 'Class 7',
+    section: 'B',
+    assignmentName: 'Science Research Paper',
+    assignmentType: 'Paper',
+    subject: 'Science',
+    submittedOn: '2026-04-20',
+    status: 'Reviewed',
+    score: '90%',
+  },
+  {
+    id: 4,
+    studentName: 'Karan Malhotra',
+    className: 'Class 7',
+    section: 'A',
+    assignmentName: 'Lab Observation Sheet',
+    assignmentType: 'Project',
+    subject: 'Science',
+    submittedOn: '2026-04-20',
+    status: 'Submitted',
+    score: 'Pending',
+  },
+  {
+    id: 5,
+    studentName: 'Rohan Verma',
+    className: 'Class 8',
+    section: 'C',
+    assignmentName: 'Essay Writing',
+    assignmentType: 'Project',
+    subject: 'English',
+    submittedOn: '2026-04-21',
+    status: 'Reviewed',
+    score: '82%',
+  },
 ]
 
 const uploads = [
@@ -287,26 +590,127 @@ const uploads = [
   { id: 3, title: 'Lecture Video.mp4', type: 'MP4', updated: '45.3 MB • Feb 13, 2026' },
 ]
 
+const createResourceThumbnail = (title: string, subtitle: string, bgStart: string, bgEnd: string, badge: string) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${bgStart}" />
+          <stop offset="100%" stop-color="${bgEnd}" />
+        </linearGradient>
+      </defs>
+      <rect width="760" height="360" rx="28" fill="url(#g)" />
+      <circle cx="644" cy="92" r="60" fill="rgba(255,255,255,0.16)" />
+      <circle cx="102" cy="286" r="78" fill="rgba(255,255,255,0.12)" />
+      <rect x="58" y="42" width="128" height="42" rx="21" fill="rgba(255,255,255,0.22)" />
+      <text x="122" y="69" text-anchor="middle" font-size="20" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">${badge}</text>
+      <text x="58" y="170" font-size="38" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">${title}</text>
+      <text x="58" y="214" font-size="20" font-family="Arial, sans-serif" fill="rgba(255,255,255,0.92)">${subtitle}</text>
+    </svg>
+  `)}`
+
 const resources = [
-  { id: 1, title: 'AI Lesson Plan Templates', type: 'Template Pack', audience: 'All Classes' },
-  { id: 2, title: 'Lab Safety Checklist', type: 'Guide', audience: 'Science Teachers' },
-  { id: 3, title: 'Assessment Rubrics', type: 'Rubric', audience: 'All Subjects' },
+  {
+    id: 1,
+    title: 'Canva for Education',
+    type: 'Creative Design',
+    audience: 'All Classes',
+    url: 'https://www.canva.com/education/',
+    image: createResourceThumbnail('Canva', 'Design posters, slides, and class visuals', '#06b6d4', '#2563eb', 'Design'),
+  },
+  {
+    id: 2,
+    title: 'National Geographic Kids',
+    type: 'Interactive Learning',
+    audience: 'Students',
+    url: 'https://kids.nationalgeographic.com/',
+    image: createResourceThumbnail('Nat Geo Kids', 'Explore animals, science, and world facts', '#f59e0b', '#f97316', 'Explore'),
+  },
+  {
+    id: 3,
+    title: 'Scratch',
+    type: 'Coding Playground',
+    audience: 'Students',
+    url: 'https://scratch.mit.edu/',
+    image: createResourceThumbnail('Scratch', 'Create games, stories, and code projects', '#f97316', '#ef4444', 'Code'),
+  },
+  {
+    id: 4,
+    title: 'Khan Academy',
+    type: 'Self-paced Practice',
+    audience: 'Students',
+    url: 'https://www.khanacademy.org/',
+    image: createResourceThumbnail('Khan Academy', 'Practice maths, science, and more', '#16a34a', '#0f766e', 'Learn'),
+  },
+  {
+    id: 5,
+    title: 'BBC Bitesize',
+    type: 'Revision Resource',
+    audience: 'Students',
+    url: 'https://www.bbc.co.uk/bitesize',
+    image: createResourceThumbnail('BBC Bitesize', 'Quick revision guides and study support', '#8b5cf6', '#7c3aed', 'Revise'),
+  },
 ]
 
-const getLessonStatusColor = (status: LessonPlanStatus | string) => {
-  switch (status) {
-    case 'Active':
-      return '#16a34a'
-    case 'Draft':
-      return '#0f172a'
-    case 'Incomplete':
-      return '#dc2626'
-    case 'Inactive':
-      return '#6b7280'
-    default:
-      return '#0f172a'
-  }
-}
+const initialLessonPlans: LessonPlan[] = [
+  {
+    id: 1,
+    title: 'Introduction to Algebra',
+    course: 'Mathematics',
+    module: 'Algebra Basics',
+    className: 'Class 6',
+    grade: '6',
+    subject: 'Mathematics',
+    type: 'Lesson',
+    status: 'Active',
+    description: 'Learn the basics of algebra including variables and expressions.',
+    complianceCode: 'MATH-ALG-001',
+    standards: 'NCERT Math 6',
+    objectives: 'Understand fundamental algebra concepts',
+    materials: 'Whiteboard, algebra worksheets',
+    activities: 'Problem-solving exercises',
+    assessment: 'Quiz and assignments',
+    source: 'Custom',
+    createdBy: 'internal',
+    date: '2026-02-20',
+    author: 'Skaimitra Mathematics Team',
+    createdAt: '2026-02-20',
+    updatedAt: '2026-03-29',
+    publishedAt: '2026-03-29',
+    shareScope: 'Global',
+    sharedWith: ['All mathematics teachers'],
+    assets: [],
+  },
+  {
+    id: 2,
+    title: 'Photosynthesis Process',
+    course: 'Science',
+    module: 'Biology',
+    className: 'Class 7',
+    grade: '7',
+    subject: 'Science',
+    type: 'Lesson',
+    status: 'Draft',
+    description: 'Explore the process of photosynthesis in plants.',
+    complianceCode: 'SCI-BIO-002',
+    standards: 'NCERT Science 7',
+    objectives: 'Understand photosynthesis mechanism',
+    materials: 'Lab equipment, plant samples',
+    activities: 'Experimental observation',
+    assessment: 'Lab report',
+    source: 'External',
+    createdBy: 'external',
+    date: '2026-02-21',
+    author: 'External Science Contributor',
+    createdAt: '2026-02-21',
+    updatedAt: '2026-03-26',
+    externalUrl: 'https://curriculum.example.com/photosynthesis-plan',
+    assignedApprover: 'Teacher',
+    shareScope: 'Selected Users',
+    sharedWith: ['Science Department'],
+    assets: [],
+  },
+]
 
 const includesSearch = (value: string | number | null | undefined, query: string) =>
   String(value ?? '')
@@ -317,50 +721,31 @@ function TeacherDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TeacherTab>('Home')
   const [homeSearchTerm, setHomeSearchTerm] = useState('')
-  const [lessonSearchTerm, setLessonSearchTerm] = useState('')
+  const [plannerTab, setPlannerTab] = useState<PlannerWorkspaceTab>('lesson')
+  const [plannerView, setPlannerView] = useState<PlannerView>('summary')
   const [labSearchTerm, setLabSearchTerm] = useState('')
   const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('')
+  const [assignmentBuilderMode, setAssignmentBuilderMode] = useState<LessonPlanSource>('Custom')
+  const [isAssignmentBuilderOpen, setIsAssignmentBuilderOpen] = useState(false)
+  const [editingAssignmentId, setEditingAssignmentId] = useState<number | null>(null)
   const [gradeSearchTerm, setGradeSearchTerm] = useState('')
+  const [gradeClassFilter, setGradeClassFilter] = useState('All Classes')
+  const [gradeSectionFilter, setGradeSectionFilter] = useState('All Sections')
+  const [gradeSubmissions, setGradeSubmissions] = useState<SubmissionRecord[]>(initialSubmittedAssignments)
+  const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRecord | null>(null)
+  const [isGradeEvaluatorOpen, setIsGradeEvaluatorOpen] = useState(false)
+  const [gradeMethod, setGradeMethod] = useState<'manual' | 'ai'>('manual')
+  const [gradeEvaluationForm, setGradeEvaluationForm] = useState<GradeEvaluationForm>({
+    score: '',
+    feedback: '',
+    strengths: '',
+    improvements: '',
+    rubricNotes: '',
+  })
   const [uploadSearchTerm, setUploadSearchTerm] = useState('')
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [teacherName, setTeacherName] = useState('Teacher')
-  const [lessonPlansState, setLessonPlansState] = useState<LessonPlan[]>(initialLessonPlans)
-  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(null)
-  const [isLessonPlanModalOpen, setIsLessonPlanModalOpen] = useState(false)
-  const [editingLessonPlanId, setEditingLessonPlanId] = useState<number | null>(null)
-  const [lessonPlanForm, setLessonPlanForm] = useState<LessonPlan>({
-    id: 0,
-    course: '',
-    module: '',
-    className: '',
-    classNames: [],
-    classSections: [],
-    grade: '',
-    title: '',
-    subject: '',
-    date: '',
-    status: 'Draft',
-    type: 'Lesson',
-    source: 'Custom',
-    externalUrl: '',
-    aiPrompt: '',
-    complianceCode: '',
-    objectives: '',
-    materials: '',
-    activities: '',
-    assessment: '',
-    standards: '',
-    assets: [],
-    shareOption: 'None',
-    sharedWithUserEmails: [],
-    author: 'Teacher',
-    createdBy: 'teacher',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  })
-  const [question, setQuestion] = useState('')
-  const [assistantReply, setAssistantReply] = useState('')
-  const [isAsking, setIsAsking] = useState(false)
+  const [selectedReportClass, setSelectedReportClass] = useState<(typeof classPerformanceData)[number] | null>(classPerformanceData[1])
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
@@ -401,6 +786,24 @@ function TeacherDashboard() {
     audienceIds: ['all-users'] as AudienceId[],
     eventType: 'Reminder',
   })
+
+  // Lesson Plan State
+  const [lessonPlansState, setLessonPlansState] = useState<LessonPlan[]>([])
+  const [assignmentRecords, setAssignmentRecords] = useState<AssignmentRecord[]>(initialAssignments)
+  const [labActivitiesState, setLabActivitiesState] = useState<LabActivity[]>(initialLabActivities)
+  const [editingLessonPlanId, setEditingLessonPlanId] = useState<number | null>(null)
+  const [editingLabActivityId, setEditingLabActivityId] = useState<number | null>(null)
+  const [lessonBuilderMode, setLessonBuilderMode] = useState<LessonPlanSource>('Custom')
+  const [labBuilderMode, setLabBuilderMode] = useState<LessonPlanSource>('Custom')
+  const [lessonSearchTerm, setLessonSearchTerm] = useState('')
+  const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null)
+  const [selectedLabActivity, setSelectedLabActivity] = useState<LabActivity | null>(null)
+  const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRecord | null>(initialAssignments[0] ?? null)
+  const [lessonSharePromptVisible, setLessonSharePromptVisible] = useState(false)
+  const [labSharePromptVisible, setLabSharePromptVisible] = useState(false)
+  const [lessonPlanForm, setLessonPlanForm] = useState<LessonPlanFormState>(() => createEmptyLessonPlanForm())
+  const [labActivityForm, setLabActivityForm] = useState<LabActivityFormState>(() => createEmptyLabActivityForm())
+  const [assignmentForm, setAssignmentForm] = useState<AssignmentFormState>(() => createEmptyAssignmentForm())
 
   useEffect(() => {
     const savedName = localStorage.getItem('skaimitra_name')?.trim()
@@ -443,6 +846,32 @@ function TeacherDashboard() {
     window.addEventListener('skaimitra-calendar-refresh', loadCalendar)
     return () => window.removeEventListener('skaimitra-calendar-refresh', loadCalendar)
   }, [])
+
+  // Load lesson plans when component mounts or when activeTab changes to Lesson Planning
+  useEffect(() => {
+    if (activeTab === 'Lesson Planning') {
+      const loadLessons = async () => {
+        try {
+          const token = localStorage.getItem('skaimitra_token') || undefined
+          const response = await fetchLessonPlans(token)
+          const nextLessonPlans = response.lessonPlans || initialLessonPlans
+          setLessonPlansState(nextLessonPlans)
+          setSelectedPlan((current) => current ?? nextLessonPlans[0] ?? null)
+        } catch {
+          setLessonPlansState(initialLessonPlans)
+          setSelectedPlan((current) => current ?? initialLessonPlans[0] ?? null)
+        }
+      }
+
+      void loadLessons()
+    }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (!selectedLabActivity && initialLabActivities.length) {
+      setSelectedLabActivity(initialLabActivities[0])
+    }
+  }, [selectedLabActivity])
 
   const teacherAnnouncements = useMemo(
     () =>
@@ -507,74 +936,78 @@ function TeacherDashboard() {
         return (
           includesSearch(item.id, query) ||
           includesSearch(item.title, query) ||
-          includesSearch(item.subject, query) ||
+          includesSearch(item.course, query) ||
           includesSearch(item.className, query) ||
-          includesSearch(item.classNames?.join(', '), query) ||
-          includesSearch(item.classSections?.join(', '), query) ||
-          includesSearch(item.date, query) ||
+          includesSearch(item.grade, query) ||
+          includesSearch(item.subject, query) ||
           includesSearch(item.status, query) ||
-          includesSearch(item.objectives, query) ||
-          includesSearch(item.materials, query) ||
-          includesSearch(item.activities, query) ||
-          includesSearch(item.assessment, query) ||
           includesSearch(item.standards, query)
         )
       }),
-    [lessonSearchTerm, lessonPlansState],
+    [lessonPlansState, lessonSearchTerm],
   )
 
   const filteredLabActivities = useMemo(
     () =>
-      labActivities.filter((item) => {
+      labActivitiesState.filter((item) => {
         const query = labSearchTerm.trim().toLowerCase()
         if (!query) return true
 
         return (
           includesSearch(item.id, query) ||
           includesSearch(item.title, query) ||
-          includesSearch(item.className, query) ||
-          includesSearch(item.duration, query) ||
+          includesSearch(item.course, query) ||
+          includesSearch(item.module, query) ||
+          includesSearch(item.grade, query) ||
           includesSearch(item.status, query)
         )
       }),
-    [labSearchTerm],
+    [labActivitiesState, labSearchTerm],
   )
 
   const filteredAssignments = useMemo(
     () =>
-      assignments.filter((item) => {
+      assignmentRecords.filter((item) => {
         const query = assignmentSearchTerm.trim().toLowerCase()
         if (!query) return true
 
         return (
           includesSearch(item.id, query) ||
-          includesSearch(item.title, query) ||
+          includesSearch(item.assignmentName, query) ||
           includesSearch(item.className, query) ||
-          includesSearch(item.dueDate, query) ||
-          includesSearch(item.submissions, query) ||
-          includesSearch(item.total, query)
+          includesSearch(item.section, query) ||
+          includesSearch(item.assignmentType, query) ||
+          includesSearch(item.assignmentDue, query) ||
+          includesSearch(item.subject, query) ||
+          includesSearch(item.date, query)
         )
       }),
-    [assignmentSearchTerm],
+    [assignmentRecords, assignmentSearchTerm],
   )
 
   const filteredGradeRows = useMemo(
     () =>
-      gradeRows.filter((student) => {
+      gradeSubmissions.filter((student) => {
         const query = gradeSearchTerm.trim().toLowerCase()
-        if (!query) return true
-
-        return (
+        const matchesQuery = !query || (
           includesSearch(student.id, query) ||
-          includesSearch(student.name, query) ||
+          includesSearch(student.studentName, query) ||
           includesSearch(student.className, query) ||
-          includesSearch(student.math, query) ||
-          includesSearch(student.science, query) ||
-          includesSearch(student.english, query) ||
-          includesSearch(student.overall, query)
+          includesSearch(student.section, query) ||
+          includesSearch(student.assignmentName, query) ||
+          includesSearch(student.assignmentType, query) ||
+          includesSearch(student.subject, query) ||
+          includesSearch(student.submittedOn, query) ||
+          includesSearch(student.status, query) ||
+          includesSearch(student.score, query)
         )
+
+        const matchesClass = gradeClassFilter === 'All Classes' || student.className === gradeClassFilter
+        const matchesSection = gradeSectionFilter === 'All Sections' || student.section === gradeSectionFilter
+
+        return matchesQuery && matchesClass && matchesSection
       }),
-    [gradeSearchTerm],
+    [gradeClassFilter, gradeSearchTerm, gradeSectionFilter, gradeSubmissions],
   )
 
   const filteredUploads = useMemo(
@@ -598,180 +1031,6 @@ function TeacherDashboard() {
       }),
     [resourceSearchTerm],
   )
-
-  const handleAskQuestion = async () => {
-    const trimmedQuestion = question.trim()
-    if (!trimmedQuestion || isAsking) return
-
-    try {
-      setIsAsking(true)
-      const response = await askAssistant('teacher', trimmedQuestion)
-      setAssistantReply(response.answer)
-      setQuestion('')
-    } catch (error) {
-      setAssistantReply(error instanceof Error ? error.message : 'Unable to get a response right now.')
-    } finally {
-      setIsAsking(false)
-    }
-  }
-
-  const openNewLessonPlanModal = () => {
-    setEditingLessonPlanId(null)
-    setLessonPlanForm({
-      id: 0,
-      course: '',
-      module: '',
-      className: '',
-      classNames: [],
-      classSections: [],
-      grade: '',
-      title: '',
-      subject: '',
-      date: '',
-      status: 'Draft',
-      type: 'Lesson',
-      source: 'Custom',
-      externalUrl: '',
-      aiPrompt: '',
-      complianceCode: '',
-      objectives: '',
-      materials: '',
-      activities: '',
-      assessment: '',
-      standards: '',
-      assets: [],
-      shareOption: 'None',
-      sharedWithUserEmails: [],
-      author: teacherName,
-      createdBy: 'teacher',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-    setIsLessonPlanModalOpen(true)
-  }
-
-  const openEditLessonPlanModal = (plan: LessonPlan) => {
-    setEditingLessonPlanId(plan.id)
-    setLessonPlanForm(plan)
-    setIsLessonPlanModalOpen(true)
-  }
-
-  const closeLessonPlanModal = () => {
-    setIsLessonPlanModalOpen(false)
-    setEditingLessonPlanId(null)
-  }
-
-  const handleAssetUpload = (files: FileList | null) => {
-    if (!files?.length) return
-    const newAssets: LessonPlanAsset[] = Array.from(files).map((file) => ({
-      id: crypto.randomUUID(),
-      name: file.name,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-    }))
-
-    setLessonPlanForm((prev) => ({
-      ...prev,
-      assets: [...(prev.assets || []), ...newAssets],
-    }))
-  }
-
-  const saveLessonPlan = (publish = false) => {
-    if (!lessonPlanForm.title.trim() || !lessonPlanForm.course.trim() || !lessonPlanForm.module.trim() || !lessonPlanForm.className.trim()) {
-      setCalendarNotice({ type: 'error', message: 'Lesson title, course, module, and class are required.' })
-      return
-    }
-
-    const now = new Date().toISOString()
-    const classNames = lessonPlanForm.classNames?.length ? lessonPlanForm.classNames : lessonPlanForm.className ? [lessonPlanForm.className] : []
-    const planToSave: LessonPlan = {
-      ...lessonPlanForm,
-      classNames,
-      className: classNames.join(', '),
-      classSections: lessonPlanForm.classSections ?? [],
-      status: publish ? 'Active' : lessonPlanForm.status,
-      author: lessonPlanForm.author || teacherName,
-      createdBy: lessonPlanForm.createdBy || 'teacher',
-      updatedAt: now,
-      publishedAt: publish ? now : lessonPlanForm.publishedAt,
-      createdAt: lessonPlanForm.createdAt || now,
-    }
-
-    if (editingLessonPlanId) {
-      setLessonPlansState((prev) => prev.map((plan) => (plan.id === editingLessonPlanId ? planToSave : plan)))
-      setCalendarNotice({ type: 'success', message: publish ? 'Lesson plan published successfully.' : 'Lesson plan saved successfully.' })
-    } else {
-      const nextId = Math.max(0, ...lessonPlansState.map((plan) => plan.id)) + 1
-      setLessonPlansState((prev) => [{ ...planToSave, id: nextId }, ...prev])
-      setCalendarNotice({ type: 'success', message: publish ? 'Lesson plan published successfully.' : 'New lesson plan saved as draft.' })
-    }
-
-    closeLessonPlanModal()
-  }
-
-  const duplicateLessonPlan = (plan: LessonPlan) => {
-    const nextId = Math.max(0, ...lessonPlansState.map((pl) => pl.id)) + 1
-    const duplicated: LessonPlan = {
-      ...plan,
-      id: nextId,
-      title: `${plan.title} (Copy)`,
-      status: 'Draft',
-      author: teacherName,
-      createdBy: 'teacher',
-      assignedApprover: plan.assignedApprover,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      publishedAt: undefined,
-    }
-    setLessonPlansState((prev) => [duplicated, ...prev])
-    setCalendarNotice({ type: 'success', message: 'Lesson plan duplicated successfully.' })
-  }
-
-  const printLessonPlan = (plan: LessonPlan) => {
-    const popup = window.open('', '_blank')
-    if (!popup) return
-    popup.document.write('<html><head><title>Lesson Plan</title></head><body>')
-    popup.document.write(`<h1>${plan.title}</h1>`)
-    popup.document.write(`<p><strong>Course:</strong> ${plan.course}</p>`)
-    popup.document.write(`<p><strong>Module:</strong> ${plan.module}</p>`)
-    popup.document.write(`<p><strong>Grade:</strong> ${plan.grade}</p>`)
-    popup.document.write(`<p><strong>Status:</strong> ${plan.status}</p>`)
-    popup.document.write(`<p><strong>Type:</strong> ${plan.type}</p>`)
-    popup.document.write(`<p><strong>Compliance Code:</strong> ${plan.complianceCode}</p>`)
-    popup.document.write(`<p><strong>Objectives:</strong> ${plan.objectives}</p>`)
-    popup.document.write(`<p><strong>Materials:</strong> ${plan.materials}</p>`)
-    popup.document.write(`<p><strong>Activities:</strong> ${plan.activities}</p>`)
-    popup.document.write(`<p><strong>Assessment:</strong> ${plan.assessment}</p>`)
-    popup.document.write('</body></html>')
-    popup.document.close()
-    popup.print()
-  }
-
-  const downloadLessonPlan = (plan: LessonPlan) => {
-    // Browsers don’t have native PDF generation here; using text-based PDF stub for demo.
-    const content = `Lesson Plan: ${plan.title}\nCourse: ${plan.course}\nModule: ${plan.module}\nType: ${plan.type}\nStatus: ${plan.status}\n\nObjectives:\n${plan.objectives}\n\nMaterials:\n${plan.materials}\n\nActivities:\n${plan.activities}\n\nAssessment:\n${plan.assessment}\n`;
-    const blob = new Blob([content], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${plan.title.replace(/\s+/g, '_').toLowerCase()}.pdf`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const approveLessonPlan = (planId: number) => {
-    setLessonPlansState((prev) => prev.map((plan) => (plan.id === planId ? { ...plan, status: 'Active', updatedAt: new Date().toISOString() } : plan)))
-    setCalendarNotice({ type: 'success', message: 'Lesson plan approved.' })
-  }
-
-  const deleteLessonPlan = (planId: number) => {
-    const confirmed = window.confirm('Delete this lesson plan?')
-    if (!confirmed) return
-
-    setLessonPlansState((prev) => prev.filter((plan) => plan.id !== planId))
-    setCalendarNotice({ type: 'success', message: 'Lesson plan deleted successfully.' })
-    if (selectedLessonId === planId) setSelectedLessonId(null)
-  }
 
   const resetEventForm = () => {
     setEditingEventId(null)
@@ -928,8 +1187,7 @@ function TeacherDashboard() {
         type: 'success',
         message: editingEventId ? 'Calendar event updated successfully.' : 'Calendar event added successfully.',
       })
-    } catch (error) {
-      console.error(error)
+    } catch {
       applyLocalCalendarSave()
     }
   }
@@ -954,7 +1212,7 @@ function TeacherDashboard() {
       setCalendarEvents(response.events)
       window.dispatchEvent(new Event('skaimitra-calendar-refresh'))
       setCalendarNotice({ type: 'success', message: 'Calendar event deleted successfully.' })
-    } catch (error) {
+    } catch {
       applyLocalCalendarDelete()
     }
   }
@@ -1002,6 +1260,664 @@ function TeacherDashboard() {
       type: 'success',
       message: editingAnnouncementId ? 'Announcement updated successfully.' : 'Announcement posted successfully.',
     })
+  }
+
+  // Lesson and lab planner helpers
+  const formatPlannerDate = (value?: string) => {
+    if (!value) return 'Not available'
+
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return value
+
+    return parsed.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
+  const getStatusBadgeClass = (status: LessonPlanStatus) => {
+    switch (status) {
+      case 'Active':
+        return 'status-active'
+      case 'Draft':
+        return 'status-draft'
+      case 'Inactive':
+        return 'status-inactive'
+      default:
+        return 'status-muted'
+    }
+  }
+
+  const createAssetRecord = (file: File): LessonPlanAsset => ({
+    id: `${file.name}-${file.lastModified}`,
+    name: file.name,
+    type: file.type || 'File',
+    url: URL.createObjectURL(file),
+    size: file.size,
+  })
+
+  const getShareScopeLabel = (scope: ShareVisibility) => {
+    switch (scope) {
+      case 'global':
+        return 'Global'
+      case 'users':
+        return 'Selected Users'
+      default:
+        return 'Private'
+    }
+  }
+
+  const openNewLessonBuilder = () => {
+    setPlannerTab('lesson')
+    setPlannerView('builder')
+    setEditingLessonPlanId(null)
+    setLessonBuilderMode('Custom')
+    setLessonPlanForm(createEmptyLessonPlanForm())
+    setLessonSharePromptVisible(false)
+  }
+
+  const openEditLessonPlanBuilder = (plan: LessonPlan) => {
+    setPlannerTab('lesson')
+    setPlannerView('builder')
+    setEditingLessonPlanId(plan.id)
+    setLessonBuilderMode(plan.source)
+    setLessonPlanForm({
+      course: plan.course,
+      module: plan.module,
+      grade: plan.grade,
+      type: plan.type,
+      status: plan.status,
+      title: plan.title,
+      description: plan.description,
+      scheduleDate: plan.publishedAt || plan.updatedAt || plan.date,
+      complianceCode: plan.complianceCode,
+      source: plan.source,
+      className: plan.className,
+      objectives: plan.objectives,
+      materials: plan.materials,
+      activities: plan.activities,
+      assessment: plan.assessment,
+      externalUrl: plan.externalUrl || '',
+      aiTopic: plan.title,
+      aiObjective: plan.objectives,
+      aiPrompt: plan.aiPrompt || '',
+      assets: plan.assets || [],
+      shareEnabled: plan.shareScope ? plan.shareScope !== 'Private' : false,
+      shareScope: plan.shareScope === 'Global' ? 'global' : plan.shareScope === 'Selected Users' ? 'users' : 'private',
+      shareUsers: plan.sharedWith?.join(', ') || '',
+    })
+    setLessonSharePromptVisible(true)
+  }
+
+  const cancelLessonBuilder = () => {
+    setPlannerView('summary')
+    setEditingLessonPlanId(null)
+    setLessonSharePromptVisible(false)
+  }
+
+  const updateLessonPlanField = <K extends keyof LessonPlanFormState>(field: K, value: LessonPlanFormState[K]) => {
+    setLessonPlanForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleLessonAssetUpload = (files: FileList | null) => {
+    if (!files?.length) return
+
+    const nextAssets = Array.from(files).map(createAssetRecord)
+    setLessonPlanForm((prev) => ({ ...prev, assets: [...prev.assets, ...nextAssets] }))
+    setLessonSharePromptVisible(true)
+    setCalendarNotice({ type: 'success', message: 'Assets uploaded. Choose how you want to share them.' })
+  }
+
+  const removeLessonAsset = (assetId: string) => {
+    setLessonPlanForm((prev) => ({ ...prev, assets: prev.assets.filter((asset) => asset.id !== assetId) }))
+  }
+
+  const generateLessonPlanWithAI = () => {
+    if (!lessonPlanForm.aiTopic.trim() && !lessonPlanForm.aiPrompt.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Add a topic or prompt so AI can generate the lesson plan.' })
+      return
+    }
+
+    const topic = lessonPlanForm.aiTopic.trim() || lessonPlanForm.title.trim() || 'the selected topic'
+    const learningGoal = lessonPlanForm.aiObjective.trim() || 'build understanding through guided instruction'
+
+    setLessonPlanForm((prev) => ({
+      ...prev,
+      title: prev.title || `${topic} Lesson Plan`,
+      description: prev.description || `AI-assisted lesson outline for ${topic}.`,
+      objectives: `Students will ${learningGoal}.`,
+      materials: prev.materials || 'Slides, whiteboard, student notebooks, formative exit ticket',
+      activities:
+        prev.activities ||
+        `1. Hook learners with a short warm-up on ${topic}.\n2. Model the concept with direct instruction.\n3. Facilitate pair practice and guided discussion.\n4. Close with a reflective check for understanding.`,
+      assessment: prev.assessment || 'Quick formative check, class discussion, and independent practice review.',
+    }))
+    setCalendarNotice({ type: 'success', message: 'AI draft generated. You can refine the content before saving.' })
+  }
+
+  const saveLessonPlan = (publish: boolean) => {
+    if (!lessonPlanForm.title.trim() || !lessonPlanForm.course.trim() || !lessonPlanForm.module.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please complete Course, Module, and Title before saving.' })
+      return
+    }
+
+    const now = new Date().toISOString().slice(0, 10)
+    const nextPlan: LessonPlan = {
+      id: editingLessonPlanId || Date.now(),
+      title: lessonPlanForm.title.trim(),
+      course: lessonPlanForm.course.trim(),
+      module: lessonPlanForm.module.trim(),
+      className: lessonPlanForm.className.trim() || `Class ${lessonPlanForm.grade || 'General'}`,
+      grade: lessonPlanForm.grade.trim(),
+      subject: lessonPlanForm.course.trim(),
+      type: lessonPlanForm.type,
+      status: publish ? 'Active' : lessonPlanForm.status,
+      description: lessonPlanForm.description.trim(),
+      complianceCode: lessonPlanForm.complianceCode.trim(),
+      standards: `${lessonPlanForm.course.trim()} - ${lessonPlanForm.module.trim()}`,
+      objectives: lessonPlanForm.objectives.trim(),
+      materials: lessonPlanForm.materials.trim(),
+      activities: lessonPlanForm.activities.trim(),
+      assessment: lessonPlanForm.assessment.trim(),
+      source: lessonBuilderMode,
+      createdBy: lessonBuilderMode === 'External' ? 'external' : lessonBuilderMode === 'AI' ? 'ai' : 'internal',
+      assignedApprover: lessonBuilderMode === 'External' ? teacherName : undefined,
+      date: now,
+      author: teacherName,
+      createdAt: editingLessonPlanId ? lessonPlansState.find((plan) => plan.id === editingLessonPlanId)?.createdAt || now : now,
+      updatedAt: now,
+      publishedAt: publish ? now : lessonPlansState.find((plan) => plan.id === editingLessonPlanId)?.publishedAt,
+      externalUrl: lessonBuilderMode === 'External' ? lessonPlanForm.externalUrl.trim() : undefined,
+      aiPrompt: lessonBuilderMode === 'AI' ? lessonPlanForm.aiPrompt.trim() : undefined,
+      shareScope: lessonPlanForm.shareEnabled ? getShareScopeLabel(lessonPlanForm.shareScope) : 'Private',
+      sharedWith:
+        lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'users'
+          ? lessonPlanForm.shareUsers.split(',').map((item) => item.trim()).filter(Boolean)
+          : lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'global'
+            ? ['All users']
+            : [],
+      assets: lessonPlanForm.assets,
+    }
+
+    setLessonPlansState((prev) => {
+      const nextPlans = editingLessonPlanId ? prev.map((plan) => (plan.id === editingLessonPlanId ? nextPlan : plan)) : [nextPlan, ...prev]
+      setSelectedPlan(nextPlan)
+      return nextPlans
+    })
+    setPlannerView('summary')
+    setEditingLessonPlanId(null)
+    setLessonSharePromptVisible(true)
+    setCalendarNotice({
+      type: 'success',
+      message: `Lesson plan ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
+    })
+  }
+
+  const duplicateLessonPlan = (plan: LessonPlan) => {
+    const duplicatedPlan: LessonPlan = {
+      ...plan,
+      id: Date.now(),
+      title: `${plan.title} (Copy)`,
+      status: 'Draft',
+      updatedAt: new Date().toISOString().slice(0, 10),
+      publishedAt: undefined,
+    }
+    setLessonPlansState((prev) => [duplicatedPlan, ...prev])
+    setSelectedPlan(duplicatedPlan)
+    setCalendarNotice({ type: 'success', message: 'Lesson plan duplicated. You can edit the copy for a new class or module.' })
+  }
+
+  const approveLessonPlan = (planId: number) => {
+    setLessonPlansState((prev) =>
+      prev.map((plan) => (plan.id === planId ? { ...plan, status: 'Active', publishedAt: new Date().toISOString().slice(0, 10) } : plan)),
+    )
+    setSelectedPlan((prev) => (prev && prev.id === planId ? { ...prev, status: 'Active', publishedAt: new Date().toISOString().slice(0, 10) } : prev))
+    setCalendarNotice({ type: 'success', message: 'Lesson plan approved and marked as active.' })
+  }
+
+  const deleteLessonPlan = (planId: number) => {
+    setLessonPlansState((prev) => prev.filter((plan) => plan.id !== planId))
+    setSelectedPlan((prev) => (prev?.id === planId ? null : prev))
+    setCalendarNotice({ type: 'success', message: 'Lesson plan removed from the summary view.' })
+  }
+
+  const printLessonPlan = (plan: LessonPlan) => {
+    const printWindow = window.open('', '', 'width=900,height=700')
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <html>
+        <head><title>${plan.title}</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 24px;">
+          <h1>${plan.title}</h1>
+          <p><strong>Course:</strong> ${plan.course}</p>
+          <p><strong>Module:</strong> ${plan.module}</p>
+          <p><strong>Type:</strong> ${plan.type}</p>
+          <p><strong>Compliance Code:</strong> ${plan.complianceCode || 'N/A'}</p>
+          <p><strong>Description:</strong> ${plan.description || 'N/A'}</p>
+          <p><strong>Objectives:</strong> ${plan.objectives || 'N/A'}</p>
+          <p><strong>Materials:</strong> ${plan.materials || 'N/A'}</p>
+          <p><strong>Activities:</strong> ${plan.activities || 'N/A'}</p>
+          <p><strong>Assessment:</strong> ${plan.assessment || 'N/A'}</p>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
+    setCalendarNotice({ type: 'success', message: 'Lesson plan ready to print.' })
+  }
+
+  const downloadLessonPlan = (plan: LessonPlan) => {
+    const content = [
+      `Title: ${plan.title}`,
+      `Course: ${plan.course}`,
+      `Module: ${plan.module}`,
+      `Grade: ${plan.grade}`,
+      `Type: ${plan.type}`,
+      `Status: ${plan.status}`,
+      `Compliance Code: ${plan.complianceCode || 'N/A'}`,
+      `Description: ${plan.description || 'N/A'}`,
+      `Objectives: ${plan.objectives || 'N/A'}`,
+      `Materials: ${plan.materials || 'N/A'}`,
+      `Activities: ${plan.activities || 'N/A'}`,
+      `Assessment: ${plan.assessment || 'N/A'}`,
+    ].join('\n\n')
+
+    const blob = new Blob([content], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${plan.title.replace(/\s+/g, '-')}.pdf`
+    anchor.click()
+    URL.revokeObjectURL(url)
+    setCalendarNotice({ type: 'success', message: 'Lesson plan downloaded in a printable document format.' })
+  }
+
+  const canApprovePlan = (plan: LessonPlan) =>
+    plan.createdBy === 'external' && (plan.assignedApprover === teacherName || plan.assignedApprover === 'Teacher' || !plan.assignedApprover)
+
+  const openNewLabActivityBuilder = () => {
+    setPlannerTab('lab')
+    setPlannerView('builder')
+    setEditingLabActivityId(null)
+    setLabBuilderMode('Custom')
+    setLabActivityForm(createEmptyLabActivityForm())
+    setLabSharePromptVisible(false)
+  }
+
+  const openEditLabActivityBuilder = (activity: LabActivity) => {
+    setPlannerTab('lab')
+    setPlannerView('builder')
+    setEditingLabActivityId(activity.id)
+    setLabBuilderMode(activity.source)
+    setLabActivityForm({
+      course: activity.course,
+      module: activity.module,
+      grade: activity.grade,
+      type: activity.type,
+      status: activity.status,
+      title: activity.title,
+      description: activity.description,
+      scheduleDate: activity.scheduleDate,
+      complianceCode: activity.complianceCode,
+      source: activity.source,
+      objective: activity.objective,
+      materials: activity.materials,
+      procedureSteps: activity.procedureSteps.length ? activity.procedureSteps : [''],
+      observations: activity.observations,
+      result: activity.result,
+      externalUrl: activity.externalUrl || '',
+      aiPrompt: activity.aiPrompt || '',
+      assets: activity.assets || [],
+      shareEnabled: activity.shareScope ? activity.shareScope !== 'Private' : false,
+      shareScope: activity.shareScope === 'Global' ? 'global' : activity.shareScope === 'Selected Users' ? 'users' : 'private',
+      shareUsers: activity.sharedWith?.join(', ') || '',
+    })
+    setLabSharePromptVisible(true)
+  }
+
+  const cancelLabActivityBuilder = () => {
+    setPlannerView('summary')
+    setEditingLabActivityId(null)
+    setLabSharePromptVisible(false)
+  }
+
+  const updateLabActivityField = <K extends keyof LabActivityFormState>(field: K, value: LabActivityFormState[K]) => {
+    setLabActivityForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const updateLabProcedureStep = (index: number, value: string) => {
+    setLabActivityForm((prev) => ({
+      ...prev,
+      procedureSteps: prev.procedureSteps.map((step, stepIndex) => (stepIndex === index ? value : step)),
+    }))
+  }
+
+  const addLabProcedureStep = () => {
+    setLabActivityForm((prev) => ({ ...prev, procedureSteps: [...prev.procedureSteps, ''] }))
+  }
+
+  const removeLabProcedureStep = (index: number) => {
+    setLabActivityForm((prev) => ({
+      ...prev,
+      procedureSteps: prev.procedureSteps.length === 1 ? [''] : prev.procedureSteps.filter((_, stepIndex) => stepIndex !== index),
+    }))
+  }
+
+  const handleLabAssetUpload = (files: FileList | null) => {
+    if (!files?.length) return
+
+    const nextAssets = Array.from(files).map(createAssetRecord)
+    setLabActivityForm((prev) => ({ ...prev, assets: [...prev.assets, ...nextAssets] }))
+    setLabSharePromptVisible(true)
+    setCalendarNotice({ type: 'success', message: 'Lab assets uploaded. Choose how you want to share them.' })
+  }
+
+  const removeLabAsset = (assetId: string) => {
+    setLabActivityForm((prev) => ({ ...prev, assets: prev.assets.filter((asset) => asset.id !== assetId) }))
+  }
+
+  const generateLabActivityWithAI = () => {
+    if (!labActivityForm.aiPrompt.trim() && !labActivityForm.title.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Describe the lab so AI can scaffold the activity.' })
+      return
+    }
+
+    const title = labActivityForm.title.trim() || 'AI Generated Lab Activity'
+    setLabActivityForm((prev) => ({
+      ...prev,
+      title,
+      description: prev.description || `AI-assisted lab design for ${title}.`,
+      objective: prev.objective || `Students will investigate ${title.toLowerCase()} and record evidence-based findings.`,
+      materials: prev.materials || 'Safety goggles, worksheet, measuring tools, lab apparatus',
+      procedureSteps:
+        prev.procedureSteps.some((step) => step.trim())
+          ? prev.procedureSteps
+          : ['Review the objective and safety notes', 'Set up the apparatus', 'Run the investigation and capture observations', 'Discuss results as a class'],
+      observations: prev.observations || 'Record visible changes, timing, and measurement values.',
+      result: prev.result || 'Summarize whether the observed data supports the prediction.',
+    }))
+    setCalendarNotice({ type: 'success', message: 'AI scaffold generated for the lab activity.' })
+  }
+
+  const saveLabActivity = (publish: boolean) => {
+    if (!labActivityForm.title.trim() || !labActivityForm.course.trim() || !labActivityForm.module.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please complete Course, Module, and Experiment Title before saving.' })
+      return
+    }
+
+    const now = new Date().toISOString().slice(0, 10)
+    const nextActivity: LabActivity = {
+      id: editingLabActivityId || Date.now(),
+      title: labActivityForm.title.trim(),
+      course: labActivityForm.course.trim(),
+      module: labActivityForm.module.trim(),
+      grade: labActivityForm.grade.trim(),
+      type: labActivityForm.type,
+      status: publish ? 'Active' : labActivityForm.status,
+      description: labActivityForm.description.trim(),
+      objective: labActivityForm.objective.trim(),
+      materials: labActivityForm.materials.trim(),
+      procedureSteps: labActivityForm.procedureSteps.map((step) => step.trim()).filter(Boolean),
+      observations: labActivityForm.observations.trim(),
+      result: labActivityForm.result.trim(),
+      source: labBuilderMode,
+      complianceCode: labActivityForm.complianceCode.trim(),
+      scheduleDate: labActivityForm.scheduleDate.trim(),
+      date: now,
+      author: teacherName,
+      createdBy: labBuilderMode === 'External' ? 'external' : labBuilderMode === 'AI' ? 'ai' : 'internal',
+      createdAt: editingLabActivityId ? labActivitiesState.find((activity) => activity.id === editingLabActivityId)?.createdAt || now : now,
+      updatedAt: now,
+      publishedAt: publish ? now : labActivitiesState.find((activity) => activity.id === editingLabActivityId)?.publishedAt,
+      externalUrl: labBuilderMode === 'External' ? labActivityForm.externalUrl.trim() : undefined,
+      aiPrompt: labBuilderMode === 'AI' ? labActivityForm.aiPrompt.trim() : undefined,
+      shareScope: labActivityForm.shareEnabled ? getShareScopeLabel(labActivityForm.shareScope) : 'Private',
+      sharedWith:
+        labActivityForm.shareEnabled && labActivityForm.shareScope === 'users'
+          ? labActivityForm.shareUsers.split(',').map((item) => item.trim()).filter(Boolean)
+          : labActivityForm.shareEnabled && labActivityForm.shareScope === 'global'
+            ? ['All users']
+            : [],
+      assets: labActivityForm.assets,
+    }
+
+    setLabActivitiesState((prev) => {
+      const nextActivities = editingLabActivityId
+        ? prev.map((activity) => (activity.id === editingLabActivityId ? nextActivity : activity))
+        : [nextActivity, ...prev]
+      setSelectedLabActivity(nextActivity)
+      return nextActivities
+    })
+    setPlannerView('summary')
+    setEditingLabActivityId(null)
+    setLabSharePromptVisible(true)
+    setCalendarNotice({
+      type: 'success',
+      message: `Lab activity ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
+    })
+  }
+
+  const duplicateLabActivity = (activity: LabActivity) => {
+    const duplicatedActivity: LabActivity = {
+      ...activity,
+      id: Date.now(),
+      title: `${activity.title} (Copy)`,
+      status: 'Draft',
+      publishedAt: undefined,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    }
+    setLabActivitiesState((prev) => [duplicatedActivity, ...prev])
+    setSelectedLabActivity(duplicatedActivity)
+    setCalendarNotice({ type: 'success', message: 'Lab activity duplicated. You can tailor the copy for another cohort.' })
+  }
+
+  const printLabActivity = (activity: LabActivity) => {
+    const printWindow = window.open('', '', 'width=900,height=700')
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <html>
+        <head><title>${activity.title}</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 24px;">
+          <h1>${activity.title}</h1>
+          <p><strong>Course:</strong> ${activity.course}</p>
+          <p><strong>Module:</strong> ${activity.module}</p>
+          <p><strong>Objective:</strong> ${activity.objective || 'N/A'}</p>
+          <p><strong>Materials:</strong> ${activity.materials || 'N/A'}</p>
+          <p><strong>Procedure:</strong> ${activity.procedureSteps.join(', ') || 'N/A'}</p>
+          <p><strong>Observations:</strong> ${activity.observations || 'N/A'}</p>
+          <p><strong>Result:</strong> ${activity.result || 'N/A'}</p>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
+    setCalendarNotice({ type: 'success', message: 'Lab activity ready to print.' })
+  }
+
+  const downloadLabActivity = (activity: LabActivity) => {
+    const blob = new Blob([JSON.stringify(activity, null, 2)], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${activity.title.replace(/\s+/g, '-')}.pdf`
+    anchor.click()
+    URL.revokeObjectURL(url)
+    setCalendarNotice({ type: 'success', message: 'Lab activity downloaded in a printable document format.' })
+  }
+
+  const openNewAssignmentBuilder = () => {
+    setIsAssignmentBuilderOpen(true)
+    setEditingAssignmentId(null)
+    setAssignmentBuilderMode('Custom')
+    setAssignmentForm(createEmptyAssignmentForm())
+  }
+
+  const openEditAssignmentBuilder = (assignment: AssignmentRecord) => {
+    setIsAssignmentBuilderOpen(true)
+    setEditingAssignmentId(assignment.id)
+    setAssignmentBuilderMode(assignment.source)
+    setAssignmentForm({
+      assignmentName: assignment.assignmentName,
+      className: assignment.className,
+      section: assignment.section,
+      assignmentType: assignment.assignmentType,
+      assignmentDue: assignment.assignmentDue,
+      subject: assignment.subject,
+      date: assignment.date,
+      status: assignment.status,
+      source: assignment.source,
+      description: assignment.description,
+      instructions: assignment.instructions,
+      rubric: assignment.rubric,
+      externalUrl: assignment.externalUrl || '',
+      aiPrompt: assignment.aiPrompt || '',
+      assets: assignment.assets,
+    })
+  }
+
+  const closeAssignmentBuilder = () => {
+    setIsAssignmentBuilderOpen(false)
+    setEditingAssignmentId(null)
+  }
+
+  const updateAssignmentField = <K extends keyof AssignmentFormState>(field: K, value: AssignmentFormState[K]) => {
+    setAssignmentForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleAssignmentAssetUpload = (files: FileList | null) => {
+    if (!files?.length) return
+    const nextAssets = Array.from(files).map(createAssetRecord)
+    setAssignmentForm((prev) => ({ ...prev, assets: [...prev.assets, ...nextAssets] }))
+  }
+
+  const removeAssignmentAsset = (assetId: string) => {
+    setAssignmentForm((prev) => ({ ...prev, assets: prev.assets.filter((asset) => asset.id !== assetId) }))
+  }
+
+  const generateAssignmentWithAI = () => {
+    if (!assignmentForm.aiPrompt.trim() && !assignmentForm.assignmentName.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Add an assignment title or AI prompt before generating content.' })
+      return
+    }
+
+    const title = assignmentForm.assignmentName.trim() || 'AI Generated Assignment'
+    setAssignmentForm((prev) => ({
+      ...prev,
+      assignmentName: title,
+      description: prev.description || `AI-generated ${prev.assignmentType.toLowerCase()} for ${title}.`,
+      instructions:
+        prev.instructions ||
+        `1. Review the assignment brief.\n2. Complete the required tasks independently.\n3. Submit your work before the due date.\n4. Check the rubric before final submission.`,
+      rubric: prev.rubric || 'Understanding, completion, creativity, and clarity of presentation.',
+    }))
+    setCalendarNotice({ type: 'success', message: 'AI assignment draft generated successfully.' })
+  }
+
+  const saveAssignment = (publish: boolean) => {
+    if (!assignmentForm.assignmentName.trim() || !assignmentForm.className.trim() || !assignmentForm.subject.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please complete Assignment Name, Class, and Subject before saving.' })
+      return
+    }
+
+    const nextAssignment: AssignmentRecord = {
+      id: editingAssignmentId || Date.now(),
+      assignmentName: assignmentForm.assignmentName.trim(),
+      className: assignmentForm.className.trim(),
+      section: assignmentForm.section.trim(),
+      assignmentType: assignmentForm.assignmentType,
+      assignmentDue: assignmentForm.assignmentDue,
+      subject: assignmentForm.subject.trim(),
+      date: assignmentForm.date || new Date().toISOString().slice(0, 10),
+      status: publish ? 'Active' : assignmentForm.status,
+      source: assignmentBuilderMode,
+      description: assignmentForm.description.trim(),
+      instructions: assignmentForm.instructions.trim(),
+      rubric: assignmentForm.rubric.trim(),
+      externalUrl: assignmentBuilderMode === 'External' ? assignmentForm.externalUrl.trim() : undefined,
+      aiPrompt: assignmentBuilderMode === 'AI' ? assignmentForm.aiPrompt.trim() : undefined,
+      assets: assignmentForm.assets,
+    }
+
+    setAssignmentRecords((prev) => {
+      const nextAssignments = editingAssignmentId
+        ? prev.map((assignment) => (assignment.id === editingAssignmentId ? nextAssignment : assignment))
+        : [nextAssignment, ...prev]
+      setSelectedAssignment(nextAssignment)
+      return nextAssignments
+    })
+    closeAssignmentBuilder()
+    setCalendarNotice({ type: 'success', message: `Assignment ${publish ? 'published' : 'saved as draft'} successfully.` })
+  }
+
+  const openGradeEvaluator = (submission: SubmissionRecord) => {
+    setSelectedSubmission(submission)
+    setIsGradeEvaluatorOpen(true)
+    setGradeMethod('manual')
+    setGradeEvaluationForm({
+      score: submission.score === 'Pending' ? '' : submission.score.replace('%', ''),
+      feedback: submission.status === 'Reviewed' ? 'Reviewed and ready to share with the student.' : '',
+      strengths: '',
+      improvements: '',
+      rubricNotes: '',
+    })
+  }
+
+  const updateGradeEvaluationField = <K extends keyof GradeEvaluationForm>(field: K, value: GradeEvaluationForm[K]) => {
+    setGradeEvaluationForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const generateAiGradeSuggestion = () => {
+    if (!selectedSubmission) return
+
+    const generatedScore = selectedSubmission.assignmentType === 'Quiz'
+      ? '88'
+      : selectedSubmission.assignmentType === 'Paper'
+        ? '91'
+        : '85'
+
+    setGradeMethod('ai')
+    setGradeEvaluationForm({
+      score: generatedScore,
+      feedback: `AI review suggests that ${selectedSubmission.studentName} met most of the expected outcomes for ${selectedSubmission.assignmentName}.`,
+      strengths: 'Clear understanding of the topic, on-time submission, and complete response structure.',
+      improvements: 'Add more supporting detail and refine presentation for a stronger final score.',
+      rubricNotes: 'Recommended rubric alignment: good content mastery, moderate improvement needed in depth and polish.',
+    })
+    setCalendarNotice({ type: 'success', message: 'AI grading suggestion generated. Review and adjust before saving.' })
+  }
+
+  const saveGradeEvaluation = () => {
+    if (!selectedSubmission) return
+    if (!gradeEvaluationForm.score.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please enter or generate a score before saving the grade.' })
+      return
+    }
+
+    setGradeSubmissions((prev) =>
+      prev.map((submission) =>
+        submission.id === selectedSubmission.id
+          ? {
+              ...submission,
+              status: 'Reviewed',
+              score: `${gradeEvaluationForm.score.replace('%', '')}%`,
+            }
+          : submission,
+      ),
+    )
+    setSelectedSubmission((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: 'Reviewed',
+            score: `${gradeEvaluationForm.score.replace('%', '')}%`,
+          }
+        : null,
+    )
+    setIsGradeEvaluatorOpen(false)
+    setCalendarNotice({ type: 'success', message: `Grade saved for ${selectedSubmission.studentName}.` })
   }
 
   const renderHome = () => (
@@ -1089,7 +2005,7 @@ function TeacherDashboard() {
 
       <aside className="role-secondary">
         <RoleCalendar
-          title="My Events"
+          title="My Calendar"
           events={calendarEvents}
           addButtonLabel="+"
           onAddEvent={handleOpenEventModal}
@@ -1151,26 +2067,6 @@ function TeacherDashboard() {
           </div>
         </section>
 
-        <section className="role-card">
-          <div className="role-ask-box">
-            <input
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask a question"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  void handleAskQuestion()
-                }
-              }}
-            />
-            <button type="button" aria-label="Ask question" onClick={() => void handleAskQuestion()}>
-              <Send size={16} />
-            </button>
-          </div>
-          {assistantReply ? <p className="role-ask-response">{assistantReply}</p> : null}
-        </section>
       </aside>
     </main>
   )
@@ -1178,533 +2074,837 @@ function TeacherDashboard() {
   const renderReports = () => (
     <main className="role-main role-main-detail">
       <section className="role-primary">
-        <section className="role-card role-detail-card">
+        <section className="role-card role-detail-card analytics-reports-shell">
           <div className="role-section-head">
             <div>
-              <h2>Reports</h2>
-              <p className="role-muted">Student performance reports and submissions overview</p>
+              <h2>Analytics & Reports</h2>
+              <p className="role-muted">System-wide analytics and performance metrics</p>
             </div>
           </div>
 
-          <div className="role-table-wrap">
-            <h3 className="role-section-title">Class Submission Summary</h3>
-            <table className="role-table">
-              <thead>
-                <tr>
-                  <th>Class</th>
-                  <th>On-time</th>
-                  <th>Late</th>
-                  <th>Missing</th>
-                </tr>
-              </thead>
-              <tbody>
-                {submissionData.map((row) => (
-                  <tr key={row.name}>
-                    <td>{row.name}</td>
-                    <td>{row.onTime}%</td>
-                    <td>{row.late}%</td>
-                    <td>{row.missing}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="analytics-summary-grid">
+            {analyticsSummaryCards.map((item) => (
+              <article key={item.label} className="analytics-summary-card">
+                <div>
+                  <p className="analytics-summary-label">{item.label}</p>
+                  <p className="analytics-summary-value">{item.value}</p>
+                  <span className="role-muted">{item.note}</span>
+                </div>
+                <span className="analytics-summary-icon">
+                  <item.icon size={18} />
+                </span>
+              </article>
+            ))}
           </div>
 
-          <div className="role-table-wrap mt-6">
-            <h3 className="role-section-title">Performance Trend</h3>
-            <table className="role-table">
-              <thead>
-                <tr>
-                  <th>Week</th>
-                  <th>Avg Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {performanceTrend.map((item) => (
-                  <tr key={item.week}>
-                    <td>{item.week}</td>
-                    <td>{item.score}%</td>
-                  </tr>
+          <div className="analytics-chart-grid">
+            <section className="analytics-chart-card">
+              <div className="role-section-head">
+                <div>
+                  <h3 className="role-section-title">Growth Trends</h3>
+                  <p className="role-muted">Monthly score, submission, and completion movement</p>
+                </div>
+              </div>
+              <div className="analytics-chart-wrap">
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={analyticsTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="month" stroke="#6b7280" />
+                    <YAxis stroke="#6b7280" domain={[60, 100]} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="averageScore" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4 }} name="Average score" />
+                    <Line type="monotone" dataKey="submissionRate" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} name="Submission rate" />
+                    <Line type="monotone" dataKey="completionRate" stroke="#16a34a" strokeWidth={3} dot={{ r: 4 }} name="Completion rate" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+
+            <section className="analytics-chart-card">
+              <div className="role-section-head">
+                <div>
+                  <h3 className="role-section-title">Performance by Class</h3>
+                  <p className="role-muted">Click a class bar to inspect the detailed breakdown</p>
+                </div>
+              </div>
+              <div className="analytics-chart-wrap">
+                <ResponsiveContainer width="100%" height={320}>
+                  <RechartsBarChart data={classPerformanceData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="className" stroke="#6b7280" />
+                    <YAxis stroke="#6b7280" domain={[0, 100]} />
+                    <Tooltip
+                      formatter={(value, name, props) => {
+                        const numericValue = typeof value === 'number' ? value : Number(value ?? 0)
+                        if (name === 'avgScore') return [`${value}%`, 'Avg score']
+                        if (name === 'submissionRate') return [`${props.payload?.submissionRate ?? numericValue}%`, 'Submission %']
+                        return [`${numericValue}%`, String(name)]
+                      }}
+                    />
+                    <Bar
+                      dataKey="avgScore"
+                      radius={[12, 12, 0, 0]}
+                      fill="url(#teacherReportsGradient)"
+                      name="avgScore"
+                      onClick={(_, index) => setSelectedReportClass(classPerformanceData[index])}
+                    />
+                    <defs>
+                      <linearGradient id="teacherReportsGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#a855f7" />
+                        <stop offset="100%" stopColor="#7c3aed" />
+                      </linearGradient>
+                    </defs>
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          </div>
+
+          <div className="analytics-insights-grid">
+            <section className="analytics-chart-card">
+              <div className="role-section-head">
+                <div>
+                  <h3 className="role-section-title">Quick Insights</h3>
+                  <p className="role-muted">Instant takeaways from this month’s performance dashboard</p>
+                </div>
+              </div>
+              <div className="analytics-insights-list">
+                {analyticsInsights.map((insight) => (
+                  <article key={insight} className="analytics-insight-item">
+                    <CheckCircle size={16} />
+                    <span>{insight}</span>
+                  </article>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </section>
+
+            <section className="analytics-chart-card">
+              <div className="role-section-head">
+                <div>
+                  <h3 className="role-section-title">Selected Class Breakdown</h3>
+                  <p className="role-muted">Click a class in the bar chart to update this summary</p>
+                </div>
+              </div>
+              {selectedReportClass ? (
+                <div className="analytics-breakdown-grid">
+                  <div className="analytics-breakdown-hero">
+                    <h4>{selectedReportClass.className}</h4>
+                    <p className="role-muted">{selectedReportClass.topStrength}</p>
+                  </div>
+                  <div className="analytics-breakdown-stats">
+                    <p><strong>Average score:</strong> {selectedReportClass.avgScore}%</p>
+                    <p><strong>Submission rate:</strong> {selectedReportClass.submissionRate}%</p>
+                    <p><strong>Completion rate:</strong> {selectedReportClass.completionRate}%</p>
+                    <p><strong>Pending tasks:</strong> {selectedReportClass.pendingTasks}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="role-muted">Select a class from the chart to view more details.</p>
+              )}
+              <div className="analytics-breakdown-note">
+                <span className="role-muted">Recommended focus:</span>
+                <strong>{selectedReportClass?.className === 'Class 6' ? 'Improve submission discipline through weekly reminders.' : selectedReportClass?.className === 'Class 7' ? 'Maintain current momentum and assign enrichment tasks.' : 'Increase assessment confidence with revision sessions.'}</strong>
+              </div>
+            </section>
           </div>
         </section>
       </section>
     </main>
   )
 
-  const renderLessonPlanning = () => {
-    const selectedPlan = lessonPlansState.find((plan) => plan.id === selectedLessonId)
+  const plannerModes: LessonPlanSource[] = ['Custom', 'External', 'AI']
 
-    return (
-      <main className="role-main role-main-detail">
-        <section className="role-primary">
-          <section className="role-section-head role-admin-page-head">
-            <div>
-              <h2>Lesson Planning</h2>
-              <p className="role-muted">Create, review and manage full lesson plans from a single workspace.</p>
-            </div>
-            <button type="button" className="role-primary-btn" onClick={openNewLessonPlanModal}>
-              <Plus size={16} />
-              Create Lesson Plan
-            </button>
-          </section>
+  const renderShareSettings = (
+    type: 'lesson' | 'lab',
+    shareVisible: boolean,
+    shareEnabled: boolean,
+    shareScope: ShareVisibility,
+    shareUsers: string,
+  ) => (
+    <section className={`role-card planner-card planner-share-card ${shareVisible ? 'is-highlighted' : ''}`}>
+      <div className="planner-card-head">
+        <div>
+          <h3>Sharing</h3>
+          <p className="role-muted">
+            After uploading assets or saving, decide whether this should stay private, be shared globally, or be sent to selected users.
+          </p>
+        </div>
+      </div>
+      <div className="planner-share-grid">
+        <label className="planner-toggle-field">
+          <span>Allow sharing</span>
+          <input
+            type="checkbox"
+            checked={shareEnabled}
+            onChange={(e) => {
+              if (type === 'lesson') {
+                updateLessonPlanField('shareEnabled', e.target.checked)
+              } else {
+                updateLabActivityField('shareEnabled', e.target.checked)
+              }
+            }}
+          />
+        </label>
+        <label>
+          <span>Share scope</span>
+          <select
+            value={shareScope}
+            disabled={!shareEnabled}
+            onChange={(e) => {
+              const nextValue = e.target.value as ShareVisibility
+              if (type === 'lesson') {
+                updateLessonPlanField('shareScope', nextValue)
+              } else {
+                updateLabActivityField('shareScope', nextValue)
+              }
+            }}
+          >
+            <option value="private">Private</option>
+            <option value="global">Global</option>
+            <option value="users">Selected Users</option>
+          </select>
+        </label>
+        {shareEnabled && shareScope === 'users' ? (
+          <label className="planner-span-2">
+            <span>Specific users</span>
+            <input
+              type="text"
+              placeholder="Enter user names separated by commas"
+              value={shareUsers}
+              onChange={(e) => {
+                if (type === 'lesson') {
+                  updateLessonPlanField('shareUsers', e.target.value)
+                } else {
+                  updateLabActivityField('shareUsers', e.target.value)
+                }
+              }}
+            />
+          </label>
+        ) : null}
+      </div>
+    </section>
+  )
 
-          <div className="role-user-toolbar role-user-toolbar-search-only">
-            <div className="role-user-search-wrap role-user-search-inline">
+  const renderLessonSummary = () => (
+    <div className="planner-layout">
+      <section className="planner-main-column">
+        <section className="role-card planner-card">
+          <div className="planner-toolbar">
+            <div className="role-user-search-wrap">
               <Search size={16} />
               <input
                 type="text"
-                placeholder="Search lesson plans by title, subject, class, date, or standards..."
+                placeholder="Search lesson plans by title, course, module, grade, or status..."
                 value={lessonSearchTerm}
                 onChange={(e) => setLessonSearchTerm(e.target.value)}
               />
             </div>
-          </div>
-
-          <section className="role-table-wrap">
-            <div className="teacher-lesson-table-container">
-              <table className="role-table teacher-lesson-table">
-                <thead>
-                  <tr>
-                  <th>ID</th>
-                  <th>Title</th>
-                  <th>Classes</th>
-                  <th>Sections</th>
-                  <th>Subject</th>
-                  <th>Published Date</th>
-                  <th>Status</th>
-                  <th>Standards</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLessonPlans.length > 0 ? (
-                  filteredLessonPlans.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.id}</td>
-                      <td>{item.title}</td>
-                      <td>{(item.classNames && item.classNames.length > 0 ? item.classNames : [item.className]).join(', ')}</td>
-                      <td>{item.classSections?.length ? item.classSections.join(', ') : 'N/A'}</td>
-                      <td>{item.subject}</td>
-                      <td>{item.date}</td>
-                      <td>
-                        <span className="lesson-status-text" style={{ color: getLessonStatusColor(item.status) }}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td>{item.standards}</td>
-                      <td className="teacher-lesson-table-actions">
-                        <button
-                          type="button"
-                          className="role-icon-square-btn"
-                          onClick={() => openEditLessonPlanModal(item)}
-                          title="Edit lesson plan"
-                          aria-label={`Edit lesson plan ${item.title}`}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="role-icon-square-btn"
-                          onClick={() => setSelectedLessonId(item.id)}
-                          title="View lesson plan"
-                          aria-label={`View lesson plan ${item.title}`}
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="role-icon-square-btn"
-                          onClick={() => duplicateLessonPlan(item)}
-                          title="Duplicate lesson plan"
-                          aria-label={`Duplicate lesson plan ${item.title}`}
-                        >
-                          <Copy size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="role-icon-square-btn"
-                          onClick={() => printLessonPlan(item)}
-                          title="Print lesson plan"
-                          aria-label={`Print lesson plan ${item.title}`}
-                        >
-                          <Printer size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="role-icon-square-btn"
-                          onClick={() => downloadLessonPlan(item)}
-                          title="Download lesson plan"
-                          aria-label={`Download lesson plan ${item.title}`}
-                        >
-                          <Download size={16} />
-                        </button>
-                        {item.createdBy === 'external' && item.assignedApprover === teacherName ? (
-                          <button
-                            type="button"
-                            className="role-icon-square-btn"
-                            onClick={() => approveLessonPlan(item.id)}
-                            title="Approve lesson plan"
-                            aria-label={`Approve lesson plan ${item.title}`}
-                          >
-                            <CheckCircle size={16} />
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="role-icon-square-btn role-icon-square-btn-danger"
-                          onClick={() => deleteLessonPlan(item.id)}
-                          title="Delete lesson plan"
-                          aria-label={`Delete lesson plan ${item.title}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={9} className="role-muted">
-                      No lesson plans match your search.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <div className="planner-summary-copy">
+              <span>{`${filteredLessonPlans.length} lesson plans`}</span>
             </div>
-          </section>
+          </div>
 
-          {selectedPlan ? (
-            <section className="role-card">
-              <h3 className="role-section-title">Lesson Plan Details</h3>
-              <p>
-                <strong>Author:</strong> {selectedPlan.author}
-              </p>
-              <p>
-                <strong>Created:</strong> {new Date(selectedPlan.createdAt).toLocaleString()}
-              </p>
-              <p>
-                <strong>Last Updated:</strong> {new Date(selectedPlan.updatedAt).toLocaleString()}
-              </p>
-              {selectedPlan.publishedAt ? (
-                <p>
-                  <strong>Published:</strong> {new Date(selectedPlan.publishedAt).toLocaleString()}
-                </p>
-              ) : null}
-              <p>
-                <strong>Classes:</strong> {(selectedPlan.classNames && selectedPlan.classNames.length > 0 ? selectedPlan.classNames : [selectedPlan.className]).join(', ')}
-              </p>
-              <p>
-                <strong>Sections:</strong> {selectedPlan.classSections?.length ? selectedPlan.classSections.join(', ') : 'N/A'}
-              </p>
-              <p>
-                <strong>Objectives:</strong> {selectedPlan.objectives}
-              </p>
-              <p>
-                <strong>Materials:</strong> {selectedPlan.materials}
-              </p>
-              <p>
-                <strong>Activities:</strong> {selectedPlan.activities}
-              </p>
-              <p>
-                <strong>Assessment:</strong> {selectedPlan.assessment}
-              </p>
-              <p>
-                <strong>Type:</strong> {selectedPlan.type}
-              </p>
-              <p>
-                <strong>Compliance Code:</strong> {selectedPlan.complianceCode}
-              </p>
-              {selectedPlan.assets?.length ? (
-                <div>
-                  <strong>Assets:</strong>
-                  <ul>
-                    {selectedPlan.assets.map((asset) => (
-                      <li key={asset.id}>{asset.name} ({(asset.size / 1024).toFixed(1)} KB)</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              <div className="teacher-lesson-table-actions">
-                <button
-                  type="button"
-                  className="role-icon-square-btn"
-                  onClick={() => openEditLessonPlanModal(selectedPlan)}
-                  title="Edit selected lesson plan"
-                  aria-label={`Edit selected lesson plan ${selectedPlan.title}`}
+          {filteredLessonPlans.length ? (
+            <div className="planner-summary-grid">
+              {filteredLessonPlans.map((plan) => (
+                <article
+                  key={plan.id}
+                  className={`planner-summary-card ${selectedPlan?.id === plan.id ? 'is-selected' : ''}`}
+                  onClick={() => setSelectedPlan(plan)}
                 >
-                  <Pencil size={16} />
-                </button>
-                <button
-                  type="button"
-                  className="role-icon-square-btn"
-                  onClick={() => printLessonPlan(selectedPlan)}
-                  title="Print selected lesson plan"
-                  aria-label={`Print selected lesson plan ${selectedPlan.title}`}
-                >
-                  <Printer size={16} />
-                </button>
-                <button
-                  type="button"
-                  className="role-icon-square-btn"
-                  onClick={() => downloadLessonPlan(selectedPlan)}
-                  title="Download selected lesson plan"
-                  aria-label={`Download selected lesson plan ${selectedPlan.title}`}
-                >
-                  <Download size={16} />
-                </button>
-                {selectedPlan.createdBy === 'external' && selectedPlan.assignedApprover === teacherName ? (
-                  <button
-                    type="button"
-                    className="role-icon-square-btn"
-                    onClick={() => approveLessonPlan(selectedPlan.id)}
-                    title="Approve selected lesson plan"
-                    aria-label={`Approve selected lesson plan ${selectedPlan.title}`}
-                  >
-                    <CheckCircle size={16} />
-                  </button>
-                ) : null}
-              </div>
-            </section>
-          ) : null}
-        </section>
-
-        {isLessonPlanModalOpen ? (
-          <div className="role-modal-backdrop" role="presentation" onClick={closeLessonPlanModal}>
-            <section className="role-modal teacher-lesson-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-              <div className="role-modal-head">
-                <h2>{editingLessonPlanId ? 'Edit Lesson Plan' : 'Create Lesson Plan'}</h2>
-                <button type="button" onClick={closeLessonPlanModal} aria-label="Close modal">
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="role-modal-form">
-                <label>
-                  Course
-                  <input
-                    type="text"
-                    value={lessonPlanForm.course}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, course: e.target.value }))}
-                    placeholder="Course"
-                  />
-                </label>
-                <label>
-                  Module
-                  <input
-                    type="text"
-                    value={lessonPlanForm.module}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, module: e.target.value }))}
-                    placeholder="Module"
-                  />
-                </label>
-                <label>
-                  Grade
-                  <input
-                    type="text"
-                    value={lessonPlanForm.grade}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, grade: e.target.value }))}
-                    placeholder="Grade"
-                  />
-                </label>
-                <label>
-                  Title
-                  <input
-                    type="text"
-                    value={lessonPlanForm.title}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder="Lesson title"
-                  />
-                </label>
-                <label>
-                  Subject
-                  <input
-                    type="text"
-                    value={lessonPlanForm.subject}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, subject: e.target.value }))}
-                    placeholder="Subject"
-                  />
-                </label>
-                <label>
-                  Class
-                  <input
-                    type="text"
-                    value={lessonPlanForm.className}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, className: e.target.value }))}
-                    placeholder="Class 6"
-                  />
-                </label>
-                <label>
-                  Date
-                  <input
-                    type="date"
-                    value={lessonPlanForm.date}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, date: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Type
-                  <select
-                    value={lessonPlanForm.type}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, type: e.target.value as LessonPlan['type'] }))}
-                  >
-                    <option value="Lesson">Lesson</option>
-                    <option value="Project">Project</option>
-                    <option value="Discussion">Discussion</option>
-                    <option value="Custom">Custom</option>
-                  </select>
-                </label>
-                <label>
-                  Compliance Code
-                  <input
-                    type="text"
-                    value={lessonPlanForm.complianceCode}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, complianceCode: e.target.value }))}
-                    placeholder="CBSE901A, 417"
-                  />
-                </label>
-                <label>
-                  Status
-                  <select
-                    value={lessonPlanForm.status}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, status: e.target.value as LessonPlanStatus }))}
-                  >
-                    <option value="Draft">Draft</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Deleted">Deleted</option>
-                  </select>
-                </label>
-                <label>
-                  Upload Assets
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => handleAssetUpload(e.target.files)}
-                  />
-                </label>
-                {lessonPlanForm.assets?.length ? (
-                  <div className="lesson-assets-list">
-                    {lessonPlanForm.assets.map((asset) => (
-                      <div key={asset.id} className="lesson-asset-item">
-                        <strong>{asset.name}</strong> ({(asset.size / 1024).toFixed(1)} KB)
-                      </div>
-                    ))}
+                  <div className="planner-summary-head">
+                    <div>
+                      <h3>{plan.title}</h3>
+                      <p className="role-muted">{`${plan.course} • ${plan.module}`}</p>
+                    </div>
+                    <span className={`role-status-badge ${getStatusBadgeClass(plan.status)}`}>{plan.status}</span>
                   </div>
-                ) : null}
-                <label>
-                  Objectives
-
-                  <textarea
-                    value={lessonPlanForm.objectives}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, objectives: e.target.value }))}
-                    rows={3}
-                  />
-                </label>
-                <label>
-                  Materials
-                  <textarea
-                    value={lessonPlanForm.materials}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, materials: e.target.value }))}
-                    rows={2}
-                  />
-                </label>
-                <label>
-                  Activities
-                  <textarea
-                    value={lessonPlanForm.activities}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, activities: e.target.value }))}
-                    rows={2}
-                  />
-                </label>
-                <label>
-                  Assessment
-                  <textarea
-                    value={lessonPlanForm.assessment}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, assessment: e.target.value }))}
-                    rows={2}
-                  />
-                </label>
-                <label>
-                  Standards
-                  <input
-                    type="text"
-                    value={lessonPlanForm.standards}
-                    onChange={(e) => setLessonPlanForm((prev) => ({ ...prev, standards: e.target.value }))}
-                    placeholder="CBSE Math 6.1"
-                  />
-                </label>
-                <div className="role-modal-actions">
-                  <button type="button" className="role-secondary-btn" onClick={() => saveLessonPlan(false)}>
-                    <ClipboardList size={16} style={{ marginRight: 6 }} /> Save Draft
-                  </button>
-                  <button type="button" className="role-primary-btn" onClick={() => saveLessonPlan(true)}>
-                    <Upload size={16} style={{ marginRight: 6 }} /> Publish
-                  </button>
-                  <button type="button" className="role-secondary-btn" onClick={closeLessonPlanModal}>
-                    <X size={16} style={{ marginRight: 6 }} /> Cancel
-                  </button>
-                </div>
-              </div>
-            </section>
-          </div>
-        ) : null}
-      </main>
-    )
-  }
-
-  const renderLabActivityDesigner = () => (
-    <main className="role-main role-main-detail">
-      <section className="role-primary">
-        <section className="role-section-head role-admin-page-head">
-          <div>
-            <h2>Lab Activity Planning</h2>
-            <p className="role-muted">Design engaging laboratory activities</p>
-          </div>
-          <button type="button" className="role-primary-btn">
-            <Plus size={16} />
-            Create Lab Activity
-          </button>
+                  <div className="planner-summary-meta">
+                    <span>{`Grade ${plan.grade || 'N/A'}`}</span>
+                    <span>{plan.type}</span>
+                    <span>{plan.source}</span>
+                  </div>
+                  <p className="planner-summary-text">{plan.description || 'No summary added yet.'}</p>
+                  <div className="planner-card-actions">
+                    <ActionIconButton icon={Eye} onClick={() => setSelectedPlan(plan)} ariaLabel={`View ${plan.title}`} />
+                    <ActionIconButton icon={Pencil} onClick={() => openEditLessonPlanBuilder(plan)} ariaLabel={`Edit ${plan.title}`} />
+                    <ActionIconButton icon={Copy} onClick={() => duplicateLessonPlan(plan)} ariaLabel={`Duplicate ${plan.title}`} />
+                    <ActionIconButton icon={Printer} onClick={() => printLessonPlan(plan)} ariaLabel={`Print ${plan.title}`} />
+                    <ActionIconButton icon={Download} onClick={() => downloadLessonPlan(plan)} ariaLabel={`Download ${plan.title}`} />
+                    {canApprovePlan(plan) ? (
+                      <ActionIconButton icon={CheckCircle} onClick={() => approveLessonPlan(plan.id)} ariaLabel={`Approve ${plan.title}`} />
+                    ) : null}
+                    <ActionIconButton icon={Trash2} onClick={() => deleteLessonPlan(plan.id)} ariaLabel={`Delete ${plan.title}`} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="planner-empty-state">
+              <FlaskConical size={36} />
+              <h3>No lesson plans yet</h3>
+              <p className="role-muted">Start with a custom builder, bring in an external source, or generate a lesson with AI.</p>
+              <button type="button" className="role-primary-btn" onClick={openNewLessonBuilder}>
+                <Plus size={16} />
+                Create Lesson Plan
+              </button>
+            </div>
+          )}
         </section>
+      </section>
 
-        <div className="role-user-toolbar role-user-toolbar-search-only">
-          <div className="role-user-search-wrap role-user-search-inline">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search lab activities by title, class, status, or ID..."
-              value={labSearchTerm}
-              onChange={(e) => setLabSearchTerm(e.target.value)}
-            />
+      <aside className="planner-side-column">
+        <section className="role-card planner-card planner-detail-card">
+          <div className="planner-card-head">
+            <div>
+              <h3>Lesson Plan Details</h3>
+              <p className="role-muted">Preview metadata, sharing, publishing info, and quick actions.</p>
+            </div>
+          </div>
+          {selectedPlan ? (
+            <div className="planner-detail-content">
+              <div className="planner-detail-head">
+                <div>
+                  <h4>{selectedPlan.title}</h4>
+                  <p className="role-muted">{`${selectedPlan.course} • ${selectedPlan.module}`}</p>
+                </div>
+                <span className={`role-status-badge ${getStatusBadgeClass(selectedPlan.status)}`}>{selectedPlan.status}</span>
+              </div>
+              <div className="planner-detail-grid">
+                <p><strong>Author:</strong> {selectedPlan.author || teacherName}</p>
+                <p><strong>Last saved:</strong> {formatPlannerDate(selectedPlan.updatedAt || selectedPlan.createdAt)}</p>
+                <p><strong>Published:</strong> {formatPlannerDate(selectedPlan.publishedAt)}</p>
+                <p><strong>Compliance Code:</strong> {selectedPlan.complianceCode || 'Not provided'}</p>
+                <p><strong>Share:</strong> {selectedPlan.shareScope || 'Private'}</p>
+                <p><strong>Assets:</strong> {selectedPlan.assets?.length || 0}</p>
+              </div>
+              <div className="planner-detail-block">
+                <strong>Description</strong>
+                <p>{selectedPlan.description || 'No description added.'}</p>
+              </div>
+              <div className="planner-detail-block">
+                <strong>Objectives</strong>
+                <p>{selectedPlan.objectives || 'No objectives added.'}</p>
+              </div>
+              <div className="planner-detail-block">
+                <strong>Shared with</strong>
+                <p>{selectedPlan.sharedWith?.length ? selectedPlan.sharedWith.join(', ') : 'This item is currently private.'}</p>
+              </div>
+              <div className="planner-inline-actions">
+                <button type="button" className="role-secondary-btn" onClick={() => openEditLessonPlanBuilder(selectedPlan)}>Edit</button>
+                <button type="button" className="role-secondary-btn" onClick={() => duplicateLessonPlan(selectedPlan)}>Duplicate</button>
+                <button type="button" className="role-secondary-btn" onClick={() => printLessonPlan(selectedPlan)}>Print</button>
+                <button type="button" className="role-secondary-btn" onClick={() => downloadLessonPlan(selectedPlan)}>Download</button>
+                {canApprovePlan(selectedPlan) ? (
+                  <button type="button" className="role-primary-btn" onClick={() => approveLessonPlan(selectedPlan.id)}>Approve</button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="planner-empty-side">
+              <p className="role-muted">Select a lesson plan to review its metadata and actions.</p>
+            </div>
+          )}
+        </section>
+      </aside>
+    </div>
+  )
+
+  const renderLessonBuilder = () => (
+    <div className="planner-builder-stack">
+      <section className="role-card planner-card">
+        <div className="planner-card-head">
+          <div>
+            <h3>Lesson Plan Builder</h3>
+            <p className="role-muted">Build content with custom fields, external sources, or AI. Uploaded assets can be shared globally or with selected users.</p>
           </div>
         </div>
 
-        <section className="teacher-lab-grid">
-          {filteredLabActivities.length ? filteredLabActivities.map((item) => (
-            <article key={item.id} className="role-card teacher-lab-card">
-              <div className="teacher-lab-head">
-                <h3>{item.title}</h3>
-                <span className={`role-status-badge ${item.status === 'Scheduled' ? 'status-draft' : item.status === 'Completed' ? 'status-completed' : 'status-active'}`}>
-                  {item.status.toLowerCase()}
-                </span>
-              </div>
+        <div className="planner-mode-grid">
+          {plannerModes.map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={`planner-mode-card ${lessonBuilderMode === mode ? 'is-active' : ''}`}
+              onClick={() => {
+                setLessonBuilderMode(mode)
+                updateLessonPlanField('source', mode)
+              }}
+            >
+              <span className="planner-mode-icon">{mode === 'Custom' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
+              <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
+              <span>{mode === 'Custom' ? 'Structured sections and custom inputs' : mode === 'External' ? 'Upload files or link external lesson sources' : 'Generate a draft and refine it inline'}</span>
+            </button>
+          ))}
+        </div>
 
-              <p className="role-muted teacher-lab-meta">{`${item.className} • ${item.duration}`}</p>
+        <div className="planner-form-grid">
+          <label>
+            <span>Course</span>
+            <input type="text" value={lessonPlanForm.course} onChange={(e) => updateLessonPlanField('course', e.target.value)} placeholder="Course" />
+          </label>
+          <label>
+            <span>Module</span>
+            <input type="text" value={lessonPlanForm.module} onChange={(e) => updateLessonPlanField('module', e.target.value)} placeholder="Module" />
+          </label>
+          <label>
+            <span>Type</span>
+            <select value={lessonPlanForm.type} onChange={(e) => updateLessonPlanField('type', e.target.value as LessonPlan['type'])}>
+              {lessonTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Compliance Code</span>
+            <input type="text" value={lessonPlanForm.complianceCode} onChange={(e) => updateLessonPlanField('complianceCode', e.target.value)} placeholder="CBSE901A / 417" />
+          </label>
+          <label className="planner-span-2">
+            <span>Lesson Title</span>
+            <input type="text" value={lessonPlanForm.title} onChange={(e) => updateLessonPlanField('title', e.target.value)} placeholder="Lesson title" />
+          </label>
+          <label className="planner-span-2">
+            <span>Description</span>
+            <textarea value={lessonPlanForm.description} onChange={(e) => updateLessonPlanField('description', e.target.value)} placeholder="Short lesson summary" rows={4} />
+          </label>
+          <label>
+            <span>Status</span>
+            <select value={lessonPlanForm.status} onChange={(e) => updateLessonPlanField('status', e.target.value as LessonPlanStatus)}>
+              {lessonStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Schedule Date</span>
+            <input type="date" value={lessonPlanForm.scheduleDate} onChange={(e) => updateLessonPlanField('scheduleDate', e.target.value)} />
+          </label>
+        </div>
+      </section>
 
-              <div className="teacher-lab-actions">
-                <button type="button" className="role-secondary-btn">
-                  Edit
-                </button>
-                <button type="button" className="role-secondary-btn">
-                  Materials
-                </button>
-                <button type="button" className="teacher-primary-dark-btn">
-                  Start Lab
-                </button>
+      {lessonBuilderMode !== 'External' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head"><div><h3>{lessonBuilderMode === 'AI' ? 'Generated Lesson Content' : 'Custom Lesson Content'}</h3></div></div>
+          <div className="planner-form-grid">
+            <label className="planner-span-2">
+              <span>Learning Objectives</span>
+              <textarea value={lessonPlanForm.objectives} onChange={(e) => updateLessonPlanField('objectives', e.target.value)} rows={5} />
+            </label>
+            <label className="planner-span-2">
+              <span>Materials Required</span>
+              <textarea value={lessonPlanForm.materials} onChange={(e) => updateLessonPlanField('materials', e.target.value)} rows={5} />
+            </label>
+            <label className="planner-span-2">
+              <span>Activities / Teaching Steps</span>
+              <textarea value={lessonPlanForm.activities} onChange={(e) => updateLessonPlanField('activities', e.target.value)} rows={6} />
+            </label>
+            <label className="planner-span-2">
+              <span>Assessment & Evaluation</span>
+              <textarea value={lessonPlanForm.assessment} onChange={(e) => updateLessonPlanField('assessment', e.target.value)} rows={5} />
+            </label>
+          </div>
+        </section>
+      ) : null}
+
+      {lessonBuilderMode === 'External' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head"><div><h3>External Source</h3><p className="role-muted">Upload lesson files or paste a source URL, then review the assets and sharing permissions.</p></div></div>
+          <div className="planner-form-grid">
+            <label className="planner-span-2">
+              <span>Lesson Plan URL</span>
+              <input type="url" value={lessonPlanForm.externalUrl} onChange={(e) => updateLessonPlanField('externalUrl', e.target.value)} placeholder="https://example.com/lesson-plan" />
+            </label>
+          </div>
+        </section>
+      ) : null}
+
+      {lessonBuilderMode === 'AI' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head"><div><h3>AI Assistant</h3><p className="role-muted">Provide a topic and learning goal, then generate an editable draft.</p></div></div>
+          <div className="planner-form-grid">
+            <label>
+              <span>Topic</span>
+              <input type="text" value={lessonPlanForm.aiTopic} onChange={(e) => updateLessonPlanField('aiTopic', e.target.value)} placeholder="Topic for AI generation" />
+            </label>
+            <label>
+              <span>Learning Objective</span>
+              <input type="text" value={lessonPlanForm.aiObjective} onChange={(e) => updateLessonPlanField('aiObjective', e.target.value)} placeholder="What should learners achieve?" />
+            </label>
+            <label className="planner-span-2">
+              <span>Prompt</span>
+              <textarea value={lessonPlanForm.aiPrompt} onChange={(e) => updateLessonPlanField('aiPrompt', e.target.value)} placeholder="Describe the tone, teaching style, and constraints for the AI output" rows={5} />
+            </label>
+          </div>
+          <button type="button" className="role-primary-btn planner-generate-btn" onClick={generateLessonPlanWithAI}>
+            Generate Lesson Plan with AI
+          </button>
+        </section>
+      ) : null}
+
+      {lessonBuilderMode === 'Custom' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head">
+            <div>
+              <h3>Attachments</h3>
+              <p className="role-muted">Upload lesson assets and decide how they should be shared.</p>
+            </div>
+          </div>
+          <label className="planner-upload-zone">
+            <Upload size={22} />
+            <span>Drag and drop or select PDF, DOC, PPT, image, or worksheet files</span>
+            <input type="file" multiple onChange={(e) => handleLessonAssetUpload(e.target.files)} />
+          </label>
+          {lessonPlanForm.assets.length ? (
+            <div className="planner-asset-list">
+              {lessonPlanForm.assets.map((asset) => (
+                <div key={asset.id} className="planner-asset-row">
+                  <div>
+                    <strong>{asset.name}</strong>
+                    <span>{asset.type || 'File'}</span>
+                  </div>
+                  <button type="button" className="role-secondary-btn" onClick={() => removeLessonAsset(asset.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {renderShareSettings('lesson', lessonSharePromptVisible || lessonPlanForm.assets.length > 0, lessonPlanForm.shareEnabled, lessonPlanForm.shareScope, lessonPlanForm.shareUsers)}
+
+      <section className="role-card planner-card planner-actions-card">
+        <div className="planner-inline-actions planner-inline-actions-end">
+          <button type="button" className="role-secondary-btn" onClick={cancelLessonBuilder}>Cancel</button>
+          <button type="button" className="role-secondary-btn" onClick={() => saveLessonPlan(false)}>Save Draft</button>
+          <button type="button" className="role-primary-btn" onClick={() => saveLessonPlan(true)}>Publish</button>
+        </div>
+      </section>
+    </div>
+  )
+
+  const renderLabSummary = () => (
+    <div className="planner-layout">
+      <section className="planner-main-column">
+        <section className="role-card planner-card">
+          <div className="planner-toolbar">
+            <div className="role-user-search-wrap">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Search lab activities by title, course, module, grade, or status..."
+                value={labSearchTerm}
+                onChange={(e) => setLabSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="planner-summary-copy">
+              <span>{`${filteredLabActivities.length} lab activities`}</span>
+            </div>
+          </div>
+
+          {filteredLabActivities.length ? (
+            <div className="planner-summary-grid">
+              {filteredLabActivities.map((activity) => (
+                <article
+                  key={activity.id}
+                  className={`planner-summary-card ${selectedLabActivity?.id === activity.id ? 'is-selected' : ''}`}
+                  onClick={() => setSelectedLabActivity(activity)}
+                >
+                  <div className="planner-summary-head">
+                    <div>
+                      <h3>{activity.title}</h3>
+                      <p className="role-muted">{`${activity.course} • ${activity.module}`}</p>
+                    </div>
+                    <span className={`role-status-badge ${getStatusBadgeClass(activity.status)}`}>{activity.status}</span>
+                  </div>
+                  <div className="planner-summary-meta">
+                    <span>{`Grade ${activity.grade || 'N/A'}`}</span>
+                    <span>{activity.type}</span>
+                    <span>{activity.source}</span>
+                  </div>
+                  <p className="planner-summary-text">{activity.description || 'No summary added yet.'}</p>
+                  <div className="planner-card-actions">
+                    <ActionIconButton icon={Eye} onClick={() => setSelectedLabActivity(activity)} ariaLabel={`View ${activity.title}`} />
+                    <ActionIconButton icon={Pencil} onClick={() => openEditLabActivityBuilder(activity)} ariaLabel={`Edit ${activity.title}`} />
+                    <ActionIconButton icon={Copy} onClick={() => duplicateLabActivity(activity)} ariaLabel={`Duplicate ${activity.title}`} />
+                    <ActionIconButton icon={Printer} onClick={() => printLabActivity(activity)} ariaLabel={`Print ${activity.title}`} />
+                    <ActionIconButton icon={Download} onClick={() => downloadLabActivity(activity)} ariaLabel={`Download ${activity.title}`} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="planner-empty-state">
+              <ClipboardList size={36} />
+              <h3>No lab activities yet</h3>
+              <p className="role-muted">Create a new lab activity inline and keep procedures, observations, and assets in one place.</p>
+              <button type="button" className="role-primary-btn" onClick={openNewLabActivityBuilder}>
+                <Plus size={16} />
+                Create Lab Activity
+              </button>
+            </div>
+          )}
+        </section>
+      </section>
+
+      <aside className="planner-side-column">
+        <section className="role-card planner-card planner-detail-card">
+          <div className="planner-card-head">
+            <div>
+              <h3>Lab Activity Details</h3>
+              <p className="role-muted">Review procedures, sharing status, and delivery metadata.</p>
+            </div>
+          </div>
+          {selectedLabActivity ? (
+            <div className="planner-detail-content">
+              <div className="planner-detail-head">
+                <div>
+                  <h4>{selectedLabActivity.title}</h4>
+                  <p className="role-muted">{`${selectedLabActivity.course} • ${selectedLabActivity.module}`}</p>
+                </div>
+                <span className={`role-status-badge ${getStatusBadgeClass(selectedLabActivity.status)}`}>{selectedLabActivity.status}</span>
               </div>
-            </article>
-          )) : <p className="role-muted">No lab activities match your search.</p>}
+              <div className="planner-detail-grid">
+                <p><strong>Author:</strong> {selectedLabActivity.author || teacherName}</p>
+                <p><strong>Last saved:</strong> {formatPlannerDate(selectedLabActivity.updatedAt || selectedLabActivity.createdAt)}</p>
+                <p><strong>Published:</strong> {formatPlannerDate(selectedLabActivity.publishedAt)}</p>
+                <p><strong>Compliance Code:</strong> {selectedLabActivity.complianceCode || 'Not provided'}</p>
+                <p><strong>Share:</strong> {selectedLabActivity.shareScope || 'Private'}</p>
+                <p><strong>Assets:</strong> {selectedLabActivity.assets?.length || 0}</p>
+              </div>
+              <div className="planner-detail-block">
+                <strong>Objective</strong>
+                <p>{selectedLabActivity.objective || 'No objective added.'}</p>
+              </div>
+              <div className="planner-detail-block">
+                <strong>Procedure</strong>
+                <p>{selectedLabActivity.procedureSteps.length ? selectedLabActivity.procedureSteps.join(', ') : 'No procedure added.'}</p>
+              </div>
+              <div className="planner-inline-actions">
+                <button type="button" className="role-secondary-btn" onClick={() => openEditLabActivityBuilder(selectedLabActivity)}>Edit</button>
+                <button type="button" className="role-secondary-btn" onClick={() => duplicateLabActivity(selectedLabActivity)}>Duplicate</button>
+                <button type="button" className="role-secondary-btn" onClick={() => printLabActivity(selectedLabActivity)}>Print</button>
+                <button type="button" className="role-secondary-btn" onClick={() => downloadLabActivity(selectedLabActivity)}>Download</button>
+              </div>
+            </div>
+          ) : (
+            <div className="planner-empty-side">
+              <p className="role-muted">Select a lab activity to review its details.</p>
+            </div>
+          )}
+        </section>
+      </aside>
+    </div>
+  )
+
+  const renderLabBuilder = () => (
+    <div className="planner-builder-stack">
+      <section className="role-card planner-card">
+        <div className="planner-card-head">
+          <div>
+            <h3>Lab Activity Designer</h3>
+            <p className="role-muted">Use the same inline builder experience for lab design with custom, external, or AI-assisted workflows.</p>
+          </div>
+        </div>
+
+        <div className="planner-mode-grid">
+          {plannerModes.map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={`planner-mode-card ${labBuilderMode === mode ? 'is-active' : ''}`}
+              onClick={() => {
+                setLabBuilderMode(mode)
+                updateLabActivityField('source', mode)
+              }}
+            >
+              <span className="planner-mode-icon">{mode === 'Custom' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
+              <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
+              <span>{mode === 'Custom' ? 'Build the experiment manually' : mode === 'External' ? 'Bring in links, files, and references' : 'Generate a scaffold for the lab flow'}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="planner-form-grid">
+          <label>
+            <span>Course</span>
+            <input type="text" value={labActivityForm.course} onChange={(e) => updateLabActivityField('course', e.target.value)} placeholder="Course" />
+          </label>
+          <label>
+            <span>Module</span>
+            <input type="text" value={labActivityForm.module} onChange={(e) => updateLabActivityField('module', e.target.value)} placeholder="Module" />
+          </label>
+          <label>
+            <span>Type</span>
+            <select value={labActivityForm.type} onChange={(e) => updateLabActivityField('type', e.target.value as LabActivity['type'])}>
+              {labTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Compliance Code</span>
+            <input type="text" value={labActivityForm.complianceCode} onChange={(e) => updateLabActivityField('complianceCode', e.target.value)} placeholder="LAB417 / SCI901A" />
+          </label>
+          <label className="planner-span-2">
+            <span>Experiment Title</span>
+            <input type="text" value={labActivityForm.title} onChange={(e) => updateLabActivityField('title', e.target.value)} placeholder="Experiment title" />
+          </label>
+          <label className="planner-span-2">
+            <span>Description</span>
+            <textarea value={labActivityForm.description} onChange={(e) => updateLabActivityField('description', e.target.value)} placeholder="Short lab summary" rows={4} />
+          </label>
+          <label>
+            <span>Status</span>
+            <select value={labActivityForm.status} onChange={(e) => updateLabActivityField('status', e.target.value as LessonPlanStatus)}>
+              {lessonStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Schedule Date</span>
+            <input type="date" value={labActivityForm.scheduleDate} onChange={(e) => updateLabActivityField('scheduleDate', e.target.value)} />
+          </label>
+        </div>
+      </section>
+
+      {labBuilderMode === 'External' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head"><div><h3>External Source</h3><p className="role-muted">Reference a shared document or URL for the lab activity.</p></div></div>
+          <div className="planner-form-grid">
+            <label className="planner-span-2">
+              <span>Lab Activity URL</span>
+              <input type="url" value={labActivityForm.externalUrl} onChange={(e) => updateLabActivityField('externalUrl', e.target.value)} placeholder="https://example.com/lab-activity" />
+            </label>
+          </div>
+        </section>
+      ) : null}
+
+      {labBuilderMode === 'AI' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head"><div><h3>AI Lab Scaffold</h3><p className="role-muted">Describe the experiment and let AI prepare a first pass for you to edit.</p></div></div>
+          <div className="planner-form-grid">
+            <label className="planner-span-2">
+              <span>Prompt</span>
+              <textarea value={labActivityForm.aiPrompt} onChange={(e) => updateLabActivityField('aiPrompt', e.target.value)} placeholder="Describe the experiment, safety needs, and expected observations" rows={5} />
+            </label>
+          </div>
+          <button type="button" className="role-primary-btn planner-generate-btn" onClick={generateLabActivityWithAI}>
+            Generate Lab Activity with AI
+          </button>
+        </section>
+      ) : null}
+
+      <section className="role-card planner-card">
+        <div className="planner-card-head"><div><h3>Lab Content</h3></div></div>
+        <div className="planner-form-grid">
+          <label className="planner-span-2">
+            <span>Objective</span>
+            <textarea value={labActivityForm.objective} onChange={(e) => updateLabActivityField('objective', e.target.value)} rows={4} />
+          </label>
+          <label className="planner-span-2">
+            <span>Required Materials</span>
+            <textarea value={labActivityForm.materials} onChange={(e) => updateLabActivityField('materials', e.target.value)} rows={4} />
+          </label>
+          <div className="planner-span-2">
+            <span className="planner-field-label">Procedure Steps</span>
+            <div className="planner-steps-list">
+              {labActivityForm.procedureSteps.map((step, index) => (
+                <div key={`${index}-${step}`} className="planner-step-row">
+                  <span className="planner-step-number">{index + 1}</span>
+                  <textarea value={step} onChange={(e) => updateLabProcedureStep(index, e.target.value)} rows={3} placeholder={`Describe step ${index + 1}`} />
+                  <button type="button" className="role-secondary-btn" onClick={() => removeLabProcedureStep(index)}>Remove</button>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="role-secondary-btn planner-add-step-btn" onClick={addLabProcedureStep}>
+              <Plus size={16} />
+              Add Step
+            </button>
+          </div>
+          <label className="planner-span-2">
+            <span>Observations</span>
+            <textarea value={labActivityForm.observations} onChange={(e) => updateLabActivityField('observations', e.target.value)} rows={4} />
+          </label>
+          <label className="planner-span-2">
+            <span>Result / Conclusion</span>
+            <textarea value={labActivityForm.result} onChange={(e) => updateLabActivityField('result', e.target.value)} rows={4} />
+          </label>
+        </div>
+      </section>
+
+      {labBuilderMode === 'Custom' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head">
+            <div>
+              <h3>Attachments</h3>
+              <p className="role-muted">Upload lab manuals, worksheets, images, or safety references.</p>
+            </div>
+          </div>
+          <label className="planner-upload-zone">
+            <Upload size={22} />
+            <span>Drag and drop or select support files for the lab activity</span>
+            <input type="file" multiple onChange={(e) => handleLabAssetUpload(e.target.files)} />
+          </label>
+          {labActivityForm.assets.length ? (
+            <div className="planner-asset-list">
+              {labActivityForm.assets.map((asset) => (
+                <div key={asset.id} className="planner-asset-row">
+                  <div>
+                    <strong>{asset.name}</strong>
+                    <span>{asset.type || 'File'}</span>
+                  </div>
+                  <button type="button" className="role-secondary-btn" onClick={() => removeLabAsset(asset.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {renderShareSettings('lab', labSharePromptVisible || labActivityForm.assets.length > 0, labActivityForm.shareEnabled, labActivityForm.shareScope, labActivityForm.shareUsers)}
+
+      <section className="role-card planner-card planner-actions-card">
+        <div className="planner-inline-actions planner-inline-actions-end">
+          <button type="button" className="role-secondary-btn" onClick={cancelLabActivityBuilder}>Cancel</button>
+          <button type="button" className="role-secondary-btn" onClick={() => saveLabActivity(false)}>Save Draft</button>
+          <button type="button" className="role-primary-btn" onClick={() => saveLabActivity(true)}>Publish</button>
+        </div>
+      </section>
+    </div>
+  )
+
+  const renderLessonPlanningWorkspace = () => (
+    <main className="role-main role-main-detail planner-page">
+      <section className="role-primary">
+        <section className="role-section-head role-admin-page-head planner-page-head">
+          <div>
+            <h2>{plannerTab === 'lesson' ? 'Lesson Planning' : 'Lab Activity Designer'}</h2>
+            <p className="role-muted">
+              {plannerTab === 'lesson'
+                ? 'Create, duplicate, print, approve, download, and share lesson plans without leaving the teacher dashboard.'
+                : 'Design lab experiences inline with the same builder workflow and sharing controls.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="role-primary-btn"
+            onClick={plannerTab === 'lesson' ? openNewLessonBuilder : openNewLabActivityBuilder}
+          >
+            <Plus size={16} />
+            {plannerTab === 'lesson' ? 'Create Lesson Plan' : 'Create Lab Activity'}
+          </button>
+        </section>
+
+        <section className="role-card planner-card planner-tab-shell">
+          <div className="planner-role-tabs">
+            <button type="button" className={plannerTab === 'lesson' ? 'is-active' : ''} onClick={() => { setPlannerTab('lesson'); setPlannerView('summary') }}>
+              Lesson Planning
+            </button>
+            <button type="button" className={plannerTab === 'lab' ? 'is-active' : ''} onClick={() => { setPlannerTab('lab'); setPlannerView('summary') }}>
+              Lab Activities
+            </button>
+          </div>
+          {plannerTab === 'lesson'
+            ? plannerView === 'summary'
+              ? renderLessonSummary()
+              : renderLessonBuilder()
+            : plannerView === 'summary'
+              ? renderLabSummary()
+              : renderLabBuilder()}
         </section>
       </section>
     </main>
@@ -1713,7 +2913,7 @@ function TeacherDashboard() {
   const renderCards = (
     title: string,
     description: string,
-    items: Array<{ id: number; title: string; meta: string; submeta?: string; badge?: string; action?: string }>,
+    items: Array<{ id: number; title: string; meta: string; submeta?: string; badge?: string; action?: string; href?: string; image?: string }>,
     searchValue?: string,
     onSearchChange?: (value: string) => void,
     searchPlaceholder?: string,
@@ -1743,6 +2943,7 @@ function TeacherDashboard() {
           <div className="role-detail-grid">
             {items.length ? items.map((item) => (
               <article key={item.id} className="role-card role-mini-card">
+                {item.image ? <img src={item.image} alt={item.title} className="resource-card-image" /> : null}
                 <div className="role-mini-card-head">
                   <h3>{item.title}</h3>
                   {item.badge ? <span className="role-status-badge status-active">{item.badge}</span> : null}
@@ -1750,7 +2951,15 @@ function TeacherDashboard() {
                 <p className="role-muted">{item.meta}</p>
                 {item.submeta ? <p className="role-muted">{item.submeta}</p> : null}
                 {item.action ? (
-                  <button type="button" className="role-inline-action">
+                  <button
+                    type="button"
+                    className="role-inline-action"
+                    onClick={() => {
+                      if (item.href) {
+                        window.open(item.href, '_blank', 'noopener,noreferrer')
+                      }
+                    }}
+                  >
                     {item.action}
                   </button>
                 ) : null}
@@ -1768,51 +2977,265 @@ function TeacherDashboard() {
         <section className="role-section-head role-admin-page-head">
           <div>
             <h2>Assignments</h2>
-            <p className="role-muted">Create and manage student assignments</p>
+            <p className="role-muted">Create and manage student assignments with custom, external, or AI-assisted workflows</p>
           </div>
-          <button type="button" className="role-primary-btn">
+          <button type="button" className="role-primary-btn" onClick={openNewAssignmentBuilder}>
             <Plus size={16} />
             Create Assignment
           </button>
         </section>
 
-        <section className="role-card role-detail-card teacher-assignment-card">
-          <div className="role-section-head">
-            <div>
-              <h3 className="role-section-title">Active Assignments</h3>
-            </div>
-          </div>
-          <div className="role-user-toolbar role-user-toolbar-search-only">
-            <div className="role-user-search-wrap">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search assignments by title, class, due date, or ID..."
-                value={assignmentSearchTerm}
-                onChange={(e) => setAssignmentSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="teacher-assignment-list">
-            {filteredAssignments.length ? filteredAssignments.map((item) => (
-              <article key={item.id} className="teacher-assignment-row">
-                <div className="teacher-assignment-copy">
-                  <h4>{item.title}</h4>
-                  <p className="role-muted">{`${item.className}   Due: ${item.dueDate}`}</p>
-                </div>
-                <div className="teacher-assignment-side">
-                  <div className="teacher-assignment-stats">
-                    <strong>{`${item.submissions}/${item.total}`}</strong>
-                    <span>Submissions</span>
+        {!isAssignmentBuilderOpen ? (
+          <div className="planner-layout">
+            <section className="planner-main-column">
+              <section className="role-card planner-card">
+                <div className="planner-toolbar">
+                  <div className="role-user-search-wrap">
+                    <Search size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search assignments by assignment name, class, section, type, due date, or subject..."
+                      value={assignmentSearchTerm}
+                      onChange={(e) => setAssignmentSearchTerm(e.target.value)}
+                    />
                   </div>
-                  <button type="button" className="teacher-primary-dark-btn teacher-view-btn">
-                    View
-                  </button>
                 </div>
-              </article>
-            )) : <p className="role-muted">No assignments match your search.</p>}
+
+                <div className="role-table-wrap">
+                  <table className="role-table">
+                    <thead>
+                      <tr>
+                        <th>Assignment Name</th>
+                        <th>Class</th>
+                        <th>Section</th>
+                        <th>Assignment Type</th>
+                        <th>Assignment Due</th>
+                        <th>Subject</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAssignments.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.assignmentName}</td>
+                          <td>{item.className}</td>
+                          <td>{item.section}</td>
+                          <td>{item.assignmentType}</td>
+                          <td>{item.assignmentDue}</td>
+                          <td>{item.subject}</td>
+                          <td>{item.date}</td>
+                          <td>
+                            <div className="lesson-action-row">
+                              <ActionIconButton icon={Eye} onClick={() => setSelectedAssignment(item)} ariaLabel={`View ${item.assignmentName}`} />
+                              <ActionIconButton icon={Pencil} onClick={() => openEditAssignmentBuilder(item)} ariaLabel={`Edit ${item.assignmentName}`} />
+                              <ActionIconButton
+                                icon={Copy}
+                                onClick={() => {
+                                  const duplicated = { ...item, id: Date.now(), assignmentName: `${item.assignmentName} (Copy)`, status: 'Draft' as const }
+                                  setAssignmentRecords((prev) => [duplicated, ...prev])
+                                  setSelectedAssignment(duplicated)
+                                }}
+                                ariaLabel={`Duplicate ${item.assignmentName}`}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {filteredAssignments.length === 0 ? <p className="role-muted">No assignments match your search.</p> : null}
+                </div>
+              </section>
+            </section>
+
+            <aside className="planner-side-column">
+              <section className="role-card planner-card planner-detail-card">
+                <div className="planner-card-head">
+                  <div>
+                    <h3>Assignment Details</h3>
+                    <p className="role-muted">Review selected assignment information before editing or publishing changes.</p>
+                  </div>
+                </div>
+                {selectedAssignment ? (
+                  <div className="planner-detail-content">
+                    <div className="planner-detail-head">
+                      <div>
+                        <h4>{selectedAssignment.assignmentName}</h4>
+                        <p className="role-muted">{`${selectedAssignment.subject} • ${selectedAssignment.className} ${selectedAssignment.section}`}</p>
+                      </div>
+                      <span className={`role-status-badge ${getStatusBadgeClass(selectedAssignment.status)}`}>{selectedAssignment.status}</span>
+                    </div>
+                    <div className="planner-detail-grid">
+                      <p><strong>Type:</strong> {selectedAssignment.assignmentType}</p>
+                      <p><strong>Due:</strong> {selectedAssignment.assignmentDue}</p>
+                      <p><strong>Source:</strong> {selectedAssignment.source}</p>
+                      <p><strong>Date:</strong> {selectedAssignment.date}</p>
+                    </div>
+                    <div className="planner-detail-block">
+                      <strong>Description</strong>
+                      <p>{selectedAssignment.description || 'No description added yet.'}</p>
+                    </div>
+                    <div className="planner-detail-block">
+                      <strong>Instructions</strong>
+                      <p>{selectedAssignment.instructions || 'No instructions added yet.'}</p>
+                    </div>
+                    <div className="planner-inline-actions">
+                      <button type="button" className="role-secondary-btn" onClick={() => openEditAssignmentBuilder(selectedAssignment)}>Edit</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="role-muted">Select an assignment to review the details.</p>
+                )}
+              </section>
+            </aside>
           </div>
-        </section>
+        ) : (
+          <div className="planner-builder-stack">
+            <section className="role-card planner-card">
+              <div className="planner-card-head">
+                <div>
+                  <h3>Assignment Builder</h3>
+                  <p className="role-muted">Choose how you want to create the assignment and fill in the full assignment details.</p>
+                </div>
+              </div>
+
+              <div className="planner-mode-grid">
+                {(['Custom', 'External', 'AI'] as LessonPlanSource[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={`planner-mode-card ${assignmentBuilderMode === mode ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setAssignmentBuilderMode(mode)
+                      updateAssignmentField('source', mode)
+                    }}
+                  >
+                    <span className="planner-mode-icon">{mode === 'Custom' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
+                    <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
+                    <span>{mode === 'Custom' ? 'Create the assignment manually' : mode === 'External' ? 'Use a file or source link' : 'Generate assignment instructions with AI'}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="planner-form-grid">
+                <label>
+                  <span>Assignment Name</span>
+                  <input type="text" value={assignmentForm.assignmentName} onChange={(e) => updateAssignmentField('assignmentName', e.target.value)} />
+                </label>
+                <label>
+                  <span>Subject</span>
+                  <input type="text" value={assignmentForm.subject} onChange={(e) => updateAssignmentField('subject', e.target.value)} />
+                </label>
+                <label>
+                  <span>Class</span>
+                  <input type="text" value={assignmentForm.className} onChange={(e) => updateAssignmentField('className', e.target.value)} />
+                </label>
+                <label>
+                  <span>Section</span>
+                  <input type="text" value={assignmentForm.section} onChange={(e) => updateAssignmentField('section', e.target.value)} />
+                </label>
+                <label>
+                  <span>Assignment Type</span>
+                  <select value={assignmentForm.assignmentType} onChange={(e) => updateAssignmentField('assignmentType', e.target.value as AssignmentType)}>
+                    {assignmentTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select value={assignmentForm.status} onChange={(e) => updateAssignmentField('status', e.target.value as LessonPlanStatus)}>
+                    {lessonStatusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Assignment Due</span>
+                  <input type="date" value={assignmentForm.assignmentDue} onChange={(e) => updateAssignmentField('assignmentDue', e.target.value)} />
+                </label>
+                <label>
+                  <span>Date</span>
+                  <input type="date" value={assignmentForm.date} onChange={(e) => updateAssignmentField('date', e.target.value)} />
+                </label>
+                <label className="planner-span-2">
+                  <span>Description</span>
+                  <textarea rows={4} value={assignmentForm.description} onChange={(e) => updateAssignmentField('description', e.target.value)} />
+                </label>
+              </div>
+            </section>
+
+            {assignmentBuilderMode === 'External' ? (
+              <section className="role-card planner-card">
+                <div className="planner-card-head"><div><h3>External Source</h3></div></div>
+                <div className="planner-form-grid">
+                  <label className="planner-span-2">
+                    <span>Assignment Source URL</span>
+                    <input type="url" value={assignmentForm.externalUrl} onChange={(e) => updateAssignmentField('externalUrl', e.target.value)} />
+                  </label>
+                </div>
+              </section>
+            ) : null}
+
+            {assignmentBuilderMode === 'AI' ? (
+              <section className="role-card planner-card">
+                <div className="planner-card-head"><div><h3>AI Assistant</h3></div></div>
+                <div className="planner-form-grid">
+                  <label className="planner-span-2">
+                    <span>AI Prompt</span>
+                    <textarea rows={4} value={assignmentForm.aiPrompt} onChange={(e) => updateAssignmentField('aiPrompt', e.target.value)} />
+                  </label>
+                </div>
+                <button type="button" className="role-primary-btn planner-generate-btn" onClick={generateAssignmentWithAI}>
+                  Generate Assignment with AI
+                </button>
+              </section>
+            ) : null}
+
+            <section className="role-card planner-card">
+              <div className="planner-card-head"><div><h3>Assignment Content</h3></div></div>
+              <div className="planner-form-grid">
+                <label className="planner-span-2">
+                  <span>Instructions</span>
+                  <textarea rows={5} value={assignmentForm.instructions} onChange={(e) => updateAssignmentField('instructions', e.target.value)} />
+                </label>
+                <label className="planner-span-2">
+                  <span>Rubric / Evaluation</span>
+                  <textarea rows={5} value={assignmentForm.rubric} onChange={(e) => updateAssignmentField('rubric', e.target.value)} />
+                </label>
+              </div>
+            </section>
+
+            {assignmentBuilderMode === 'Custom' ? (
+              <section className="role-card planner-card">
+                <div className="planner-card-head"><div><h3>Attachments</h3></div></div>
+                <label className="planner-upload-zone">
+                  <Upload size={22} />
+                  <span>Upload assignment files and support material</span>
+                  <input type="file" multiple onChange={(e) => handleAssignmentAssetUpload(e.target.files)} />
+                </label>
+                {assignmentForm.assets.length ? (
+                  <div className="planner-asset-list">
+                    {assignmentForm.assets.map((asset) => (
+                      <div key={asset.id} className="planner-asset-row">
+                        <div>
+                          <strong>{asset.name}</strong>
+                          <span>{asset.type || 'File'}</span>
+                        </div>
+                        <button type="button" className="role-secondary-btn" onClick={() => removeAssignmentAsset(asset.id)}>Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
+            <section className="role-card planner-card planner-actions-card">
+              <div className="planner-inline-actions planner-inline-actions-end">
+                <button type="button" className="role-secondary-btn" onClick={closeAssignmentBuilder}>Cancel</button>
+                <button type="button" className="role-secondary-btn" onClick={() => saveAssignment(false)}>Save Draft</button>
+                <button type="button" className="role-primary-btn" onClick={() => saveAssignment(true)}>Publish</button>
+              </div>
+            </section>
+          </div>
+        )}
       </section>
     </main>
   )
@@ -1820,59 +3243,193 @@ function TeacherDashboard() {
   const renderGrades = () => (
     <main className="role-main role-main-detail">
       <section className="role-primary">
-        <section className="role-card role-detail-card">
-          <div className="role-section-head">
-            <div>
-              <h2>Assessments</h2>
-              <p className="role-muted">View and manage student performance</p>
+        {!isGradeEvaluatorOpen ? (
+          <section className="role-card role-detail-card">
+            <div className="role-section-head">
+              <div>
+                <h2>Grades</h2>
+                <p className="role-muted">Find submitted assignments class-wise and section-wise, then review and grade them quickly</p>
+              </div>
             </div>
-          </div>
-          <div className="role-user-toolbar role-user-toolbar-search-only">
-            <div className="role-user-search-wrap">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search grades by student, class, marks, or ID..."
-                value={gradeSearchTerm}
-                onChange={(e) => setGradeSearchTerm(e.target.value)}
-              />
+            <div className="role-user-toolbar">
+              <div className="role-user-search-wrap">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Search by student, assignment, subject, class, section, or status..."
+                  value={gradeSearchTerm}
+                  onChange={(e) => setGradeSearchTerm(e.target.value)}
+                />
+              </div>
+              <select value={gradeClassFilter} onChange={(e) => setGradeClassFilter(e.target.value)}>
+                <option value="All Classes">All Classes</option>
+                <option value="Class 6">Class 6</option>
+                <option value="Class 7">Class 7</option>
+                <option value="Class 8">Class 8</option>
+              </select>
+              <select value={gradeSectionFilter} onChange={(e) => setGradeSectionFilter(e.target.value)}>
+                <option value="All Sections">All Sections</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+                <option value="C">Section C</option>
+              </select>
             </div>
-          </div>
-          <div className="role-table-wrap">
-            <table className="role-table teacher-grade-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Class</th>
-                  <th>Math</th>
-                  <th>Science</th>
-                  <th>English</th>
-                  <th>Overall</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredGradeRows.map((student) => (
-                  <tr key={student.id}>
-                    <td>{student.name}</td>
-                    <td>{student.className}</td>
-                    <td>{student.math}%</td>
-                    <td>{student.science}%</td>
-                    <td>{student.english}%</td>
-                    <td>
-                      <span className="role-admin-score-pill">{student.overall}%</span>
-                    </td>
-                    <td>
-                      <button type="button" className="role-secondary-btn teacher-detail-btn">
-                        Details
-                      </button>
-                    </td>
+            <div className="role-table-wrap">
+              <table className="role-table teacher-grade-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Section</th>
+                    <th>Assignment</th>
+                    <th>Type</th>
+                    <th>Subject</th>
+                    <th>Submitted On</th>
+                    <th>Status</th>
+                    <th>Score</th>
+                    <th>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredGradeRows.length === 0 ? <p className="role-muted">No students match your search.</p> : null}
+                </thead>
+                <tbody>
+                  {filteredGradeRows.map((student) => (
+                    <tr key={student.id}>
+                      <td>{student.studentName}</td>
+                      <td>{student.className}</td>
+                      <td>{student.section}</td>
+                      <td>{student.assignmentName}</td>
+                      <td>{student.assignmentType}</td>
+                      <td>{student.subject}</td>
+                      <td>{student.submittedOn}</td>
+                      <td>
+                        <span className={`teacher-grade-status-text ${student.status === 'Reviewed' ? 'is-reviewed' : 'is-submitted'}`}>{student.status}</span>
+                      </td>
+                      <td>
+                        <span className={`teacher-grade-score-text ${student.score === 'Pending' ? 'is-pending' : 'is-scored'}`}>{student.score}</span>
+                      </td>
+                      <td>
+                        <button type="button" className="role-secondary-btn teacher-detail-btn" onClick={() => openGradeEvaluator(student)}>
+                          Grade Now
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredGradeRows.length === 0 ? <p className="role-muted">No submitted assignments match your selected class, section, or search.</p> : null}
+            </div>
+          </section>
+        ) : (
+          <div className="planner-layout">
+            <section className="planner-main-column">
+              <section className="role-card planner-card">
+                <div className="planner-card-head">
+                  <div>
+                    <h3>Grade Evaluation</h3>
+                    <p className="role-muted">Review the submission, assign marks manually, or use AI automation as a starting point.</p>
+                  </div>
+                </div>
+
+                <div className="planner-mode-grid">
+                  <button type="button" className={`planner-mode-card ${gradeMethod === 'manual' ? 'is-active' : ''}`} onClick={() => setGradeMethod('manual')}>
+                    <span className="planner-mode-icon"><Pencil size={18} /></span>
+                    <strong>Manual Grading</strong>
+                    <span>Teacher reviews and assigns score directly.</span>
+                  </button>
+                  <button type="button" className={`planner-mode-card ${gradeMethod === 'ai' ? 'is-active' : ''}`} onClick={generateAiGradeSuggestion}>
+                    <span className="planner-mode-icon"><CheckCircle size={18} /></span>
+                    <strong>AI Assisted</strong>
+                    <span>Generate suggested marks and feedback for review.</span>
+                  </button>
+                  <div className="planner-mode-card">
+                    <span className="planner-mode-icon"><Eye size={18} /></span>
+                    <strong>Submission Review</strong>
+                    <span>Check submission details, rubric notes, and performance before saving.</span>
+                  </div>
+                </div>
+
+                <div className="planner-form-grid">
+                  <label>
+                    <span>Student</span>
+                    <input type="text" value={selectedSubmission?.studentName || ''} readOnly />
+                  </label>
+                  <label>
+                    <span>Assignment</span>
+                    <input type="text" value={selectedSubmission?.assignmentName || ''} readOnly />
+                  </label>
+                  <label>
+                    <span>Class</span>
+                    <input type="text" value={selectedSubmission ? `${selectedSubmission.className} - ${selectedSubmission.section}` : ''} readOnly />
+                  </label>
+                  <label>
+                    <span>Subject</span>
+                    <input type="text" value={selectedSubmission?.subject || ''} readOnly />
+                  </label>
+                  <label className="planner-span-2">
+                    <span>Submission Summary</span>
+                    <textarea
+                      rows={4}
+                      readOnly
+                      value={selectedSubmission ? `${selectedSubmission.studentName} submitted ${selectedSubmission.assignmentName} on ${selectedSubmission.submittedOn}. Assignment type: ${selectedSubmission.assignmentType}. Current status: ${selectedSubmission.status}.` : ''}
+                    />
+                  </label>
+                  <label>
+                    <span>Score</span>
+                    <input type="text" value={gradeEvaluationForm.score} onChange={(e) => updateGradeEvaluationField('score', e.target.value)} placeholder="Enter marks / percentage" />
+                  </label>
+                  <label>
+                    <span>Rubric Notes</span>
+                    <input type="text" value={gradeEvaluationForm.rubricNotes} onChange={(e) => updateGradeEvaluationField('rubricNotes', e.target.value)} placeholder="Rubric alignment notes" />
+                  </label>
+                  <label className="planner-span-2">
+                    <span>Teacher Feedback</span>
+                    <textarea rows={4} value={gradeEvaluationForm.feedback} onChange={(e) => updateGradeEvaluationField('feedback', e.target.value)} placeholder="Write overall evaluation feedback" />
+                  </label>
+                  <label className="planner-span-2">
+                    <span>Strengths</span>
+                    <textarea rows={3} value={gradeEvaluationForm.strengths} onChange={(e) => updateGradeEvaluationField('strengths', e.target.value)} placeholder="What the student did well" />
+                  </label>
+                  <label className="planner-span-2">
+                    <span>Areas for Improvement</span>
+                    <textarea rows={3} value={gradeEvaluationForm.improvements} onChange={(e) => updateGradeEvaluationField('improvements', e.target.value)} placeholder="What should improve in the next submission" />
+                  </label>
+                </div>
+              </section>
+            </section>
+
+            <aside className="planner-side-column">
+              <section className="role-card planner-card planner-detail-card">
+                <div className="planner-card-head">
+                  <div>
+                    <h3>Evaluation Guide</h3>
+                    <p className="role-muted">A simple teacher workflow for assessing and finalizing marks.</p>
+                  </div>
+                </div>
+                <div className="planner-detail-content">
+                  <div className="planner-detail-block">
+                    <strong>Manual workflow</strong>
+                    <p>Review the submission, enter score, add rubric notes, and save the evaluation.</p>
+                  </div>
+                  <div className="planner-detail-block">
+                    <strong>AI workflow</strong>
+                    <p>Generate an automated draft score and comments, then edit them before saving.</p>
+                  </div>
+                  <div className="planner-detail-block">
+                    <strong>Recommended teacher action</strong>
+                    <p>Use AI for the first pass, but always verify marks and final comments manually.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="role-card planner-card planner-actions-card">
+                <div className="planner-inline-actions planner-inline-actions-end">
+                  <button type="button" className="role-secondary-btn" onClick={() => setIsGradeEvaluatorOpen(false)}>Back</button>
+                  <button type="button" className="role-secondary-btn" onClick={generateAiGradeSuggestion}>AI Suggest</button>
+                  <button type="button" className="role-primary-btn" onClick={saveGradeEvaluation}>Save Grade</button>
+                </div>
+              </section>
+            </aside>
           </div>
-        </section>
+        )}
       </section>
     </main>
   )
@@ -1945,9 +3502,7 @@ function TeacherDashboard() {
   let content = renderHome()
 
   if (activeTab === 'Lesson Planning') {
-    content = renderLessonPlanning()
-  } else if (activeTab === 'Lab Activity Planning') {
-    content = renderLabActivityDesigner()
+    content = renderLessonPlanningWorkspace()
   } else if (activeTab === 'Assignments') {
     content = renderAssignments()
   } else if (activeTab === 'Grades') {
@@ -1961,13 +3516,15 @@ function TeacherDashboard() {
   } else if (activeTab === 'Resources') {
     content = renderCards(
       'Resources',
-      'Browse reusable templates, guides, and teaching packs.',
+      'Browse student-friendly external resources to explore, create, and learn.',
       filteredResources.map((item) => ({
         id: item.id,
         title: item.title,
         meta: item.type,
         submeta: item.audience,
         action: 'Open Resource',
+        href: item.url,
+        image: item.image,
       })),
       resourceSearchTerm,
       setResourceSearchTerm,

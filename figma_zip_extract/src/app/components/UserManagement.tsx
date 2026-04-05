@@ -11,7 +11,6 @@ import {
   GraduationCap, ArrowLeft, Search, Plus, Edit, Trash2, Users, 
   Bell, Settings, LogOut, UserPlus
 } from 'lucide-react';
-import { SkaiMitraAssistant } from './SkaiMitraAssistant';
 import { SkaiMitraLogo } from './SkaiMitraLogo';
 
 interface UserManagementProps {
@@ -341,7 +340,6 @@ export function UserManagement({ onBack, onLogout }: UserManagementProps) {
         </div>
       </main>
 
-      <SkaiMitraAssistant />
     </div>
   );
 }

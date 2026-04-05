@@ -1,7 +1,15 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { SkaiMitraAssistant } from './SkaiMitraAssistant';
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import { SkaiMitraLogo } from './SkaiMitraLogo';
-import bgImage from 'figma:asset/7280b9bb2443d06a2dd7ab56b34ecee081080853.png';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { Award, Beaker, Bell, BookOpen, ClipboardList, Clock, FileText, FileUp, Home, LogOut, MessageSquare, Plus, Play, Send, Settings, Trash2, Upload, Users } from 'lucide-react';
+import bgImage from '../../assets/7280b9bb2443d06a2dd7ab56b34ecee081080853.png';
 
 interface TeacherDashboardNewProps {
   onLogout: () => void;
@@ -562,9 +570,6 @@ export function TeacherDashboardNew({ onLogout }: TeacherDashboardNewProps) {
           {renderContent()}
         </div>
       </main>
-
-      {/* SkaiMitra Assistant */}
-      <SkaiMitraAssistant />
     </div>
   );
 }

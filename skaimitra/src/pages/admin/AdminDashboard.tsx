@@ -12,7 +12,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Send,
   Settings,
   Trash2,
   FolderOpen,
@@ -23,10 +22,8 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import AIChat from '../../components/dashboard/AIChat'
 import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
 import {
-  askAssistant,
   createCalendarEvent,
   createUser,
   deleteCalendarEvent,
@@ -39,6 +36,7 @@ import {
   type CalendarEventRecord,
   type SyncedUser,
 } from '../../lib/api'
+import AIChat from '../../components/dashboard/AIChat'
 import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
 import MessageCenter from '../../components/dashboard/MessageCenter'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
@@ -163,7 +161,6 @@ function AdminDashboard() {
   const [userInfo, setUserInfo] = useState('')
   const [editingUserId, setEditingUserId] = useState<number | null>(null)
   const [adminName, setAdminName] = useState('Admin')
-  const [question, setQuestion] = useState('')
   const [announcements, setAnnouncements] = useState<DashboardAnnouncement[]>(() => loadAnnouncements())
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventRecord[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
@@ -205,8 +202,6 @@ function AdminDashboard() {
     status: 'active' as UserStatus,
   })
   const [dashboardCounts, setDashboardCounts] = useState({ students: 0, teachers: 0 })
-  const [assistantReply, setAssistantReply] = useState('')
-  const [isAsking, setIsAsking] = useState(false)
   const [uiNotice, setUiNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
@@ -812,7 +807,7 @@ function AdminDashboard() {
       setCalendarEvents(response.events)
       window.dispatchEvent(new Event('skaimitra-calendar-refresh'))
       setUiNotice({ type: 'success', message: 'Calendar event deleted successfully.' })
-    } catch (error) {
+    } catch {
       applyLocalCalendarDelete()
     }
   }
@@ -831,22 +826,6 @@ function AdminDashboard() {
   const handleSelectNotification = (messageId: string) => {
     setSelectedMessageId(messageId)
     markMessagesSeen([messageId])
-  }
-
-  const handleAskQuestion = async () => {
-    const trimmedQuestion = question.trim()
-    if (!trimmedQuestion || isAsking) return
-
-    try {
-      setIsAsking(true)
-      const response = await askAssistant('admin', trimmedQuestion)
-      setAssistantReply(response.answer)
-      setQuestion('')
-    } catch (error) {
-      setAssistantReply(error instanceof Error ? error.message : 'Unable to get a response right now.')
-    } finally {
-      setIsAsking(false)
-    }
   }
 
   const renderDashboardHome = () => (
@@ -949,26 +928,6 @@ function AdminDashboard() {
           </div>
         </section>
 
-        <section className="role-card">
-          <div className="role-ask-box">
-            <input
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask a question"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  void handleAskQuestion()
-                }
-              }}
-            />
-            <button type="button" aria-label="Ask question" onClick={() => void handleAskQuestion()}>
-              <Send size={16} />
-            </button>
-          </div>
-          {assistantReply ? <p className="role-ask-response">{assistantReply}</p> : null}
-        </section>
       </aside>
     </main>
   )

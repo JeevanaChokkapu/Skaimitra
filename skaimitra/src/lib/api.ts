@@ -172,3 +172,30 @@ export async function deleteCalendarEvent(
 ): Promise<{ ok: true }> {
   return apiRequest(`/api/calendar-events/${eventId}`, { method: 'DELETE' }, token)
 }
+
+export async function createLessonPlan(
+  body: {
+    title: string
+    course: string
+    module: string
+    className: string
+    grade: string
+    type: string
+    status: string
+    description: string
+    complianceCode: string
+    standards: string
+    objectives: string
+    materials: string
+    activities: string
+    assessment: string
+    source: string
+  },
+  token?: string,
+): Promise<{ lessonPlan: any }> {
+  return apiRequest('/api/lesson-plan/create', { method: 'POST', body: JSON.stringify(body) }, token)
+}
+
+export async function fetchLessonPlans(token?: string): Promise<{ lessonPlans: any[] }> {
+  return apiRequest('/api/lesson-plans', { method: 'GET' }, token)
+}

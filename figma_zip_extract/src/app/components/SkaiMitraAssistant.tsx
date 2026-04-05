@@ -24,7 +24,7 @@ export function SkaiMitraAssistant() {
     if (!inputMessage.trim()) return;
 
     // Add user message
-    setMessages(prev => [...prev, { text: inputMessage, isBot: false }]);
+    setMessages((prev: Array<{ text: string; isBot: boolean }>) => [...prev, { text: inputMessage, isBot: false }]);
     
     // Simulate bot response
     setTimeout(() => {
@@ -36,13 +36,13 @@ export function SkaiMitraAssistant() {
         "I'm here to help! Would you like me to provide more details?"
       ];
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setMessages(prev => [...prev, { text: randomResponse, isBot: true }]);
+      setMessages((prev: Array<{ text: string; isBot: boolean }>) => [...prev, { text: randomResponse, isBot: true }]);
     }, 1000);
 
     setInputMessage('');
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSendMessage();
     }
@@ -54,7 +54,7 @@ export function SkaiMitraAssistant() {
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 z-50"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-2xl bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 z-50"
           size="icon"
         >
           <MessageCircle className="w-6 h-6" />
@@ -64,7 +64,7 @@ export function SkaiMitraAssistant() {
       {/* Chat Window */}
       {isOpen && (
         <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-2xl z-50 flex flex-col">
-          <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-t-lg p-4 flex-shrink-0">
+          <CardHeader className="bg-linear-to-r from-purple-600 to-blue-600 text-white rounded-t-lg p-4 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bot className="w-5 h-5" />
@@ -83,7 +83,7 @@ export function SkaiMitraAssistant() {
           </CardHeader>
 
           <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {messages.map((message, index) => (
+            {messages.map((message: { text: string; isBot: boolean }, index: number) => (
               <div
                 key={index}
                 className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
@@ -92,7 +92,7 @@ export function SkaiMitraAssistant() {
                   className={`max-w-[80%] rounded-lg p-3 ${
                     message.isBot
                       ? 'bg-white text-gray-800 shadow-sm'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                      : 'bg-linear-to-r from-purple-600 to-blue-600 text-white'
                   }`}
                 >
                   {message.isBot && (
@@ -108,18 +108,18 @@ export function SkaiMitraAssistant() {
             <div ref={messagesEndRef} />
           </CardContent>
 
-          <div className="p-4 bg-white border-t flex-shrink-0">
+          <div className="p-4 bg-white border-t shrink-0">
             <div className="flex gap-2">
               <Input
                 value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask a question..."
                 className="flex-1"
               />
               <Button
                 onClick={handleSendMessage}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                className="bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 size="icon"
               >
                 <Send className="w-4 h-4" />

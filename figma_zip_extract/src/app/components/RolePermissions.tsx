@@ -1,4 +1,3 @@
-import { SkaiMitraAssistant } from './SkaiMitraAssistant';
 import { SkaiMitraLogo } from './SkaiMitraLogo';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
@@ -277,8 +276,6 @@ export function RolePermissions({ onBack, onLogout }: RolePermissionsProps) {
           </Card>
         </div>
       </main>
-
-      <SkaiMitraAssistant />
     </div>
   );
 }

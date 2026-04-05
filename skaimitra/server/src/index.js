@@ -734,6 +734,32 @@ app.post('/api/assistant/query', async (req, res) => {
   }
 })
 
+app.post('/api/ai/chat', async (req, res) => {
+  const role = String(req.body?.role || 'student').trim().toLowerCase()
+  const prompt = String(req.body?.prompt || '').trim()
+
+  if (!prompt) {
+    return res.status(400).json({ error: 'Prompt is required.' })
+  }
+
+  if (!['admin', 'teacher', 'student'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role.' })
+  }
+
+  try {
+    const answer = geminiApiKey
+      ? await generateGeminiResponse(role, prompt)
+      : buildAssistantResponse(role, prompt)
+
+    return res.json({ reply: answer })
+  } catch (error) {
+    const fallback = buildAssistantResponse(role, prompt)
+    const message = error instanceof Error ? error.message : 'AI chat request failed.'
+
+    return res.status(500).json({ reply: `${fallback}\n\n[Fallback mode: ${message}]` })
+  }
+})
+
 async function startServer() {
   await ensureSchema()
   app.listen(port, () => {

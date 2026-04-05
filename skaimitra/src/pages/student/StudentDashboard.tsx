@@ -13,10 +13,9 @@ import {
   LogOut,
   Play,
   Search,
-  Send,
   Settings,
 } from 'lucide-react'
-import { askAssistant, fetchCalendarEvents, type CalendarEventRecord } from '../../lib/api'
+import { fetchCalendarEvents, type CalendarEventRecord } from '../../lib/api'
 import AIChat from '../../components/dashboard/AIChat'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import MessageCenter from '../../components/dashboard/MessageCenter'
@@ -107,9 +106,6 @@ function StudentDashboard() {
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [studentName, setStudentName] = useState('Aarav Mehta')
   const [studentClassSection, setStudentClassSection] = useState('Class 6A')
-  const [question, setQuestion] = useState('')
-  const [assistantReply, setAssistantReply] = useState('')
-  const [isAsking, setIsAsking] = useState(false)
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
@@ -207,22 +203,6 @@ function StudentDashboard() {
   )
 
   const pendingAssignments = filteredAssignments.filter((assignment) => assignment.status === 'pending')
-
-  const handleAskQuestion = async () => {
-    const trimmedQuestion = question.trim()
-    if (!trimmedQuestion || isAsking) return
-
-    try {
-      setIsAsking(true)
-      const response = await askAssistant('student', trimmedQuestion)
-      setAssistantReply(response.answer)
-      setQuestion('')
-    } catch (error) {
-      setAssistantReply(error instanceof Error ? error.message : 'Unable to get a response right now.')
-    } finally {
-      setIsAsking(false)
-    }
-  }
 
   return (
     <div className="role-page student-dashboard-page">
@@ -335,26 +315,6 @@ function StudentDashboard() {
 
             <RoleCalendar title="Student Calendar" events={calendarEvents} emptyMessage="No student events scheduled for this date." />
 
-            <section className="role-card">
-              <div className="role-ask-box">
-                <input
-                  type="text"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask a question"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      void handleAskQuestion()
-                    }
-                  }}
-                />
-                <button type="button" aria-label="Ask question" onClick={() => void handleAskQuestion()}>
-                  <Send size={16} />
-                </button>
-              </div>
-              {assistantReply ? <p className="role-ask-response">{assistantReply}</p> : null}
-            </section>
           </aside>
         </main>
       )}

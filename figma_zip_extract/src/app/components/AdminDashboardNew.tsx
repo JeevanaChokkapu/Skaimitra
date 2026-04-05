@@ -9,9 +9,8 @@ import {
   BarChart3, Mail, Phone, Edit, Trash2, Send
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { SkaiMitraAssistant } from './SkaiMitraAssistant';
 import { SkaiMitraLogo } from './SkaiMitraLogo';
-import bgImage from 'figma:asset/7280b9bb2443d06a2dd7ab56b34ecee081080853.png';
+import bgImage from '../../assets/7280b9bb2443d06a2dd7ab56b34ecee081080853.png';
 
 interface AdminDashboardNewProps {
   onLogout: () => void;
@@ -769,9 +768,6 @@ export function AdminDashboardNew({ onLogout, onNavigate }: AdminDashboardNewPro
           {renderContent()}
         </div>
       </main>
-
-      {/* SkaiMitra Assistant */}
-      <SkaiMitraAssistant />
     </div>
   );
 }

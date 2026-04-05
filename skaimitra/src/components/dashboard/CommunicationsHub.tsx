@@ -1,356 +1,606 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   Archive,
-  Calendar,
-  Edit3,
+  CheckCircle2,
   Eye,
-  MessageSquare,
+  Mail,
+  MessageCircleMore,
+  MessagesSquare,
   Paperclip,
+  Plane,
   Plus,
   Search,
-  Send,
+  Smartphone,
+  Sparkles,
   Trash2,
-  Zap,
+  X,
 } from 'lucide-react'
 
-type CommunicationStatus = 'Draft' | 'Scheduled' | 'Sent' | 'Archived'
-type DeliveryMethod = 'Email' | 'WhatsApp' | 'Both'
-type CommunicationCategory = 'Fee Reminder' | 'Holiday Notice' | 'PTM Invite' | 'General'
+type DeliveryMethod = 'Email' | 'WhatsApp' | 'SMS'
+type CommunicationStatus = 'Draft' | 'Sent' | 'Received' | 'Delivered' | 'Failed' | 'Archived'
+type CommunicationCategory = 'Fee reminder' | 'Holiday notice' | 'PTM invite' | 'General'
+type RecipientMode = 'groups' | 'individual'
+type FilterTab = 'All' | 'Drafts' | 'Sent' | 'Received' | 'Delivered' | 'Failed'
+type ComposeStatus = 'Draft' | 'Active'
+type PriorityLevel = 'Low' | 'Normal' | 'High'
 
 type CommunicationMessage = {
   id: string
   scheduleDate: string
+  type: 'Notice' | 'Fees' | 'General'
   category: CommunicationCategory
-  subject: string
-  content: string
+  subjectLine: string
   deliveryMethod: DeliveryMethod
-  recipients: string[]
   status: CommunicationStatus
-  createdAt: string
-  updatedAt: string
+  recipients: string[]
+  content: string
   attachments: string[]
+  aiContext: string
+  priority: PriorityLevel
+}
+
+type ComposeFormState = {
+  category: CommunicationCategory
+  deliveryMethod: DeliveryMethod
+  subjectLine: string
+  scheduleDate: string
+  recipients: string
+  cc: string
+  bcc: string
+  phoneNumber: string
+  aiContext: string
+  content: string
+  attachments: string[]
+  recipientMode: RecipientMode
+  selectedGroups: string[]
+  classValue: string
+  sectionValue: string
+  priority: PriorityLevel
+  status: ComposeStatus
+  individualEntry: string
+  individualRecipients: string[]
 }
 
 type CommunicationsHubProps = {
   role?: 'admin' | 'teacher'
 }
 
-const emptyForm: Partial<CommunicationMessage> = {
+const STORAGE_KEY = 'skaimitra_communications_messages_v2'
+const groupOptions = ['All Students', 'All Teachers', 'Administrators', 'All Parents']
+const filterTabs: FilterTab[] = ['All', 'Drafts', 'Sent', 'Received', 'Delivered', 'Failed']
+const suggestionPills = ['Professional tone', 'Friendly tone', 'Make concise', 'Formal tone']
+
+const sampleMessages: CommunicationMessage[] = [
+  {
+    id: 'msg-1',
+    scheduleDate: '2026-04-02T09:00',
+    type: 'Notice',
+    category: 'Holiday notice',
+    subjectLine: 'School Summer Holidays',
+    deliveryMethod: 'Email',
+    status: 'Draft',
+    recipients: ['All'],
+    content: 'Please note the school summer holiday schedule for April.',
+    attachments: [],
+    aiContext: '',
+    priority: 'Normal',
+  },
+  {
+    id: 'msg-2',
+    scheduleDate: '2026-04-06T10:30',
+    type: 'Notice',
+    category: 'Holiday notice',
+    subjectLine: 'School Summer Holidays',
+    deliveryMethod: 'WhatsApp',
+    status: 'Sent',
+    recipients: ['All'],
+    content: 'WhatsApp reminder for the summer holiday schedule.',
+    attachments: [],
+    aiContext: '',
+    priority: 'Normal',
+  },
+  {
+    id: 'msg-3',
+    scheduleDate: '2026-04-30T08:15',
+    type: 'Fees',
+    category: 'Fee reminder',
+    subjectLine: 'School Fees',
+    deliveryMethod: 'Email',
+    status: 'Draft',
+    recipients: ['Students'],
+    content: 'Fee reminder for the current term.',
+    attachments: [],
+    aiContext: '',
+    priority: 'High',
+  },
+  {
+    id: 'msg-4',
+    scheduleDate: '2026-04-08T11:00',
+    type: 'Notice',
+    category: 'General',
+    subjectLine: 'Bus Route Update',
+    deliveryMethod: 'SMS',
+    status: 'Delivered',
+    recipients: ['All Parents'],
+    content: 'Route timing adjustments have been sent to parents.',
+    attachments: [],
+    aiContext: '',
+    priority: 'Normal',
+  },
+  {
+    id: 'msg-5',
+    scheduleDate: '2026-04-09T08:45',
+    type: 'General',
+    category: 'General',
+    subjectLine: 'Parent Response: Field Trip Consent',
+    deliveryMethod: 'Email',
+    status: 'Received',
+    recipients: ['Teacher'],
+    content: 'A parent has replied with field trip consent and follow-up questions.',
+    attachments: [],
+    aiContext: '',
+    priority: 'Normal',
+  },
+  {
+    id: 'msg-6',
+    scheduleDate: '2026-04-10T17:00',
+    type: 'General',
+    category: 'PTM invite',
+    subjectLine: 'Parent Teacher Meeting Reminder',
+    deliveryMethod: 'WhatsApp',
+    status: 'Failed',
+    recipients: ['Class 8 Parents'],
+    content: 'PTM invite delivery failed for one of the recipient segments.',
+    attachments: [],
+    aiContext: '',
+    priority: 'Normal',
+  },
+]
+
+const emptyForm = (): ComposeFormState => ({
   category: 'General',
-  subject: '',
-  content: '',
   deliveryMethod: 'Email',
-  recipients: [],
-  scheduleDate: new Date().toISOString().slice(0, 16),
-  status: 'Draft',
+  subjectLine: '',
+  scheduleDate: '2026-03-31T12:30',
+  recipients: '',
+  cc: '',
+  bcc: '',
+  phoneNumber: '',
+  aiContext: '',
+  content: '',
   attachments: [],
-}
+  recipientMode: 'groups',
+  selectedGroups: [],
+  classValue: '',
+  sectionValue: '',
+  priority: 'Normal',
+  status: 'Draft',
+  individualEntry: '',
+  individualRecipients: [],
+})
 
-const STORAGE_KEY = 'skaimitra_communications_messages'
-
-function loadMessages(): CommunicationMessage[] {
+const loadMessages = (): CommunicationMessage[] => {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
+    if (!raw) return sampleMessages
     const parsed = JSON.parse(raw) as CommunicationMessage[]
-    return parsed.map((item) => ({ ...item }))
+    return parsed.length ? parsed : sampleMessages
   } catch {
-    return []
+    return sampleMessages
   }
 }
 
-function saveMessages(data: CommunicationMessage[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+const saveMessages = (messages: CommunicationMessage[]) => {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
 }
 
-const statusClassName = (status: CommunicationStatus): string => {
+const formatScheduleDate = (value: string) =>
+  new Date(value).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: '2-digit',
+  })
+
+const messageTypeFromCategory = (category: CommunicationCategory): CommunicationMessage['type'] => {
+  if (category === 'Fee reminder') return 'Fees'
+  if (category === 'Holiday notice') return 'Notice'
+  return 'General'
+}
+
+const statusTextClass = (status: CommunicationStatus) => {
   switch (status) {
     case 'Sent':
-      return 'role-status-badge status-success'
-    case 'Scheduled':
-      return 'role-status-badge status-warning'
-    case 'Archived':
-      return 'role-status-badge status-muted'
+      return 'communications-status communications-status-sent'
+    case 'Received':
+      return 'communications-status communications-status-received'
+    case 'Delivered':
+      return 'communications-status communications-status-delivered'
+    case 'Failed':
+      return 'communications-status communications-status-failed'
     default:
-      return 'role-status-badge status-neutral'
+      return 'communications-status communications-status-draft'
   }
 }
+
+const statsIconMap = {
+  total: MessagesSquare,
+  draft: Paperclip,
+  sent: Plane,
+  delivered: CheckCircle2,
+  failed: X,
+}
+
+const channelCards = [
+  { key: 'Email', title: 'Email', description: 'Reach customers via email', icon: Mail, className: 'is-email' },
+  { key: 'WhatsApp', title: 'WhatsApp', description: 'Send messages via WhatsApp', icon: MessageCircleMore, className: 'is-whatsapp' },
+  { key: 'SMS', title: 'SMS', description: 'Text message campaigns', icon: Smartphone, className: 'is-sms' },
+]
 
 const CommunicationsHub: React.FC<CommunicationsHubProps> = ({ role = 'teacher' }) => {
   const [messages, setMessages] = useState<CommunicationMessage[]>([])
-  const [view, setView] = useState<'list' | 'new' | 'detail' | 'edit'>('list')
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
-  const [formState, setFormState] = useState<Partial<CommunicationMessage>>(emptyForm)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [filterTab, setFilterTab] = useState<FilterTab>('All')
+  const [isComposeOpen, setIsComposeOpen] = useState(false)
+  const [selectedMessage, setSelectedMessage] = useState<CommunicationMessage | null>(null)
+  const [formState, setFormState] = useState<ComposeFormState>(emptyForm)
+  const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [aiContext, setAiContext] = useState('')
-  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
-    setIsLoading(true)
-    try {
-      setMessages(loadMessages())
-      setError(null)
-    } catch (err) {
-      setError('Unable to load communications. Please refresh.')
-    } finally {
-      setIsLoading(false)
-    }
+    setMessages(loadMessages())
   }, [])
 
   useEffect(() => {
-    if (messages.length === 0) return
-    const interval = window.setInterval(() => {
-      const nowIso = new Date().toISOString()
-      let updated = false
-      const nextMessages = messages.map((msg) => {
-        if (msg.status === 'Scheduled' && msg.scheduleDate <= nowIso) {
-          updated = true
-          return { ...msg, status: 'Sent' as CommunicationStatus, updatedAt: nowIso }
-        }
-        return msg
-      })
-      if (updated) {
-        setMessages(nextMessages)
-        saveMessages(nextMessages)
-      }
-    }, 30 * 1000)
+    if (!notice && !error) return
+    const timer = window.setTimeout(() => {
+      setNotice(null)
+      setError(null)
+    }, 2800)
+    return () => window.clearTimeout(timer)
+  }, [notice, error])
 
-    return () => window.clearInterval(interval)
-  }, [messages])
-
-  const selectedMessage = useMemo(
-    () => messages.find((msg) => msg.id === selectedMessageId) ?? null,
-    [messages, selectedMessageId],
-  )
+  const stats = useMemo(() => ({
+    total: messages.filter((item) => item.status !== 'Archived').length,
+    draft: messages.filter((item) => item.status === 'Draft').length,
+    sent: messages.filter((item) => item.status === 'Sent').length,
+    received: messages.filter((item) => item.status === 'Received').length,
+    delivered: messages.filter((item) => item.status === 'Delivered').length,
+    failed: messages.filter((item) => item.status === 'Failed').length,
+  }), [messages])
 
   const filteredMessages = useMemo(() => {
-    let list = [...messages]
-    if (searchTerm.trim()) {
-      const q = searchTerm.trim().toLowerCase()
-      list = list.filter((m) =>
-        [m.subject, m.category, m.deliveryMethod, m.recipients.join(', ')]
+    return messages
+      .filter((message) => message.status !== 'Archived')
+      .filter((message) => {
+        if (!searchTerm.trim()) return true
+        const query = searchTerm.trim().toLowerCase()
+        return [message.subjectLine, message.type, message.deliveryMethod, message.recipients.join(', ')]
           .join(' ')
           .toLowerCase()
-          .includes(q),
-      )
-    }
-    if (filterDate) {
-      list = list.filter((m) => m.scheduleDate.slice(0, 10) === filterDate)
-    }
-    return list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-  }, [messages, searchTerm, filterDate])
+          .includes(query)
+      })
+      .filter((message) => (filterDate ? message.scheduleDate.slice(0, 10) === filterDate : true))
+      .filter((message) => {
+        if (filterTab === 'All') return true
+        if (filterTab === 'Drafts') return message.status === 'Draft'
+        if (filterTab === 'Sent') return message.status === 'Sent'
+        if (filterTab === 'Received') return message.status === 'Received'
+        if (filterTab === 'Delivered') return message.status === 'Delivered'
+        if (filterTab === 'Failed') return message.status === 'Failed'
+        return true
+      })
+  }, [messages, searchTerm, filterDate, filterTab])
 
-  const resetForm = () => {
-    setFormState(emptyForm)
-    setAiContext('')
-    setSelectedMessageId(null)
+  const resetCompose = () => {
+    setFormState(emptyForm())
+    setError(null)
   }
 
-  const showToast = (message: string) => {
-    setToast(message)
-    window.setTimeout(() => setToast(null), 2600)
+  const openCompose = () => {
+    resetCompose()
+    setIsComposeOpen(true)
   }
 
-  const withStatus = (update: Partial<CommunicationMessage>, status: CommunicationStatus): CommunicationMessage => ({
-    ...(update as CommunicationMessage),
-    id: (update as CommunicationMessage).id || `${Date.now()}-${Math.random()}`,
-    scheduleDate: update.scheduleDate || new Date().toISOString().slice(0, 16),
-    category: update.category || 'General',
-    subject: update.subject || '',
-    content: update.content || '',
-    deliveryMethod: update.deliveryMethod || 'Email',
-    recipients: update.recipients || [],
-    attachments: update.attachments || [],
-    status,
-    createdAt: (update as CommunicationMessage).createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  })
+  const closeCompose = () => {
+    setIsComposeOpen(false)
+    resetCompose()
+  }
 
-  const saveMessage = (status: CommunicationStatus) => {
-    if (!formState.subject?.trim()) {
-      setError('Subject is required.')
+  const updateForm = <K extends keyof ComposeFormState>(field: K, value: ComposeFormState[K]) => {
+    setFormState((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const toggleGroupRecipient = (group: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      selectedGroups: prev.selectedGroups.includes(group)
+        ? prev.selectedGroups.filter((item) => item !== group)
+        : [...prev.selectedGroups, group],
+    }))
+  }
+
+  const addIndividualRecipient = () => {
+    const trimmed = formState.individualEntry.trim()
+    if (!trimmed) return
+    setFormState((prev) => ({
+      ...prev,
+      individualRecipients: [...prev.individualRecipients, trimmed],
+      individualEntry: '',
+    }))
+  }
+
+  const handleAttachmentUpload = (files: FileList | null) => {
+    if (!files?.length) return
+    const fileNames = Array.from(files).map((file) => file.name)
+    setFormState((prev) => ({ ...prev, attachments: [...prev.attachments, ...fileNames] }))
+  }
+
+  const handleAiAssist = (override?: string) => {
+    const context = override || formState.aiContext || formState.subjectLine
+    if (!context.trim()) {
+      setError('Add a subject or AI context so the assistant can generate content.')
       return
     }
-    if (!formState.content?.trim()) {
+
+    const generated = [
+      `Hello,`,
+      ``,
+      `This ${formState.category.toLowerCase()} is to inform you about ${context.trim()}.`,
+      `Please review the details carefully and follow the required next steps.`,
+      ``,
+      `Thank you,`,
+      `${role === 'admin' ? 'Skaimitra Admin Team' : 'Skaimitra Teacher Team'}`,
+    ].join('\n')
+
+    setFormState((prev) => ({ ...prev, content: generated }))
+    setNotice('AI content generated successfully.')
+  }
+
+  const buildRecipients = () => {
+    if (formState.deliveryMethod === 'WhatsApp' || formState.deliveryMethod === 'SMS') {
+      return formState.phoneNumber
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+
+    if (formState.recipientMode === 'groups') {
+      const baseRecipients = [...formState.selectedGroups]
+      if (formState.classValue) baseRecipients.push(`Class ${formState.classValue}`)
+      if (formState.sectionValue) baseRecipients.push(`Section ${formState.sectionValue}`)
+      if (formState.recipients.trim()) {
+        baseRecipients.push(...formState.recipients.split(',').map((item) => item.trim()).filter(Boolean))
+      }
+      return baseRecipients
+    }
+
+    const individuals = [...formState.individualRecipients]
+    if (formState.recipients.trim()) {
+      individuals.push(...formState.recipients.split(',').map((item) => item.trim()).filter(Boolean))
+    }
+    return individuals
+  }
+
+  const persistMessages = (nextMessages: CommunicationMessage[], successMessage: string) => {
+    setMessages(nextMessages)
+    saveMessages(nextMessages)
+    setNotice(successMessage)
+  }
+
+  const saveDraft = () => {
+    const nextRecipients = buildRecipients()
+    const nextMessage: CommunicationMessage = {
+      id: `${Date.now()}`,
+      scheduleDate: formState.scheduleDate,
+      type: messageTypeFromCategory(formState.category),
+      category: formState.category,
+      subjectLine: formState.subjectLine || 'Untitled draft',
+      deliveryMethod: formState.deliveryMethod,
+      status: 'Draft',
+      recipients: nextRecipients.length ? nextRecipients : ['All'],
+      content: formState.content,
+      attachments: formState.attachments,
+      aiContext: formState.aiContext,
+      priority: formState.priority,
+    }
+
+    persistMessages([nextMessage, ...messages], 'Draft saved successfully.')
+    closeCompose()
+  }
+
+  const sendMessage = () => {
+    const nextRecipients = buildRecipients()
+    if (formState.deliveryMethod === 'Email' && !formState.subjectLine.trim()) {
+      setError('Subject line is required.')
+      return
+    }
+    if (formState.deliveryMethod !== 'SMS' && !formState.content.trim()) {
       setError('Message content is required.')
       return
     }
-    if (!formState.recipients || formState.recipients.length === 0) {
-      setError('At least one recipient is required.')
+    if (!nextRecipients.length) {
+      setError(formState.deliveryMethod === 'Email' ? 'Please add at least one recipient or recipient group.' : 'Please enter at least one phone number.')
       return
     }
 
-    const scheduledIso = new Date(formState.scheduleDate ?? new Date().toISOString()).toISOString()
-    const message: CommunicationMessage = withStatus({
-      ...formState,
-      scheduleDate: scheduledIso,
-    },
-      status,
-    )
-
-    let nextMessages = messages.slice()
-    const existingIndex = nextMessages.findIndex((m) => m.id === formState.id)
-    if (existingIndex >= 0) {
-      nextMessages[existingIndex] = { ...nextMessages[existingIndex], ...message, updatedAt: new Date().toISOString() }
-    } else {
-      nextMessages.unshift(message)
+    const nextStatus: CommunicationStatus = formState.deliveryMethod === 'SMS' ? 'Delivered' : 'Sent'
+    const nextMessage: CommunicationMessage = {
+      id: `${Date.now()}`,
+      scheduleDate: formState.scheduleDate,
+      type: messageTypeFromCategory(formState.category),
+      category: formState.category,
+      subjectLine: formState.subjectLine.trim(),
+      deliveryMethod: formState.deliveryMethod,
+      status: nextStatus,
+      recipients: nextRecipients,
+      content: formState.content.trim(),
+      attachments: formState.attachments,
+      aiContext: formState.aiContext,
+      priority: formState.priority,
     }
 
-    setMessages(nextMessages)
-    saveMessages(nextMessages)
-    resetForm()
-
-    showToast(status === 'Draft' ? 'Draft saved successfully' : 'Message sent successfully')
-    setView('list')
+    persistMessages([nextMessage, ...messages], 'Message sent successfully.')
+    closeCompose()
   }
 
-  const handleSendMessage = () => {
-    if (!formState.scheduleDate) {
-      saveMessage('Sent')
-      return
+  const handleDelete = (id: string) => {
+    persistMessages(messages.filter((message) => message.id !== id), 'Message deleted successfully.')
+    if (selectedMessage?.id === id) {
+      setSelectedMessage(null)
     }
-    const scheduleTimestamp = new Date(formState.scheduleDate).getTime()
-    const now = Date.now()
-    const nextStatus = (scheduleTimestamp > now ? 'Scheduled' : 'Sent') as CommunicationStatus
-    saveMessage(nextStatus)
-  }
-
-  const handleDeleteMessage = (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this message?')) return
-    const nextMessages = messages.filter((m) => m.id !== id)
-    setMessages(nextMessages)
-    saveMessages(nextMessages)
-    showToast('Message deleted successfully')
-    setView('list')
   }
 
   const handleArchive = (id: string) => {
-    const nextMessages = messages.map((m) =>
-      m.id === id ? { ...m, status: 'Archived' as CommunicationStatus, updatedAt: new Date().toISOString() } : m,
+    persistMessages(
+      messages.map((message) => (message.id === id ? { ...message, status: 'Archived' as const } : message)),
+      'Message archived successfully.',
     )
-    setMessages(nextMessages)
-    saveMessages(nextMessages)
-    showToast('Message archived')
-  }
-
-  const handleAiAssist = () => {
-    if (!formState.category || !formState.subject) {
-      setError('Please fill category and subject before AI Assist.')
-      return
+    if (selectedMessage?.id === id) {
+      setSelectedMessage(null)
     }
-    setError(null)
-    // Simulated AI content generation
-    const generated = `Dear recipient,\n\nThis is a ${formState.category} regarding "${formState.subject}". ${
-      aiContext ? `${aiContext} ` : ''
-    }Please review the details above and take the necessary action.\n\nThank you.`
-    setFormState((prev) => ({ ...prev, content: generated }))
   }
 
-  const openNewMessage = () => {
-    resetForm()
-    setView('new')
-    setError(null)
-  }
-
-  const openDetail = (id: string) => {
-    setSelectedMessageId(id)
-    setView('detail')
-  }
-
-  const openEdit = (id: string) => {
-    const message = messages.find((m) => m.id === id)
-    if (!message) return
-    setFormState(message)
-    setSelectedMessageId(id)
-    setView('edit')
-  }
-
-  const isEmpty = !isLoading && !error && filteredMessages.length === 0
+  const isEmpty = filteredMessages.length === 0
 
   return (
-    <main className="role-main role-main-detail">
-      <section className="role-primary">
-        <section className="role-section-head role-admin-page-head">
+    <main className="role-main role-main-detail communications-page-shell">
+      <section className="role-primary communications-page">
+        <section className="role-section-head role-admin-page-head communications-page-head">
           <div>
-            <h2>{role === 'admin' ? 'Admin' : 'Teacher'} Communications Hub</h2>
+            <h2>Communications Hub</h2>
             <p className="role-muted">Create, schedule and track Email/WhatsApp messages with AI assist.</p>
           </div>
         </section>
 
-        <section className="communications-controls-wrapper">
-          <div className="role-user-search-wrap role-user-search-inline">
-            <Search size={16} />
-            <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search subjects, categories, recipients..." />
-          </div>
-          <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
-          <button type="button" className="role-secondary-btn" onClick={() => setFilterDate('')}>
-            Clear Date
-          </button>
-          <button type="button" className="role-primary-btn" onClick={openNewMessage}>
-            <Plus size={14} /> + New Message
-          </button>
+        {notice ? <div className="role-floating-notice is-success">{notice}</div> : null}
+        {error ? <div className="role-floating-notice is-error">{error}</div> : null}
+
+        <section className="communications-stats-grid">
+          {[
+            { label: 'Total', value: stats.total, key: 'total', colorClass: 'is-total' },
+            { label: 'Draft', value: stats.draft, key: 'draft', colorClass: 'is-draft' },
+            { label: 'Sent', value: stats.sent, key: 'sent', colorClass: 'is-sent' },
+            { label: 'Delivered', value: stats.delivered, key: 'delivered', colorClass: 'is-delivered' },
+            { label: 'Failed', value: stats.failed, key: 'failed', colorClass: 'is-failed' },
+          ].map((card) => {
+            const Icon = statsIconMap[card.key as keyof typeof statsIconMap]
+            return (
+              <article key={card.label} className={`communications-stat-card ${card.colorClass}`}>
+                <div>
+                  <span className="communications-stat-label">{card.label}</span>
+                  <strong className="communications-stat-value">{card.value}</strong>
+                </div>
+                <span className="communications-stat-icon">
+                  <Icon size={16} />
+                </span>
+              </article>
+            )
+          })}
         </section>
 
-        {toast && <div className="role-floating-notice is-success">{toast}</div>}
-        {error && <div className="role-floating-notice is-error">{error}</div>}
+        <section className="communications-channel-section">
+          <div className="communications-section-label">Channels</div>
+          <div className="communications-channel-grid">
+            {channelCards.map((channel) => (
+              <article key={channel.key} className={`communications-channel-card ${channel.className}`}>
+                <span className="communications-channel-icon">
+                  <channel.icon size={20} />
+                </span>
+                <div>
+                  <h3>{channel.title}</h3>
+                  <p>{channel.description}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        {isLoading && <p className="role-muted">Loading...</p>}
+        <section className="communications-filter-tabs">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={filterTab === tab ? 'is-active' : ''}
+              onClick={() => setFilterTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </section>
 
-        {isEmpty && (
+        <section className="communications-controls-bar">
+          <div className="communications-controls-left">
+            <div className="role-user-search-wrap communications-search">
+              <Search size={16} />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by subject, type, delivery method, or recipient..."
+              />
+            </div>
+          </div>
+          <div className="communications-controls-right">
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="communications-date-input" />
+            <button type="button" className="role-secondary-btn" onClick={() => setFilterDate('')}>
+              Clear Date
+            </button>
+            <button type="button" className="role-primary-btn" onClick={openCompose}>
+              <Plus size={14} />
+              New Message
+            </button>
+          </div>
+        </section>
+
+        {isEmpty ? (
           <section className="communications-empty-state-card">
             <div className="communications-empty-icon">
-              <MessageSquare size={40} />
+              <MessagesSquare size={40} />
             </div>
             <h3>No messages found</h3>
-            <p className="role-muted">Create your first message to get started.</p>
-            <button type="button" className="role-primary-btn" onClick={openNewMessage}>
-              <Plus size={14} /> + New Message
+            <p className="role-muted">Create your first message to get started</p>
+            <button type="button" className="role-primary-btn" onClick={openCompose}>
+              <Plus size={14} />
+              New Message
             </button>
           </section>
-        )}
-
-        {view === 'list' && !isLoading && !isEmpty && (
-          <section className="role-card role-admin-communications-card role-communications-table-card">
+        ) : (
+          <section className="role-card role-communications-table-card communications-table-card">
             <div className="role-table-responsive">
-              <table className="role-table">
+              <table className="role-table communications-table">
                 <thead>
                   <tr>
                     <th>Schedule Date</th>
                     <th>Type</th>
-                    <th>Subject</th>
-                    <th>Delivery</th>
+                    <th>Subject Line</th>
+                    <th>Delivery Method</th>
                     <th>Status</th>
                     <th>Recipients</th>
-                    <th style={{ minWidth: 120 }}>Actions</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMessages.map((item) => (
-                    <tr key={item.id}>
-                      <td>{new Date(item.scheduleDate).toLocaleString()}</td>
-                      <td>{item.category}</td>
-                      <td>{item.subject}</td>
-                      <td>{item.deliveryMethod}</td>
+                  {filteredMessages.map((message) => (
+                    <tr key={message.id}>
+                      <td>{formatScheduleDate(message.scheduleDate)}</td>
+                      <td>{message.type}</td>
+                      <td>{message.subjectLine}</td>
+                      <td>{message.deliveryMethod}</td>
+                      <td><span className={statusTextClass(message.status)}>{message.status}</span></td>
+                      <td>{message.recipients.join(', ')}</td>
                       <td>
-                        <span className={statusClassName(item.status)}>{item.status}</span>
-                      </td>
-                      <td>{item.recipients.join(', ') || 'All'}</td>
-                      <td>
-                        <button className="role-icon-square-btn" title="View" onClick={() => openDetail(item.id)}>
-                          <Eye size={14} />
-                        </button>
-                        <button className="role-icon-square-btn" title="Edit" onClick={() => openEdit(item.id)}>
-                          <Edit3 size={14} />
-                        </button>
-                        <button className="role-icon-square-btn role-icon-square-btn-danger" title="Delete" onClick={() => handleDeleteMessage(item.id)}>
-                          <Trash2 size={14} />
-                        </button>
-                        <button className="role-icon-square-btn" title="Archive" onClick={() => handleArchive(item.id)}>
-                          <Archive size={14} />
-                        </button>
+                        <div className="communications-action-icons">
+                          <button type="button" title="View" onClick={() => setSelectedMessage(message)}>
+                            <Eye size={15} />
+                          </button>
+                          <button type="button" title="Delete" onClick={() => handleDelete(message.id)}>
+                            <Trash2 size={15} />
+                          </button>
+                          <button type="button" title="Archive" onClick={() => handleArchive(message.id)}>
+                            <Archive size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -359,178 +609,298 @@ const CommunicationsHub: React.FC<CommunicationsHubProps> = ({ role = 'teacher' 
             </div>
           </section>
         )}
+      </section>
 
-        {(view === 'new' || view === 'edit') && (
-          <section className="communications-form-card">
-            <div className="role-section-head">
-              <h3>{view === 'new' ? 'Create Message' : 'Edit Message'}</h3>
-            </div>
+      {isComposeOpen ? (
+        <div className="communications-modal-backdrop" role="presentation" onClick={closeCompose}>
+          <section className="communications-compose-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <header className="communications-compose-head">
+              <div className="communications-compose-title">
+                <Plane size={18} />
+                <h3>Compose Message</h3>
+              </div>
+              <button type="button" onClick={closeCompose} aria-label="Close compose modal">
+                <X size={18} />
+              </button>
+            </header>
 
-            <div className="communications-form-grid">
-              <label>
-                <span>Category</span>
-                <select
-                  value={formState.category}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, category: e.target.value as CommunicationCategory }))}
-                >
-                  {['Fee Reminder', 'Holiday Notice', 'PTM Invite', 'General'].map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div className="communications-compose-body">
+              <section className="communications-compose-section">
+                <span className="communications-modal-label">Recipients</span>
+                <div className="communications-recipient-tabs">
+                  <button type="button" className={formState.recipientMode === 'groups' ? 'is-active' : ''} onClick={() => updateForm('recipientMode', 'groups')}>
+                    Groups
+                  </button>
+                  <button type="button" className={formState.recipientMode === 'individual' ? 'is-active' : ''} onClick={() => updateForm('recipientMode', 'individual')}>
+                    Individual
+                  </button>
+                </div>
 
-              <label>
-                <span>Delivery Method</span>
-                <select
-                  value={formState.deliveryMethod}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, deliveryMethod: e.target.value as DeliveryMethod }))}
-                >
-                  <option value="Email">Email</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Both">Both</option>
-                </select>
-              </label>
+                {formState.recipientMode === 'groups' ? (
+                  <>
+                    <div className="communications-groups-grid">
+                      {groupOptions.map((group) => (
+                        <label key={group} className="communications-group-option">
+                          <input type="checkbox" checked={formState.selectedGroups.includes(group)} onChange={() => toggleGroupRecipient(group)} />
+                          <span>{group}</span>
+                        </label>
+                      ))}
+                    </div>
 
-              <label className="full-width">
-                <span>Subject Line</span>
-                <input
-                  type="text"
-                  value={formState.subject}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, subject: e.target.value }))}
-                  placeholder="Enter message subject"
-                />
-              </label>
+                    <div className="communications-modal-label">Filter by Class & Section</div>
+                    <div className="communications-modal-grid">
+                      <label>
+                        <span>Select Class</span>
+                        <select value={formState.classValue} onChange={(e) => updateForm('classValue', e.target.value)}>
+                          <option value="">Select Class</option>
+                          <option value="6">Class 6</option>
+                          <option value="7">Class 7</option>
+                          <option value="8">Class 8</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>Select Section</span>
+                        <select value={formState.sectionValue} onChange={(e) => updateForm('sectionValue', e.target.value)}>
+                          <option value="">Select Section</option>
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                        </select>
+                      </label>
+                    </div>
+                  </>
+                ) : (
+                  <div className="communications-individual-stack">
+                    <input
+                      type="text"
+                      placeholder="Enter email or phone number"
+                      value={formState.individualEntry}
+                      onChange={(e) => updateForm('individualEntry', e.target.value)}
+                    />
+                    <button type="button" className="communications-add-recipient-btn" onClick={addIndividualRecipient}>
+                      <Plus size={16} />
+                      Add Recipient
+                    </button>
+                    {formState.individualRecipients.length ? (
+                      <div className="communications-recipient-chips">
+                        {formState.individualRecipients.map((recipient) => (
+                          <span key={recipient} className="role-badge">{recipient}</span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </section>
 
-              <label>
-                <span>Schedule Date</span>
-                <input
-                  type="datetime-local"
-                  value={formState.scheduleDate?.slice(0, 16) ?? ''}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, scheduleDate: e.target.value }))}
-                />
-              </label>
-
-              <label>
-                <span>Recipients</span>
-                <input
-                  type="text"
-                  placeholder="All, Students, Teachers, Class 6A, ..."
-                  value={formState.recipients?.join(', ') ?? ''}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      recipients: e.target.value.split(',').map((v) => v.trim()).filter(Boolean),
-                    }))
-                  }
-                />
-              </label>
-
-              <label className="full-width">
-                <span>Optional AI Context</span>
-                <input
-                  type="text"
-                  value={aiContext}
-                  placeholder="Extra details for auto-generated content"
-                  onChange={(e) => setAiContext(e.target.value)}
-                />
-              </label>
-
-              <label className="full-width">
-                <span>Message Content</span>
-                <textarea
-                  rows={10}
-                  value={formState.content}
-                  onChange={(e) => setFormState((prev) => ({ ...prev, content: e.target.value }))}
-                  placeholder="Write your message content here..."
-                />
-              </label>
-
-              <label className="full-width">
-                <span>Attachments</span>
-                <div className="communications-attachment-uploader">
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files || [])
-                      setFormState((prev) => ({
-                        ...prev,
-                        attachments: [...(prev.attachments ?? []), ...files.map((file) => file.name)],
-                      }))
-                      event.target.value = ''
-                    }}
-                  />
-                  <div className="role-message-attachments">
-                    {(formState.attachments || []).map((fileName) => (
-                      <span key={fileName} className="role-badge role-badge-light">
-                        <Paperclip size={12} /> {fileName}
-                      </span>
+              <div className="communications-modal-grid">
+                <div className="communications-delivery-field">
+                  <span className="communications-modal-label">Delivery Type</span>
+                  <div className="communications-delivery-toggle">
+                    {(['Email', 'WhatsApp', 'SMS'] as DeliveryMethod[]).map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        className={formState.deliveryMethod === method ? 'is-active' : ''}
+                        onClick={() => updateForm('deliveryMethod', method)}
+                      >
+                        {method}
+                      </button>
                     ))}
                   </div>
                 </div>
+
+                <label>
+                  <span>Priority</span>
+                  <select value={formState.priority} onChange={(e) => updateForm('priority', e.target.value as PriorityLevel)}>
+                    <option value="Low">Low</option>
+                    <option value="Normal">Normal</option>
+                    <option value="High">High</option>
+                  </select>
+                </label>
+              </div>
+
+              {formState.deliveryMethod === 'Email' ? (
+                <>
+                  <label>
+                    <span>To</span>
+                    <input
+                      type="text"
+                      placeholder="Default recipients"
+                      value={formState.recipients}
+                      onChange={(e) => updateForm('recipients', e.target.value)}
+                    />
+                  </label>
+
+                  <div className="communications-modal-grid">
+                    <label>
+                      <span>CC</span>
+                      <input
+                        type="text"
+                        placeholder="Optional CC recipients"
+                        value={formState.cc}
+                        onChange={(e) => updateForm('cc', e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span>BCC</span>
+                      <input
+                        type="text"
+                        placeholder="Optional BCC recipients"
+                        value={formState.bcc}
+                        onChange={(e) => updateForm('bcc', e.target.value)}
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <label>
+                  <span>Phone Number</span>
+                  <input
+                    type="text"
+                    placeholder="Enter phone number"
+                    value={formState.phoneNumber}
+                    onChange={(e) => updateForm('phoneNumber', e.target.value)}
+                  />
+                </label>
+              )}
+
+              <div className="communications-modal-grid">
+                <label>
+                  <span>Category</span>
+                  <select value={formState.category} onChange={(e) => updateForm('category', e.target.value as CommunicationCategory)}>
+                    <option value="General">General</option>
+                    <option value="Fee reminder">Fee reminder</option>
+                    <option value="Holiday notice">Holiday notice</option>
+                    <option value="PTM invite">PTM invite</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Status</span>
+                  <select value={formState.status} onChange={(e) => updateForm('status', e.target.value as ComposeStatus)}>
+                    <option value="Draft">Draft</option>
+                    <option value="Active">Active</option>
+                  </select>
+                </label>
+              </div>
+
+              {formState.deliveryMethod === 'Email' ? (
+                <label>
+                  <span>Subject</span>
+                  <input
+                    type="text"
+                    placeholder="Message subject line"
+                    value={formState.subjectLine}
+                    onChange={(e) => updateForm('subjectLine', e.target.value)}
+                  />
+                </label>
+              ) : null}
+
+              <label>
+                <span>Schedule (Optional)</span>
+                <input
+                  type="datetime-local"
+                  value={formState.scheduleDate}
+                  onChange={(e) => updateForm('scheduleDate', e.target.value)}
+                />
               </label>
+
+              {formState.deliveryMethod !== 'SMS' ? (
+                <>
+                  <div className="communications-content-head">
+                    <span>Content</span>
+                    <button type="button" className="communications-ai-link" onClick={() => handleAiAssist()}>
+                      <Sparkles size={14} />
+                      AI Assist
+                    </button>
+                  </div>
+                  <textarea
+                    className="communications-content-textarea"
+                    value={formState.content}
+                    onChange={(e) => updateForm('content', e.target.value)}
+                    placeholder="Write your message content here..."
+                  />
+
+                  <section className="communications-ai-panel">
+                    <div className="communications-ai-panel-head">
+                      <strong>AI Content Assistant</strong>
+                    </div>
+                    <div className="communications-ai-panel-row">
+                      <input
+                        type="text"
+                        placeholder="Describe what you want to say..."
+                        value={formState.aiContext}
+                        onChange={(e) => updateForm('aiContext', e.target.value)}
+                      />
+                      <button type="button" className="role-primary-btn" onClick={() => handleAiAssist()}>
+                        <Sparkles size={14} />
+                        Generate
+                      </button>
+                    </div>
+                    <div className="communications-ai-suggestions">
+                      {suggestionPills.map((pill) => (
+                        <button key={pill} type="button" onClick={() => handleAiAssist(pill)}>
+                          {pill}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              ) : null}
+
+              <label>
+                <span>Attachments</span>
+                <label className="communications-upload-field">
+                  <Paperclip size={16} />
+                  <span>Upload attachments</span>
+                  <input type="file" multiple onChange={(e) => handleAttachmentUpload(e.target.files)} />
+                </label>
+              </label>
+              {formState.attachments.length ? (
+                <div className="communications-recipient-chips">
+                  {formState.attachments.map((attachment) => (
+                    <span key={attachment} className="role-badge">{attachment}</span>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
-            <div className="communications-form-actions">
-              <button type="button" className="role-secondary-btn" onClick={() => setView('list')}>
-                Cancel
+            <footer className="communications-compose-actions">
+              <button type="button" className="role-secondary-btn" onClick={closeCompose}>Cancel</button>
+              <button type="button" className="role-secondary-btn communications-outline-btn" onClick={saveDraft}>Save Draft</button>
+              <button type="button" className="role-primary-btn" onClick={sendMessage}>Send Message</button>
+              <button type="button" className="communications-ai-icon-btn" onClick={() => handleAiAssist()} aria-label="AI Assist">
+                <Sparkles size={16} />
               </button>
-              <button type="button" className="role-secondary-btn outlined" onClick={() => saveMessage('Draft')}>
-                Save Draft
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedMessage ? (
+        <div className="communications-modal-backdrop" role="presentation" onClick={() => setSelectedMessage(null)}>
+          <section className="communications-view-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <header className="communications-compose-head">
+              <div className="communications-compose-title">
+                <MessagesSquare size={18} />
+                <h3>Message Details</h3>
+              </div>
+              <button type="button" onClick={() => setSelectedMessage(null)} aria-label="Close message details">
+                <X size={18} />
               </button>
-              <button type="button" className="role-primary-btn" onClick={handleSendMessage}>
-                <Send size={14} /> Send Message
-              </button>
-              <button type="button" className="role-icon-btn" onClick={handleAiAssist}>
-                <Zap size={18} />
-              </button>
+            </header>
+            <div className="communications-view-content">
+              <p><strong>Subject:</strong> {selectedMessage.subjectLine}</p>
+              <p><strong>Type:</strong> {selectedMessage.type}</p>
+              <p><strong>Delivery Method:</strong> {selectedMessage.deliveryMethod}</p>
+              <p><strong>Status:</strong> <span className={statusTextClass(selectedMessage.status)}>{selectedMessage.status}</span></p>
+              <p><strong>Recipients:</strong> {selectedMessage.recipients.join(', ')}</p>
+              <p><strong>Schedule Date:</strong> {formatScheduleDate(selectedMessage.scheduleDate)}</p>
+              <p><strong>Content:</strong></p>
+              <div className="communications-view-body">{selectedMessage.content}</div>
             </div>
           </section>
-        )}
-
-        {view === 'detail' && selectedMessage && (
-          <section className="role-card role-admin-communications-card role-communication-detail-card">
-            <div className="role-section-head">
-              <h3>Message Detail</h3>
-              <div className="role-card-actions" style={{ gap: 8 }}>
-                <button type="button" className="role-secondary-btn" onClick={() => setView('list')}>
-                  Back
-                </button>
-                {selectedMessage.status === 'Draft' && (
-                  <button type="button" className="role-primary-btn" onClick={() => openEdit(selectedMessage.id)}>
-                    <Edit3 size={14} /> Edit
-                  </button>
-                )}
-                {selectedMessage.status === 'Sent' && (
-                  <button type="button" className="role-secondary-btn" onClick={() => handleArchive(selectedMessage.id)}>
-                    <Archive size={14} /> Archive
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="role-detail-grid">
-              <div>
-                <h4>{selectedMessage.subject}</h4>
-                <p className="role-muted">{selectedMessage.category} • {selectedMessage.deliveryMethod}</p>
-                <p>{selectedMessage.content}</p>
-              </div>
-              <div className="role-card role-card-small">
-                <p><strong>Scheduled</strong></p>
-                <p><Calendar size={14} /> {new Date(selectedMessage.scheduleDate).toLocaleString()}</p>
-                <p><strong>Recipients</strong></p>
-                <p>{selectedMessage.recipients.join(', ') || 'All'}</p>
-                <p><strong>Status</strong></p>
-                <p className={statusClassName(selectedMessage.status)}>{selectedMessage.status}</p>
-                <p><strong>Attachments</strong></p>
-                <p>{selectedMessage.attachments.length ? selectedMessage.attachments.join(', ') : 'None'}</p>
-              </div>
-            </div>
-          </section>
-        )}
-      </section>
+        </div>
+      ) : null}
     </main>
   )
 }

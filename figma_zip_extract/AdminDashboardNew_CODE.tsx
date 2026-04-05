@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './src/app/components/ui/card';
+import { Button } from './src/app/components/ui/button';
+import { Input } from './src/app/components/ui/input';
+import { Badge } from './src/app/components/ui/badge';
 import { 
-  GraduationCap, Bell, Settings, LogOut, Home, Users, BookOpen, 
-  ClipboardList, BarChart3, MessageSquare, Settings as SettingsIcon, Send, Mail, Phone, Edit, Trash2
+  GraduationCap, Bell, Settings as SettingsIcon, LogOut, Home, Users, BookOpen, 
+  ClipboardList, BarChart3, MessageSquare, Send, Mail, Phone, Edit, Trash2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { SkaiMitraAssistant } from './SkaiMitraAssistant';
-import bgImage from 'figma:asset/7280b9bb2443d06a2dd7ab56b34ecee081080853.png';
 
 interface AdminDashboardNewProps {
   onLogout: () => void;
@@ -19,6 +17,7 @@ interface AdminDashboardNewProps {
 export function AdminDashboardNew({ onLogout, onNavigate }: AdminDashboardNewProps) {
   const [activeTab, setActiveTab] = useState('home');
   const [question, setQuestion] = useState('');
+  const bgImage = ''
 
   // Mock data
   const performanceData = [
@@ -578,7 +577,7 @@ export function AdminDashboardNew({ onLogout, onNavigate }: AdminDashboardNewPro
                 >
                   <div className="text-left">
                     <div className="flex items-center gap-2 mb-1">
-                      <Settings className="w-4 h-4" />
+                      <SettingsIcon className="w-4 h-4" />
                       <span className="font-medium">Role Permissions</span>
                     </div>
                     <p className="text-xs text-gray-600">Manage user roles and access</p>
@@ -719,7 +718,7 @@ export function AdminDashboardNew({ onLogout, onNavigate }: AdminDashboardNewPro
           <div className="flex items-center justify-between">
             {/* Logo and Welcome */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-600 to-cyan-500 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-linear-to-br from-indigo-600 to-cyan-500 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
               <div>
@@ -735,7 +734,7 @@ export function AdminDashboardNew({ onLogout, onNavigate }: AdminDashboardNewPro
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </Button>
               <Button variant="ghost" size="icon">
-                <Settings className="w-5 h-5" />
+                <SettingsIcon className="w-5 h-5" />
               </Button>
               <Button variant="outline" onClick={onLogout} size="sm" className="hidden sm:flex">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -777,7 +776,6 @@ export function AdminDashboardNew({ onLogout, onNavigate }: AdminDashboardNewPro
       </main>
 
       {/* SkaiMitra Assistant */}
-      <SkaiMitraAssistant />
     </div>
   );
 }
