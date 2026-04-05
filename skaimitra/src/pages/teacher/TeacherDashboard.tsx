@@ -4,6 +4,8 @@ import {
   Bell,
   BarChart,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Copy,
   Eye,
@@ -30,9 +32,8 @@ import {
   Bar,
   BarChart as RechartsBarChart,
   CartesianGrid,
+  LabelList,
   Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -50,6 +51,7 @@ import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
 import ActionIconButton from '../../components/dashboard/ActionIconButton'
 import AIChat from '../../components/dashboard/AIChat'
 import MessageCenter from '../../components/dashboard/MessageCenter'
+import ProfileSettingsPanel, { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
 import {
@@ -222,12 +224,14 @@ type LabActivityFormState = {
 }
 
 type AssignmentType = 'Quiz' | 'Paper' | 'Homework' | 'Project'
+type AssignmentMode = 'Online' | 'Offline'
 
 type AssignmentRecord = {
   id: number
   assignmentName: string
   className: string
   section: string
+  assignmentMode: AssignmentMode
   assignmentType: AssignmentType
   assignmentDue: string
   subject: string
@@ -246,6 +250,7 @@ type AssignmentFormState = {
   assignmentName: string
   className: string
   section: string
+  assignmentMode: AssignmentMode
   assignmentType: AssignmentType
   assignmentDue: string
   subject: string
@@ -271,6 +276,14 @@ type SubmissionRecord = {
   submittedOn: string
   status: 'Submitted' | 'Reviewed'
   score: string
+}
+
+type StudentProfileCard = {
+  id: number
+  name: string
+  className: string
+  section: string
+  initials: string
 }
 
 type GradeEvaluationForm = {
@@ -300,13 +313,10 @@ const analyticsSummaryCards = [
   { label: 'Overall Performance', value: '87%', icon: BarChart, note: 'Up 5% since January' },
 ]
 
-const analyticsTrendData = [
-  { month: 'Jan', averageScore: 74, submissionRate: 79, completionRate: 76 },
-  { month: 'Feb', averageScore: 76, submissionRate: 82, completionRate: 80 },
-  { month: 'Mar', averageScore: 79, submissionRate: 84, completionRate: 83 },
-  { month: 'Apr', averageScore: 81, submissionRate: 88, completionRate: 86 },
-  { month: 'May', averageScore: 84, submissionRate: 90, completionRate: 88 },
-  { month: 'Jun', averageScore: 87, submissionRate: 92, completionRate: 91 },
+const attendanceDashboardData = [
+  { month: 'Jan', grade6: 120, grade7: 135, grade8: 110, g6p: '80%', g7p: '90%', g8p: '79%' },
+  { month: 'Feb', grade6: 130, grade7: 140, grade8: 115, g6p: '87%', g7p: '93%', g8p: '82%' },
+  { month: 'Mar', grade6: 125, grade7: 138, grade8: 120, g6p: '83%', g7p: '92%', g8p: '86%' },
 ]
 
 const classPerformanceData = [
@@ -449,11 +459,15 @@ const createEmptyLabActivityForm = (): LabActivityFormState => ({
 })
 
 const assignmentTypeOptions: AssignmentType[] = ['Quiz', 'Paper', 'Homework', 'Project']
+const assignmentModeOptions: AssignmentMode[] = ['Online', 'Offline']
+const assignmentClassOptions = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12']
+const assignmentSectionOptions = ['A', 'B', 'C']
 
 const createEmptyAssignmentForm = (): AssignmentFormState => ({
   assignmentName: '',
   className: '',
   section: '',
+  assignmentMode: 'Online',
   assignmentType: 'Quiz',
   assignmentDue: '',
   subject: '',
@@ -474,6 +488,7 @@ const initialAssignments: AssignmentRecord[] = [
     assignmentName: 'Algebra Quiz',
     className: 'Class 6',
     section: 'A',
+    assignmentMode: 'Online',
     assignmentType: 'Quiz',
     assignmentDue: '2026-04-20',
     subject: 'Mathematics',
@@ -490,6 +505,7 @@ const initialAssignments: AssignmentRecord[] = [
     assignmentName: 'Science Research Paper',
     className: 'Class 7',
     section: 'B',
+    assignmentMode: 'Offline',
     assignmentType: 'Paper',
     assignmentDue: '2026-04-22',
     subject: 'Science',
@@ -507,6 +523,7 @@ const initialAssignments: AssignmentRecord[] = [
     assignmentName: 'Essay Writing',
     className: 'Class 8',
     section: 'C',
+    assignmentMode: 'Online',
     assignmentType: 'Project',
     assignmentDue: '2026-04-25',
     subject: 'English',
@@ -521,10 +538,17 @@ const initialAssignments: AssignmentRecord[] = [
   },
 ]
 
+const gradeStudentProfiles: StudentProfileCard[] = [
+  { id: 1, name: 'Rahul Sharma', className: 'Class 6', section: 'A', initials: 'RS' },
+  { id: 2, name: 'Priya Reddy', className: 'Class 7', section: 'B', initials: 'PR' },
+  { id: 3, name: 'Arjun Kumar', className: 'Class 8', section: 'C', initials: 'AK' },
+  { id: 4, name: 'Sneha Patel', className: 'Class 9', section: 'A', initials: 'SP' },
+]
+
 const initialSubmittedAssignments: SubmissionRecord[] = [
   {
     id: 1,
-    studentName: 'Aarav Mehta',
+    studentName: 'Rahul Sharma',
     className: 'Class 6',
     section: 'A',
     assignmentName: 'Algebra Quiz',
@@ -536,19 +560,7 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
   },
   {
     id: 2,
-    studentName: 'Ishita Rao',
-    className: 'Class 6',
-    section: 'B',
-    assignmentName: 'Fractions Worksheet',
-    assignmentType: 'Homework',
-    subject: 'Mathematics',
-    submittedOn: '2026-04-19',
-    status: 'Submitted',
-    score: 'Pending',
-  },
-  {
-    id: 3,
-    studentName: 'Diya Sharma',
+    studentName: 'Priya Reddy',
     className: 'Class 7',
     section: 'B',
     assignmentName: 'Science Research Paper',
@@ -559,20 +571,8 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
     score: '90%',
   },
   {
-    id: 4,
-    studentName: 'Karan Malhotra',
-    className: 'Class 7',
-    section: 'A',
-    assignmentName: 'Lab Observation Sheet',
-    assignmentType: 'Project',
-    subject: 'Science',
-    submittedOn: '2026-04-20',
-    status: 'Submitted',
-    score: 'Pending',
-  },
-  {
-    id: 5,
-    studentName: 'Rohan Verma',
+    id: 3,
+    studentName: 'Arjun Kumar',
     className: 'Class 8',
     section: 'C',
     assignmentName: 'Essay Writing',
@@ -581,6 +581,18 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
     submittedOn: '2026-04-21',
     status: 'Reviewed',
     score: '82%',
+  },
+  {
+    id: 4,
+    studentName: 'Sneha Patel',
+    className: 'Class 9',
+    section: 'A',
+    assignmentName: 'Lab Observation Sheet',
+    assignmentType: 'Project',
+    subject: 'Science',
+    submittedOn: '2026-04-22',
+    status: 'Submitted',
+    score: 'Pending',
   },
 ]
 
@@ -717,6 +729,14 @@ const includesSearch = (value: string | number | null | undefined, query: string
     .toLowerCase()
     .includes(query.trim().toLowerCase())
 
+const getInitials = (name: string) =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+
 function TeacherDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TeacherTab>('Home')
@@ -745,6 +765,14 @@ function TeacherDashboard() {
   const [uploadSearchTerm, setUploadSearchTerm] = useState('')
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [teacherName, setTeacherName] = useState('Teacher')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [teacherProfile, setTeacherProfile] = useState<ProfileSettingsData>({
+    name: 'Teacher',
+    email: 'teacher@skaimitra.com',
+    phone: '+91 98765 43210',
+    subject: 'Mathematics',
+    role: 'Teacher',
+  })
   const [selectedReportClass, setSelectedReportClass] = useState<(typeof classPerformanceData)[number] | null>(classPerformanceData[1])
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
@@ -766,7 +794,9 @@ function TeacherDashboard() {
 
   const [announcements, setAnnouncements] = useState<DashboardAnnouncement[]>(() => loadAnnouncements())
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false)
-  const [showAllAnnouncements, setShowAllAnnouncements] = useState(false)
+  const [showUnreadNotifications, setShowUnreadNotifications] = useState(false)
+  const [viewedAnnouncementIds, setViewedAnnouncementIds] = useState<number[]>([])
+  const [currentNotificationIndex, setCurrentNotificationIndex] = useState(0)
   const [editingAnnouncementId, setEditingAnnouncementId] = useState<number | null>(null)
   const [isEventOpen, setIsEventOpen] = useState(false)
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
@@ -808,6 +838,13 @@ function TeacherDashboard() {
   useEffect(() => {
     const savedName = localStorage.getItem('skaimitra_name')?.trim()
     if (savedName) setTeacherName(savedName)
+    setTeacherProfile((current) => ({
+      ...current,
+      name: savedName || current.name,
+      email: localStorage.getItem('skaimitra_teacher_email')?.trim() || current.email,
+      phone: localStorage.getItem('skaimitra_teacher_phone')?.trim() || current.phone,
+      subject: localStorage.getItem('skaimitra_teacher_subject')?.trim() || current.subject,
+    }))
   }, [])
 
   useEffect(() => {
@@ -926,6 +963,16 @@ function TeacherDashboard() {
       }),
     [homeSearchTerm, teacherAnnouncements],
   )
+
+  const unreadTeacherAnnouncements = useMemo(
+    () => filteredTeacherAnnouncements.filter((item) => !viewedAnnouncementIds.includes(item.id)),
+    [filteredTeacherAnnouncements, viewedAnnouncementIds],
+  )
+
+  const activeTeacherNotifications = showUnreadNotifications ? unreadTeacherAnnouncements : filteredTeacherAnnouncements
+
+  const currentNotification = activeTeacherNotifications[currentNotificationIndex] ?? null
+  const isCurrentNotificationUnread = currentNotification ? !viewedAnnouncementIds.includes(currentNotification.id) : false
 
   const filteredLessonPlans = useMemo(
     () =>
@@ -1086,6 +1133,32 @@ function TeacherDashboard() {
     saveAnnouncements(nextAnnouncements)
     setAnnouncements(nextAnnouncements)
     setCalendarNotice({ type: 'success', message: 'Announcement deleted successfully.' })
+  }
+
+  useEffect(() => {
+    if (activeTeacherNotifications.length === 0) {
+      if (currentNotificationIndex !== 0) setCurrentNotificationIndex(0)
+      return
+    }
+
+    if (currentNotificationIndex > activeTeacherNotifications.length - 1) {
+      setCurrentNotificationIndex(activeTeacherNotifications.length - 1)
+    }
+  }, [activeTeacherNotifications, currentNotificationIndex])
+
+  const markNotificationViewed = (notificationId: number | null) => {
+    if (!notificationId) return
+    setViewedAnnouncementIds((current) => (current.includes(notificationId) ? current : [...current, notificationId]))
+  }
+
+  const handlePreviousNotification = () => {
+    markNotificationViewed(currentNotification?.id ?? null)
+    setCurrentNotificationIndex((prev) => Math.max(prev - 1, 0))
+  }
+
+  const handleNextNotification = () => {
+    markNotificationViewed(currentNotification?.id ?? null)
+    setCurrentNotificationIndex((prev) => Math.min(prev + 1, Math.max(activeTeacherNotifications.length - 1, 0)))
   }
 
   const handleEditEvent = (event: CalendarEventRecord) => {
@@ -1763,6 +1836,7 @@ function TeacherDashboard() {
       assignmentName: assignment.assignmentName,
       className: assignment.className,
       section: assignment.section,
+      assignmentMode: assignment.assignmentMode,
       assignmentType: assignment.assignmentType,
       assignmentDue: assignment.assignmentDue,
       subject: assignment.subject,
@@ -1781,6 +1855,15 @@ function TeacherDashboard() {
   const closeAssignmentBuilder = () => {
     setIsAssignmentBuilderOpen(false)
     setEditingAssignmentId(null)
+  }
+
+  const saveTeacherProfile = (nextProfile: ProfileSettingsData) => {
+    setTeacherProfile(nextProfile)
+    setTeacherName(nextProfile.name)
+    localStorage.setItem('skaimitra_name', nextProfile.name)
+    localStorage.setItem('skaimitra_teacher_email', nextProfile.email)
+    localStorage.setItem('skaimitra_teacher_phone', nextProfile.phone)
+    localStorage.setItem('skaimitra_teacher_subject', nextProfile.subject)
   }
 
   const updateAssignmentField = <K extends keyof AssignmentFormState>(field: K, value: AssignmentFormState[K]) => {
@@ -1827,6 +1910,7 @@ function TeacherDashboard() {
       assignmentName: assignmentForm.assignmentName.trim(),
       className: assignmentForm.className.trim(),
       section: assignmentForm.section.trim(),
+      assignmentMode: assignmentForm.assignmentMode,
       assignmentType: assignmentForm.assignmentType,
       assignmentDue: assignmentForm.assignmentDue,
       subject: assignmentForm.subject.trim(),
@@ -2017,53 +2101,86 @@ function TeacherDashboard() {
         <section className="role-card role-admin-communications-card">
           <div className="role-section-head role-admin-communications-head">
             <h3 className="role-section-title">Notifications</h3>
-            <button type="button" className="role-primary-btn teacher-announcement-btn" onClick={handleOpenAnnouncementModal}>
-      
-              +
-            </button>
+            <div className="teacher-notification-actions">
+              <button
+                type="button"
+                className={`role-secondary-btn teacher-notification-filter-btn ${showUnreadNotifications ? 'is-active' : ''}`}
+                onClick={() => {
+                  setShowUnreadNotifications((prev) => !prev)
+                  setCurrentNotificationIndex(0)
+                }}
+              >
+                New
+              </button>
+              <button type="button" className="role-primary-btn teacher-announcement-btn" onClick={handleOpenAnnouncementModal}>
+                +
+              </button>
+            </div>
           </div>
 
           <div className="role-admin-announcement-list">
-            {filteredTeacherAnnouncements.length ? (
-              <>
-                {(showAllAnnouncements ? filteredTeacherAnnouncements : filteredTeacherAnnouncements.slice(0, 2)).map((item) => (
-                  <article key={item.id} className="role-admin-announcement-row">
-                    <div className="role-admin-announcement-copy">
-                      <h4>{item.title}</h4>
-                      <p className="role-muted">{`${item.date} - ${formatAudienceIds(item.audienceIds)} - Expires ${item.expiresAt}`}</p>
-                      <p className="role-muted">{item.message}</p>
-                    </div>
-                    <div className="role-admin-announcement-actions">
-                      <button
-                      type="button"
-                      className="role-icon-square-btn"
-                      aria-label={`Edit ${item.title}`}
-                      onClick={() => handleEditAnnouncement(item)}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      className="role-icon-square-btn role-icon-square-btn-danger"
-                      aria-label={`Delete ${item.title}`}
-                      onClick={() => handleDeleteAnnouncement(item.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+            {currentNotification ? (
+              <article
+                key={`${currentNotification.id}-${showUnreadNotifications ? 'new' : 'all'}`}
+                className={`role-admin-announcement-row teacher-notification-card ${isCurrentNotificationUnread ? 'is-unread' : ''}`}
+              >
+                <div className="role-admin-announcement-copy teacher-notification-copy">
+                  <div className="teacher-notification-title-row">
+                    <h4>{currentNotification.title}</h4>
+                    {isCurrentNotificationUnread ? <span className="teacher-notification-dot" aria-label="Unread notification" /> : null}
                   </div>
-                </article>
-              ))}
-            </>
+                  <p className="role-muted">{currentNotification.message}</p>
+                  <div className="teacher-notification-meta">
+                    <span>{currentNotification.date}</span>
+                    <span>{formatAudienceIds(currentNotification.audienceIds)}</span>
+                    <span>Expires {currentNotification.expiresAt}</span>
+                  </div>
+                </div>
+                <div className="role-admin-announcement-actions">
+                  <button
+                    type="button"
+                    className="role-icon-square-btn"
+                    aria-label={`Edit ${currentNotification.title}`}
+                    onClick={() => handleEditAnnouncement(currentNotification)}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="role-icon-square-btn role-icon-square-btn-danger"
+                    aria-label={`Delete ${currentNotification.title}`}
+                    onClick={() => handleDeleteAnnouncement(currentNotification.id)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </article>
             ) : (
-              <p className="role-muted">No teacher announcements match your search.</p>
+              <p className="role-muted">{showUnreadNotifications ? 'No new notifications' : 'No teacher announcements match your search.'}</p>
             )}
-            {filteredTeacherAnnouncements.length > 2 ? (
-              <div className="role-announce-view-more" style={{marginTop: '0.75rem', textAlign: 'center'}}>
-                <button type="button" className="role-secondary-btn" onClick={() => setShowAllAnnouncements((prev) => !prev)}>
-                  {showAllAnnouncements ? 'Show Less' : 'View More'}
-                </button>
-              </div>
-            ) : null}
+            <div className="teacher-notification-nav">
+              <button
+                type="button"
+                className="role-secondary-btn teacher-notification-nav-btn"
+                onClick={handlePreviousNotification}
+                disabled={currentNotificationIndex === 0 || activeTeacherNotifications.length === 0}
+                aria-label="Previous notification"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="teacher-notification-count">
+                {activeTeacherNotifications.length === 0 ? '0 / 0' : `${currentNotificationIndex + 1} / ${activeTeacherNotifications.length}`}
+              </span>
+              <button
+                type="button"
+                className="role-secondary-btn teacher-notification-nav-btn"
+                onClick={handleNextNotification}
+                disabled={activeTeacherNotifications.length === 0 || currentNotificationIndex >= activeTeacherNotifications.length - 1}
+                aria-label="Next notification"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </section>
 
@@ -2101,22 +2218,36 @@ function TeacherDashboard() {
             <section className="analytics-chart-card">
               <div className="role-section-head">
                 <div>
-                  <h3 className="role-section-title">Growth Trends</h3>
-                  <p className="role-muted">Monthly score, submission, and completion movement</p>
+                  <h3 className="role-section-title">Attendance Dashboard</h3>
+                  <p className="role-muted">Class-wise monthly attendance counts with percentage labels</p>
                 </div>
               </div>
               <div className="analytics-chart-wrap">
                 <ResponsiveContainer width="100%" height={320}>
-                  <LineChart data={analyticsTrendData}>
+                  <RechartsBarChart data={attendanceDashboardData} barGap={10} barCategoryGap="22%">
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="month" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" domain={[60, 100]} />
-                    <Tooltip />
+                    <YAxis stroke="#6b7280" />
+                    <Tooltip
+                      formatter={(value, name, props) => {
+                        const percentageKey =
+                          props.dataKey === 'grade6' ? 'g6p' : props.dataKey === 'grade7' ? 'g7p' : 'g8p'
+                        const percentage = props.payload?.[percentageKey] ?? ''
+                        const seriesName = name === 'grade6' ? 'Grade 6' : name === 'grade7' ? 'Grade 7' : 'Grade 8'
+                        return [`${value} (${percentage})`, seriesName]
+                      }}
+                    />
                     <Legend />
-                    <Line type="monotone" dataKey="averageScore" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4 }} name="Average score" />
-                    <Line type="monotone" dataKey="submissionRate" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} name="Submission rate" />
-                    <Line type="monotone" dataKey="completionRate" stroke="#16a34a" strokeWidth={3} dot={{ r: 4 }} name="Completion rate" />
-                  </LineChart>
+                    <Bar dataKey="grade6" name="grade6" fill="#2563eb" radius={[10, 10, 0, 0]} maxBarSize={42}>
+                      <LabelList dataKey="g6p" position="top" fill="#1f2937" fontSize={13} fontWeight={700} />
+                    </Bar>
+                    <Bar dataKey="grade7" name="grade7" fill="#f97316" radius={[10, 10, 0, 0]} maxBarSize={42}>
+                      <LabelList dataKey="g7p" position="top" fill="#1f2937" fontSize={13} fontWeight={700} />
+                    </Bar>
+                    <Bar dataKey="grade8" name="grade8" fill="#16a34a" radius={[10, 10, 0, 0]} maxBarSize={42}>
+                      <LabelList dataKey="g8p" position="top" fill="#1f2937" fontSize={13} fontWeight={700} />
+                    </Bar>
+                  </RechartsBarChart>
                 </ResponsiveContainer>
               </div>
             </section>
@@ -3068,6 +3199,7 @@ function TeacherDashboard() {
                     </div>
                     <div className="planner-detail-grid">
                       <p><strong>Type:</strong> {selectedAssignment.assignmentType}</p>
+                      <p><strong>Mode:</strong> {selectedAssignment.assignmentMode}</p>
                       <p><strong>Due:</strong> {selectedAssignment.assignmentDue}</p>
                       <p><strong>Source:</strong> {selectedAssignment.source}</p>
                       <p><strong>Date:</strong> {selectedAssignment.date}</p>
@@ -3129,11 +3261,23 @@ function TeacherDashboard() {
                 </label>
                 <label>
                   <span>Class</span>
-                  <input type="text" value={assignmentForm.className} onChange={(e) => updateAssignmentField('className', e.target.value)} />
+                  <select value={assignmentForm.className} onChange={(e) => updateAssignmentField('className', e.target.value)}>
+                    <option value="">Select Class</option>
+                    {assignmentClassOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
                 </label>
                 <label>
                   <span>Section</span>
-                  <input type="text" value={assignmentForm.section} onChange={(e) => updateAssignmentField('section', e.target.value)} />
+                  <select value={assignmentForm.section} onChange={(e) => updateAssignmentField('section', e.target.value)}>
+                    <option value="">Select Section</option>
+                    {assignmentSectionOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Assignment Mode</span>
+                  <select value={assignmentForm.assignmentMode} onChange={(e) => updateAssignmentField('assignmentMode', e.target.value as AssignmentMode)}>
+                    {assignmentModeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
                 </label>
                 <label>
                   <span>Assignment Type</span>
@@ -3266,6 +3410,10 @@ function TeacherDashboard() {
                 <option value="Class 6">Class 6</option>
                 <option value="Class 7">Class 7</option>
                 <option value="Class 8">Class 8</option>
+                <option value="Class 9">Class 9</option>
+                <option value="Class 10">Class 10</option>
+                <option value="Class 11">Class 11</option>
+                <option value="Class 12">Class 12</option>
               </select>
               <select value={gradeSectionFilter} onChange={(e) => setGradeSectionFilter(e.target.value)}>
                 <option value="All Sections">All Sections</option>
@@ -3278,6 +3426,7 @@ function TeacherDashboard() {
               <table className="role-table teacher-grade-table">
                 <thead>
                   <tr>
+                    <th>Profile</th>
                     <th>Student</th>
                     <th>Class</th>
                     <th>Section</th>
@@ -3293,6 +3442,11 @@ function TeacherDashboard() {
                 <tbody>
                   {filteredGradeRows.map((student) => (
                     <tr key={student.id}>
+                      <td>
+                        <span className="teacher-student-avatar teacher-grade-avatar">
+                          {gradeStudentProfiles.find((item) => item.name === student.studentName)?.initials ?? getInitials(student.studentName)}
+                        </span>
+                      </td>
                       <td>{student.studentName}</td>
                       <td>{student.className}</td>
                       <td>{student.section}</td>
@@ -3559,7 +3713,7 @@ function TeacherDashboard() {
               <Bell size={20} />
               {messages.length > 0 ? <span className="role-dot" /> : null}
             </button>
-            <button type="button" className="role-icon-btn" aria-label="Settings">
+            <button type="button" className="role-icon-btn" aria-label="Settings" onClick={() => setIsSettingsOpen(true)}>
               <Settings size={20} />
             </button>
             <button type="button" className="role-logout-btn" onClick={() => navigate('/')}>
@@ -3771,6 +3925,24 @@ function TeacherDashboard() {
         onPrev={goToPreviousMessage}
         onNext={goToNextMessage}
       />
+      {isSettingsOpen ? (
+        <div className="role-modal-backdrop" role="presentation" onClick={() => setIsSettingsOpen(false)}>
+          <section className="role-modal teacher-lesson-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="role-modal-head">
+              <h2>System Settings</h2>
+              <button type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close system settings">
+                <X size={18} />
+              </button>
+            </div>
+            <ProfileSettingsPanel
+              title="Teacher Profile"
+              subtitle="Review and update your teacher details."
+              profile={teacherProfile}
+              onSave={saveTeacherProfile}
+            />
+          </section>
+        </div>
+      ) : null}
       <AIChat role="teacher" />
     </div>
   )

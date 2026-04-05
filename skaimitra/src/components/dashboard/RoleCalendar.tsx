@@ -48,6 +48,10 @@ function formatEventMeta(event: CalendarEventRecord) {
   return `${time}${event.eventType}${classScope}`
 }
 
+function formatEventSchedule(event: CalendarEventRecord) {
+  return event.time ? `${event.date} • ${event.time}` : event.date
+}
+
 function getDateNumberStyle(hasEvents: boolean, isToday: boolean) {
   if (hasEvents) {
     return {
@@ -227,11 +231,10 @@ function RoleCalendar({
             {allEvents.length ? (
               allEvents.map((event) => (
                 <article key={event.eventId} className="role-calendar-event-item">
-                  <div>
+                  <div className="role-calendar-event-copy">
                     <strong>{event.title}</strong>
+                    <span>{formatEventSchedule(event)}</span>
                     <span>{formatEventMeta(event)}</span>
-                    <span>{event.date}</span>
-                    <p>{event.description}</p>
                   </div>
                   {event.canEdit && (onEditEvent || onDeleteEvent) ? (
                     <div className="role-calendar-event-actions">

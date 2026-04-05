@@ -14,11 +14,13 @@ import {
   Play,
   Search,
   Settings,
+  X,
 } from 'lucide-react'
 import { fetchCalendarEvents, type CalendarEventRecord } from '../../lib/api'
 import AIChat from '../../components/dashboard/AIChat'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import MessageCenter from '../../components/dashboard/MessageCenter'
+import ProfileSettingsPanel, { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
 import { getInboxMessages, type InboxMessage } from '../../lib/dashboardData'
 import '../role-dashboard.css'
 
@@ -106,6 +108,14 @@ function StudentDashboard() {
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [studentName, setStudentName] = useState('Aarav Mehta')
   const [studentClassSection, setStudentClassSection] = useState('Class 6A')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [studentProfile, setStudentProfile] = useState<ProfileSettingsData>({
+    name: 'Aarav Mehta',
+    email: 'student@skaimitra.com',
+    phone: '+91 98765 41000',
+    subject: 'General Learning',
+    role: 'Student',
+  })
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
@@ -117,7 +127,24 @@ function StudentDashboard() {
 
     const savedClassGrade = localStorage.getItem('skaimitra_class_grade')?.trim()
     if (savedClassGrade) setStudentClassSection(savedClassGrade)
+
+    setStudentProfile((current) => ({
+      ...current,
+      name: savedName || current.name,
+      email: localStorage.getItem('skaimitra_student_email')?.trim() || current.email,
+      phone: localStorage.getItem('skaimitra_student_phone')?.trim() || current.phone,
+      subject: localStorage.getItem('skaimitra_student_subject')?.trim() || current.subject,
+    }))
   }, [])
+
+  const saveStudentProfile = (nextProfile: ProfileSettingsData) => {
+    setStudentProfile(nextProfile)
+    setStudentName(nextProfile.name)
+    localStorage.setItem('skaimitra_name', nextProfile.name)
+    localStorage.setItem('skaimitra_student_email', nextProfile.email)
+    localStorage.setItem('skaimitra_student_phone', nextProfile.phone)
+    localStorage.setItem('skaimitra_student_subject', nextProfile.subject)
+  }
 
   useEffect(() => {
     const syncMessages = () => {
@@ -227,7 +254,7 @@ function StudentDashboard() {
               <Bell size={20} />
               {messages.length > 0 ? <span className="role-dot" /> : null}
             </button>
-            <button type="button" className="role-icon-btn" aria-label="Settings">
+            <button type="button" className="role-icon-btn" aria-label="Settings" onClick={() => setIsSettingsOpen(true)}>
               <Settings size={20} />
             </button>
             <button type="button" className="role-logout-btn" onClick={() => navigate('/')}>
@@ -495,6 +522,24 @@ function StudentDashboard() {
         onClose={() => setIsMessagesOpen(false)}
         onSelect={setSelectedMessageId}
       />
+      {isSettingsOpen ? (
+        <div className="role-modal-backdrop" role="presentation" onClick={() => setIsSettingsOpen(false)}>
+          <section className="role-modal teacher-lesson-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="role-modal-head">
+              <h2>System Settings</h2>
+              <button type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close system settings">
+                <X size={18} />
+              </button>
+            </div>
+            <ProfileSettingsPanel
+              title="Student Profile"
+              subtitle="Review and update your profile details."
+              profile={studentProfile}
+              onSave={saveStudentProfile}
+            />
+          </section>
+        </div>
+      ) : null}
       <AIChat role="student" />
     </div>
   )

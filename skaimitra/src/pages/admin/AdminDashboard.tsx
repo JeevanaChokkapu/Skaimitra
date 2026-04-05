@@ -39,6 +39,7 @@ import {
 import AIChat from '../../components/dashboard/AIChat'
 import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
 import MessageCenter from '../../components/dashboard/MessageCenter'
+import ProfileSettingsPanel, { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import {
   createFallbackCalendarEvent,
@@ -118,12 +119,6 @@ const resourceItems = [
   { id: 3, title: 'Assessment Policy Pack', type: 'Policy', owner: 'Exams Team' },
 ]
 
-const settingsItems = [
-  { id: 1, title: 'Role Permissions', desc: 'Adjust access for admin, teacher, parent, and student roles.' },
-  { id: 2, title: 'System Preferences', desc: 'Manage notifications, appearance, and dashboard behavior.' },
-  { id: 3, title: 'Security Controls', desc: 'Review sign-in rules, password flow, and audit visibility.' },
-]
-
 const roleOptions: Role[] = ['parent', 'teacher', 'admin', 'student']
 const gradeOptions = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12']
 const toTitle = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
@@ -153,7 +148,6 @@ function AdminDashboard() {
   const [courseSearchTerm, setCourseSearchTerm] = useState('')
   const [reportSearchTerm, setReportSearchTerm] = useState('')
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
-  const [settingsSearchTerm, setSettingsSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<'All' | Role>('All')
   const [isAddUserOpen, setIsAddUserOpen] = useState(false)
   const [isUsersLoading, setIsUsersLoading] = useState(false)
@@ -161,6 +155,14 @@ function AdminDashboard() {
   const [userInfo, setUserInfo] = useState('')
   const [editingUserId, setEditingUserId] = useState<number | null>(null)
   const [adminName, setAdminName] = useState('Admin')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [adminProfile, setAdminProfile] = useState<ProfileSettingsData>({
+    name: 'Admin',
+    email: 'admin@skaimitra.com',
+    phone: '+91 98765 40000',
+    subject: 'Administration',
+    role: 'Admin',
+  })
   const [announcements, setAnnouncements] = useState<DashboardAnnouncement[]>(() => loadAnnouncements())
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventRecord[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
@@ -207,6 +209,13 @@ function AdminDashboard() {
   useEffect(() => {
     const savedName = localStorage.getItem('skaimitra_name')?.trim()
     if (savedName) setAdminName(savedName)
+    setAdminProfile((current) => ({
+      ...current,
+      name: savedName || current.name,
+      email: localStorage.getItem('skaimitra_admin_email')?.trim() || current.email,
+      phone: localStorage.getItem('skaimitra_admin_phone')?.trim() || current.phone,
+      subject: localStorage.getItem('skaimitra_admin_subject')?.trim() || current.subject,
+    }))
   }, [])
 
   useEffect(() => {
@@ -413,22 +422,20 @@ function AdminDashboard() {
     [resourceSearchTerm],
   )
 
-  const filteredSettingsItems = useMemo(
-    () =>
-      settingsItems.filter((item) => {
-        const query = settingsSearchTerm.trim().toLowerCase()
-        if (!query) return true
-
-        return includesSearch(item.id, query) || includesSearch(item.title, query) || includesSearch(item.desc, query)
-      }),
-    [settingsSearchTerm],
-  )
-
   const recentMessages = useMemo(() => communicationItems.slice(0, 2), [communicationItems])
   const unseenMessages = useMemo(
     () => communicationItems.filter((message) => !seenMessageIds.includes(message.id)),
     [communicationItems, seenMessageIds],
   )
+
+  const saveAdminProfile = (nextProfile: ProfileSettingsData) => {
+    setAdminProfile(nextProfile)
+    setAdminName(nextProfile.name)
+    localStorage.setItem('skaimitra_name', nextProfile.name)
+    localStorage.setItem('skaimitra_admin_email', nextProfile.email)
+    localStorage.setItem('skaimitra_admin_phone', nextProfile.phone)
+    localStorage.setItem('skaimitra_admin_subject', nextProfile.subject)
+  }
 
   const getAuthToken = useCallback(async () => {
     const storedToken = localStorage.getItem('skaimitra_token')
@@ -1288,17 +1295,20 @@ function AdminDashboard() {
         'Search resources by title, owner, type, or ID...',
       )
     }
-    return renderOverviewCards(
-      'System Settings',
-      'Update permissions, security, and operational controls.',
-      filteredSettingsItems.map((item) => ({
-        id: item.id,
-        title: item.title,
-        meta: item.desc,
-      })),
-      settingsSearchTerm,
-      setSettingsSearchTerm,
-      'Search settings by title, description, or ID...',
+    return (
+      <main className="role-main role-main-detail">
+        <section className="role-primary">
+          <section className="role-card role-detail-card">
+            <ProfileSettingsPanel
+              title="System Settings"
+              subtitle="Review and update your admin profile details."
+              profile={adminProfile}
+              onSave={saveAdminProfile}
+              isInline
+            />
+          </section>
+        </section>
+      </main>
     )
   }
 
@@ -1327,7 +1337,7 @@ function AdminDashboard() {
               <Bell size={20} />
               {unseenMessages.length > 0 ? <span className="role-dot" /> : null}
             </button>
-            <button type="button" className="role-icon-btn" aria-label="Settings">
+            <button type="button" className="role-icon-btn" aria-label="Settings" onClick={() => setIsSettingsOpen(true)}>
               <Settings size={20} />
             </button>
             <button type="button" className="role-logout-btn" onClick={() => navigate('/')}>
@@ -1780,6 +1790,24 @@ function AdminDashboard() {
         onClose={handleCloseNotifications}
         onSelect={handleSelectNotification}
       />
+      {isSettingsOpen ? (
+        <div className="role-modal-backdrop" role="presentation" onClick={() => setIsSettingsOpen(false)}>
+          <section className="role-modal teacher-lesson-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="role-modal-head">
+              <h2>System Settings</h2>
+              <button type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close system settings">
+                <X size={18} />
+              </button>
+            </div>
+            <ProfileSettingsPanel
+              title="Admin Profile"
+              subtitle="Review and update your admin profile details."
+              profile={adminProfile}
+              onSave={saveAdminProfile}
+            />
+          </section>
+        </div>
+      ) : null}
       <AIChat role="admin" />
     </div>
   )
