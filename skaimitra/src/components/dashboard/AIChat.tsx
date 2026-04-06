@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MessageCircle, Send, Trash2, X } from 'lucide-react'
+import { Send, Trash2 } from 'lucide-react'
 
 type UserRole = 'admin' | 'teacher' | 'student'
 
@@ -44,13 +44,11 @@ const saveMessages = (messages: ChatMessage[]) => {
   }
 }
 
-const AIChat: React.FC<AIChatProps> = ({ role }) => {
-  const [open, setOpen] = useState(false)
+function AIChat({ role }: AIChatProps) {
   const [inputText, setInputText] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -62,9 +60,10 @@ const AIChat: React.FC<AIChatProps> = ({ role }) => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
+  const chats = useMemo(() => messages, [messages])
+
   const addMessage = (roleKey: 'user' | 'assistant', text: string) => {
-    const next = [...messages, { id: `${Date.now()}-${Math.random()}`, role: roleKey, text, ts: new Date().toISOString() }]
-    setMessages(next)
+    setMessages((current) => [...current, { id: `${Date.now()}-${Math.random()}`, role: roleKey, text, ts: new Date().toISOString() }])
   }
 
   const onSend = async () => {
@@ -113,63 +112,50 @@ const AIChat: React.FC<AIChatProps> = ({ role }) => {
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      onSend()
+      void onSend()
     }
   }
 
-  const chats = useMemo(() => messages, [messages])
-
   return (
-    <div className="ai-assistant-widget">
-      <button type="button" className="ai-assistant-float-btn" onClick={() => setOpen((prev) => !prev)} aria-label="Toggle AI Assistant">
-        <MessageCircle size={18} />
-      </button>
+    <section className="role-card ai-assistant-panel ai-assistant-panel-inline" aria-label="AI Assistant">
+      <header className="ai-assistant-header">
+        <div>
+          <h4>AI Assistant</h4>
+          <p>{role === 'teacher' ? 'Plan faster and grade smarter.' : role === 'admin' ? 'Draft, analyze, and organize quickly.' : 'Ask for study help anytime.'}</p>
+        </div>
+        <div className="ai-assistant-header-actions">
+          <button type="button" className="ai-assistant-icon-btn" onClick={onClear} title="Clear chat">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </header>
 
-      {open && (
-        <section className="ai-assistant-panel" role="dialog" aria-label="AI Assistant">
-          <header className="ai-assistant-header">
-            <div>
-              <h4>AI Assistant</h4>
-              <p>Ask anything...</p>
-            </div>
-            <div className="ai-assistant-header-actions">
-              <button type="button" className="ai-assistant-icon-btn" onClick={onClear} title="Clear chat">
-                <Trash2 size={16} />
-              </button>
-              <button type="button" className="ai-assistant-icon-btn" onClick={() => setOpen(false)} title="Close chat">
-                <X size={16} />
-              </button>
-            </div>
-          </header>
-
-          <div className="ai-chat-body" ref={scrollRef}>
-            {chats.length === 0 && <p className="ai-chat-empty">Start a conversation with your AI helper.</p>}
-            {chats.map((msg) => (
-              <div key={msg.id} className={`ai-chat-message ${msg.role === 'user' ? 'ai-chat-user' : 'ai-chat-assistant'}`}>
-                <div className="ai-chat-bubble">{msg.text}</div>
-                <span className="ai-chat-ts">{new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            ))}
-            {isLoading && <div className="ai-chat-loading">AI is typing...</div>}
-            {error && <div className="ai-chat-error">{error}</div>}
+      <div className="ai-chat-body" ref={scrollRef}>
+        {chats.length === 0 ? <p className="ai-chat-empty">Start a conversation with your AI helper.</p> : null}
+        {chats.map((msg) => (
+          <div key={msg.id} className={`ai-chat-message ${msg.role === 'user' ? 'ai-chat-user' : 'ai-chat-assistant'}`}>
+            <div className="ai-chat-bubble">{msg.text}</div>
+            <span className="ai-chat-ts">{new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
+        ))}
+        {isLoading ? <div className="ai-chat-loading">AI is typing...</div> : null}
+        {error ? <div className="ai-chat-error">{error}</div> : null}
+      </div>
 
-          <div className="ai-chat-input-row">
-            <input
-              type="text"
-              placeholder="Type your question..."
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={onKeyDown}
-              aria-label="Type message"
-            />
-            <button type="button" className="ai-chat-send-btn" onClick={onSend} disabled={!inputText.trim() || isLoading}>
-              <Send size={16} />
-            </button>
-          </div>
-        </section>
-      )}
-    </div>
+      <div className="ai-chat-input-row">
+        <input
+          type="text"
+          placeholder="Type your question..."
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={onKeyDown}
+          aria-label="Type message"
+        />
+        <button type="button" className="ai-chat-send-btn" onClick={() => void onSend()} disabled={!inputText.trim() || isLoading}>
+          <Send size={16} />
+        </button>
+      </div>
+    </section>
   )
 }
 

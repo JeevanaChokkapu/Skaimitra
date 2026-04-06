@@ -276,6 +276,8 @@ type SubmissionRecord = {
   submittedOn: string
   status: 'Submitted' | 'Reviewed'
   score: string
+  submissionText: string
+  submissionFile: string
 }
 
 type StudentProfileCard = {
@@ -286,12 +288,9 @@ type StudentProfileCard = {
   initials: string
 }
 
-type GradeEvaluationForm = {
+type GradeEvaluationEntry = {
   score: string
-  feedback: string
-  strengths: string
-  improvements: string
-  rubricNotes: string
+  comment: string
 }
 
 const navTabs: Array<{ label: TeacherTab; icon: typeof Home }> = [
@@ -557,6 +556,8 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
     submittedOn: '2026-04-18',
     status: 'Submitted',
     score: 'Pending',
+    submissionText: 'Solved algebra equations, simplified expressions, and explained the method for each answer.',
+    submissionFile: 'rahul-algebra-quiz.pdf',
   },
   {
     id: 2,
@@ -569,6 +570,8 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
     submittedOn: '2026-04-20',
     status: 'Reviewed',
     score: '90%',
+    submissionText: 'Summarized renewable energy sources with diagrams, sources, and classroom examples.',
+    submissionFile: 'priya-science-paper.docx',
   },
   {
     id: 3,
@@ -581,6 +584,8 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
     submittedOn: '2026-04-21',
     status: 'Reviewed',
     score: '82%',
+    submissionText: 'Submitted a persuasive essay draft with introduction, supporting points, and conclusion.',
+    submissionFile: 'arjun-essay-writing.pdf',
   },
   {
     id: 4,
@@ -593,6 +598,8 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
     submittedOn: '2026-04-22',
     status: 'Submitted',
     score: 'Pending',
+    submissionText: 'Uploaded lab observations with measurements, conclusions, and experiment photos.',
+    submissionFile: 'sneha-lab-observation.pptx',
   },
 ]
 
@@ -624,11 +631,11 @@ const createResourceThumbnail = (title: string, subtitle: string, bgStart: strin
 const resources = [
   {
     id: 1,
-    title: 'Canva for Education',
-    type: 'Creative Design',
+    title: 'Micro:bit',
+    type: 'Physical Computing',
     audience: 'All Classes',
-    url: 'https://www.canva.com/education/',
-    image: createResourceThumbnail('Canva', 'Design posters, slides, and class visuals', '#06b6d4', '#2563eb', 'Design'),
+    url: 'https://microbit.org/',
+    image: createResourceThumbnail('Micro:bit', 'Explore coding, electronics, and classroom making', '#2563eb', '#1d4ed8', 'Build'),
   },
   {
     id: 2,
@@ -737,6 +744,20 @@ const getInitials = (name: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
 
+const createProfileAvatar = (name: string, colorA = '#a855f7', colorB = '#7c3aed') =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${colorA}" />
+          <stop offset="100%" stop-color="${colorB}" />
+        </linearGradient>
+      </defs>
+      <rect width="96" height="96" rx="48" fill="url(#g)" />
+      <text x="48" y="56" text-anchor="middle" font-size="32" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">${getInitials(name)}</text>
+    </svg>
+  `)}`
+
 function TeacherDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TeacherTab>('Home')
@@ -755,13 +776,7 @@ function TeacherDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRecord | null>(null)
   const [isGradeEvaluatorOpen, setIsGradeEvaluatorOpen] = useState(false)
   const [gradeMethod, setGradeMethod] = useState<'manual' | 'ai'>('manual')
-  const [gradeEvaluationForm, setGradeEvaluationForm] = useState<GradeEvaluationForm>({
-    score: '',
-    feedback: '',
-    strengths: '',
-    improvements: '',
-    rubricNotes: '',
-  })
+  const [gradeEvaluation, setGradeEvaluation] = useState<GradeEvaluationEntry>({ score: '', comment: '' })
   const [uploadSearchTerm, setUploadSearchTerm] = useState('')
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [teacherName, setTeacherName] = useState('Teacher')
@@ -1940,43 +1955,40 @@ function TeacherDashboard() {
     setSelectedSubmission(submission)
     setIsGradeEvaluatorOpen(true)
     setGradeMethod('manual')
-    setGradeEvaluationForm({
+    setGradeEvaluation({
       score: submission.score === 'Pending' ? '' : submission.score.replace('%', ''),
-      feedback: submission.status === 'Reviewed' ? 'Reviewed and ready to share with the student.' : '',
-      strengths: '',
-      improvements: '',
-      rubricNotes: '',
+      comment: submission.status === 'Reviewed' ? 'Reviewed and ready to share with the student.' : '',
     })
   }
 
-  const updateGradeEvaluationField = <K extends keyof GradeEvaluationForm>(field: K, value: GradeEvaluationForm[K]) => {
-    setGradeEvaluationForm((prev) => ({ ...prev, [field]: value }))
+  const updateGradeEvaluationField = (field: keyof GradeEvaluationEntry, value: string) => {
+    setGradeEvaluation((prev) => ({ ...prev, [field]: value }))
   }
 
-  const generateAiGradeSuggestion = () => {
+  const evaluateSelectedSubmissionWithAI = () => {
     if (!selectedSubmission) return
 
-    const generatedScore = selectedSubmission.assignmentType === 'Quiz'
-      ? '88'
-      : selectedSubmission.assignmentType === 'Paper'
-        ? '91'
-        : '85'
+    const suggestedScore =
+      selectedSubmission.assignmentType === 'Quiz'
+        ? '88'
+        : selectedSubmission.assignmentType === 'Paper'
+          ? '91'
+          : selectedSubmission.assignmentType === 'Project'
+            ? '85'
+            : '84'
 
     setGradeMethod('ai')
-    setGradeEvaluationForm({
-      score: generatedScore,
-      feedback: `AI review suggests that ${selectedSubmission.studentName} met most of the expected outcomes for ${selectedSubmission.assignmentName}.`,
-      strengths: 'Clear understanding of the topic, on-time submission, and complete response structure.',
-      improvements: 'Add more supporting detail and refine presentation for a stronger final score.',
-      rubricNotes: 'Recommended rubric alignment: good content mastery, moderate improvement needed in depth and polish.',
+    setGradeEvaluation({
+      score: suggestedScore,
+      comment: `${selectedSubmission.studentName} demonstrated a solid understanding of the assignment outcomes. The submission is complete and well structured, with room to improve supporting detail and polish.`,
     })
-    setCalendarNotice({ type: 'success', message: 'AI grading suggestion generated. Review and adjust before saving.' })
+    setCalendarNotice({ type: 'success', message: 'AI evaluation completed. Review and edit before uploading.' })
   }
 
   const saveGradeEvaluation = () => {
     if (!selectedSubmission) return
-    if (!gradeEvaluationForm.score.trim()) {
-      setCalendarNotice({ type: 'error', message: 'Please enter or generate a score before saving the grade.' })
+    if (!gradeEvaluation.score.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please enter marks before saving the grade.' })
       return
     }
 
@@ -1986,7 +1998,7 @@ function TeacherDashboard() {
           ? {
               ...submission,
               status: 'Reviewed',
-              score: `${gradeEvaluationForm.score.replace('%', '')}%`,
+              score: `${gradeEvaluation.score.replace('%', '')}%`,
             }
           : submission,
       ),
@@ -1996,12 +2008,33 @@ function TeacherDashboard() {
         ? {
             ...prev,
             status: 'Reviewed',
-            score: `${gradeEvaluationForm.score.replace('%', '')}%`,
+            score: `${gradeEvaluation.score.replace('%', '')}%`,
           }
         : null,
     )
-    setIsGradeEvaluatorOpen(false)
     setCalendarNotice({ type: 'success', message: `Grade saved for ${selectedSubmission.studentName}.` })
+  }
+
+  const uploadGradeEvaluation = () => {
+    if (!selectedSubmission) return
+    if (!gradeEvaluation.score.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Enter marks before uploading the final grade.' })
+      return
+    }
+
+    setGradeSubmissions((prev) =>
+      prev.map((submission) =>
+        submission.id === selectedSubmission.id
+          ? {
+              ...submission,
+              status: 'Reviewed',
+              score: `${gradeEvaluation.score.replace('%', '')}%`,
+            }
+          : submission,
+      ),
+    )
+    setIsGradeEvaluatorOpen(false)
+    setCalendarNotice({ type: 'success', message: `Grade uploaded successfully for ${selectedSubmission.studentName}.` })
   }
 
   const renderHome = () => (
@@ -2183,6 +2216,8 @@ function TeacherDashboard() {
             </div>
           </div>
         </section>
+
+        <AIChat role="teacher" />
 
       </aside>
     </main>
@@ -3473,115 +3508,119 @@ function TeacherDashboard() {
             </div>
           </section>
         ) : (
-          <div className="planner-layout">
-            <section className="planner-main-column">
-              <section className="role-card planner-card">
-                <div className="planner-card-head">
-                  <div>
-                    <h3>Grade Evaluation</h3>
-                    <p className="role-muted">Review the submission, assign marks manually, or use AI automation as a starting point.</p>
+          <div className="planner-builder-stack">
+            <section className="role-card planner-card">
+              <div className="planner-card-head">
+                <div>
+                  <h3>Grade Evaluation</h3>
+                  <p className="role-muted">Evaluate the selected student with manual grading or AI-assisted grading.</p>
+                </div>
+              </div>
+              <div className="planner-form-grid">
+                <label className="planner-span-2">
+                  <span>Select Grading Method</span>
+                  <div className="planner-mode-grid">
+                    <button type="button" className={`planner-mode-card ${gradeMethod === 'manual' ? 'is-active' : ''}`} onClick={() => setGradeMethod('manual')}>
+                      <span className="planner-mode-icon"><Pencil size={18} /></span>
+                      <strong>Manual Grading</strong>
+                      <span>Enter marks and optional feedback manually.</span>
+                    </button>
+                    <button type="button" className={`planner-mode-card ${gradeMethod === 'ai' ? 'is-active' : ''}`} onClick={() => setGradeMethod('ai')}>
+                      <span className="planner-mode-icon"><CheckCircle size={18} /></span>
+                      <strong>AI Grading</strong>
+                      <span>Generate marks and feedback, then review before upload.</span>
+                    </button>
                   </div>
-                </div>
-
-                <div className="planner-mode-grid">
-                  <button type="button" className={`planner-mode-card ${gradeMethod === 'manual' ? 'is-active' : ''}`} onClick={() => setGradeMethod('manual')}>
-                    <span className="planner-mode-icon"><Pencil size={18} /></span>
-                    <strong>Manual Grading</strong>
-                    <span>Teacher reviews and assigns score directly.</span>
-                  </button>
-                  <button type="button" className={`planner-mode-card ${gradeMethod === 'ai' ? 'is-active' : ''}`} onClick={generateAiGradeSuggestion}>
-                    <span className="planner-mode-icon"><CheckCircle size={18} /></span>
-                    <strong>AI Assisted</strong>
-                    <span>Generate suggested marks and feedback for review.</span>
-                  </button>
-                  <div className="planner-mode-card">
-                    <span className="planner-mode-icon"><Eye size={18} /></span>
-                    <strong>Submission Review</strong>
-                    <span>Check submission details, rubric notes, and performance before saving.</span>
-                  </div>
-                </div>
-
-                <div className="planner-form-grid">
-                  <label>
-                    <span>Student</span>
-                    <input type="text" value={selectedSubmission?.studentName || ''} readOnly />
-                  </label>
-                  <label>
-                    <span>Assignment</span>
-                    <input type="text" value={selectedSubmission?.assignmentName || ''} readOnly />
-                  </label>
-                  <label>
-                    <span>Class</span>
-                    <input type="text" value={selectedSubmission ? `${selectedSubmission.className} - ${selectedSubmission.section}` : ''} readOnly />
-                  </label>
-                  <label>
-                    <span>Subject</span>
-                    <input type="text" value={selectedSubmission?.subject || ''} readOnly />
-                  </label>
-                  <label className="planner-span-2">
-                    <span>Submission Summary</span>
-                    <textarea
-                      rows={4}
-                      readOnly
-                      value={selectedSubmission ? `${selectedSubmission.studentName} submitted ${selectedSubmission.assignmentName} on ${selectedSubmission.submittedOn}. Assignment type: ${selectedSubmission.assignmentType}. Current status: ${selectedSubmission.status}.` : ''}
-                    />
-                  </label>
-                  <label>
-                    <span>Score</span>
-                    <input type="text" value={gradeEvaluationForm.score} onChange={(e) => updateGradeEvaluationField('score', e.target.value)} placeholder="Enter marks / percentage" />
-                  </label>
-                  <label>
-                    <span>Rubric Notes</span>
-                    <input type="text" value={gradeEvaluationForm.rubricNotes} onChange={(e) => updateGradeEvaluationField('rubricNotes', e.target.value)} placeholder="Rubric alignment notes" />
-                  </label>
-                  <label className="planner-span-2">
-                    <span>Teacher Feedback</span>
-                    <textarea rows={4} value={gradeEvaluationForm.feedback} onChange={(e) => updateGradeEvaluationField('feedback', e.target.value)} placeholder="Write overall evaluation feedback" />
-                  </label>
-                  <label className="planner-span-2">
-                    <span>Strengths</span>
-                    <textarea rows={3} value={gradeEvaluationForm.strengths} onChange={(e) => updateGradeEvaluationField('strengths', e.target.value)} placeholder="What the student did well" />
-                  </label>
-                  <label className="planner-span-2">
-                    <span>Areas for Improvement</span>
-                    <textarea rows={3} value={gradeEvaluationForm.improvements} onChange={(e) => updateGradeEvaluationField('improvements', e.target.value)} placeholder="What should improve in the next submission" />
-                  </label>
-                </div>
-              </section>
+                </label>
+              </div>
             </section>
 
-            <aside className="planner-side-column">
-              <section className="role-card planner-card planner-detail-card">
-                <div className="planner-card-head">
+            <section className="role-card planner-card">
+              <div className="planner-card-head">
+                <div>
+                  <h3>Student Details</h3>
+                </div>
+              </div>
+              <div className="teacher-grade-submission-head">
+                <div className="teacher-grade-submission-user">
+                  {selectedSubmission ? (
+                    <img
+                      src={createProfileAvatar(selectedSubmission.studentName)}
+                      alt={selectedSubmission.studentName}
+                      className="teacher-student-avatar-image"
+                    />
+                  ) : null}
                   <div>
-                    <h3>Evaluation Guide</h3>
-                    <p className="role-muted">A simple teacher workflow for assessing and finalizing marks.</p>
+                    <strong>{selectedSubmission?.studentName || ''}</strong>
+                    <span>{selectedSubmission ? `${selectedSubmission.className}${selectedSubmission.section}` : ''}</span>
                   </div>
                 </div>
-                <div className="planner-detail-content">
-                  <div className="planner-detail-block">
-                    <strong>Manual workflow</strong>
-                    <p>Review the submission, enter score, add rubric notes, and save the evaluation.</p>
-                  </div>
-                  <div className="planner-detail-block">
-                    <strong>AI workflow</strong>
-                    <p>Generate an automated draft score and comments, then edit them before saving.</p>
-                  </div>
-                  <div className="planner-detail-block">
-                    <strong>Recommended teacher action</strong>
-                    <p>Use AI for the first pass, but always verify marks and final comments manually.</p>
-                  </div>
-                </div>
-              </section>
+                <span className={`teacher-grade-card-status ${selectedSubmission?.status === 'Reviewed' || gradeEvaluation.score.trim() ? 'is-graded' : 'is-pending'}`}>
+                  {selectedSubmission?.status === 'Reviewed' || gradeEvaluation.score.trim() ? 'Graded' : 'Not Graded'}
+                </span>
+              </div>
+              <div className="planner-detail-grid">
+                <p><strong>Assignment Title:</strong> {selectedSubmission?.assignmentName || ''}</p>
+                <p><strong>Submission Date:</strong> {selectedSubmission?.submittedOn || ''}</p>
+              </div>
+            </section>
 
-              <section className="role-card planner-card planner-actions-card">
-                <div className="planner-inline-actions planner-inline-actions-end">
-                  <button type="button" className="role-secondary-btn" onClick={() => setIsGradeEvaluatorOpen(false)}>Back</button>
-                  <button type="button" className="role-secondary-btn" onClick={generateAiGradeSuggestion}>AI Suggest</button>
-                  <button type="button" className="role-primary-btn" onClick={saveGradeEvaluation}>Save Grade</button>
+            <section className="role-card planner-card">
+              <div className="planner-card-head">
+                <div>
+                  <h3>Submission Preview</h3>
                 </div>
-              </section>
-            </aside>
+              </div>
+              <div className="teacher-grade-submission-preview">
+                <p><strong>Submission Text:</strong> {selectedSubmission?.submissionText || ''}</p>
+                <p><strong>Submission File:</strong> {selectedSubmission?.submissionFile || ''}</p>
+              </div>
+            </section>
+
+            <section className="role-card planner-card">
+              <div className="planner-card-head">
+                <div>
+                  <h3>Grading</h3>
+                </div>
+              </div>
+              <div className="planner-form-grid">
+                {gradeMethod === 'ai' ? (
+                  <div className="planner-span-2">
+                    <button type="button" className="role-primary-btn" onClick={evaluateSelectedSubmissionWithAI}>
+                      Evaluate with AI
+                    </button>
+                  </div>
+                ) : null}
+                <label>
+                  <span>Marks</span>
+                  <input
+                    type="number"
+                    value={gradeEvaluation.score}
+                    onChange={(e) => updateGradeEvaluationField('score', e.target.value)}
+                    placeholder="Enter marks"
+                  />
+                </label>
+                <label className="planner-span-2">
+                  <span>Feedback</span>
+                  <textarea
+                    rows={4}
+                    value={gradeEvaluation.comment}
+                    onChange={(e) => updateGradeEvaluationField('comment', e.target.value)}
+                    placeholder="Add optional feedback"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="role-card planner-card planner-actions-card">
+              <div className="planner-inline-actions planner-inline-actions-end">
+                <button type="button" className="role-secondary-btn" onClick={() => setIsGradeEvaluatorOpen(false)}>Back</button>
+                <button type="button" className="role-secondary-btn" onClick={saveGradeEvaluation}>Save</button>
+                <button type="button" className="role-primary-btn" onClick={uploadGradeEvaluation} disabled={!gradeEvaluation.score.trim()}>
+                  Upload
+                </button>
+              </div>
+            </section>
           </div>
         )}
       </section>
@@ -3943,7 +3982,6 @@ function TeacherDashboard() {
           </section>
         </div>
       ) : null}
-      <AIChat role="teacher" />
     </div>
   )
 }

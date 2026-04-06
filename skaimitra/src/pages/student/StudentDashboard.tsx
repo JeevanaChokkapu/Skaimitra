@@ -342,6 +342,8 @@ function StudentDashboard() {
 
             <RoleCalendar title="Student Calendar" events={calendarEvents} emptyMessage="No student events scheduled for this date." />
 
+            <AIChat role="student" />
+
           </aside>
         </main>
       )}
@@ -540,7 +542,6 @@ function StudentDashboard() {
           </section>
         </div>
       ) : null}
-      <AIChat role="student" />
     </div>
   )
 }

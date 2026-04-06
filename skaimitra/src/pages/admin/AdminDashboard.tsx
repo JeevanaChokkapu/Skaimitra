@@ -82,10 +82,10 @@ const navTabs = [
 ]
 
 const statCards = [
-  { title: 'Total Students', value: '0', change: 'Live', icon: Users, iconClass: 'role-stat-icon-1' },
-  { title: 'Total Teachers', value: '0', change: 'Live', icon: UserCheck, iconClass: 'role-stat-icon-2' },
-  { title: 'Courses', value: '156', change: '+8%', icon: BookOpen, iconClass: 'role-stat-icon-3' },
-  { title: 'Avg. Performance', value: '78.5%', change: '+3.2%', icon: BarChart3, iconClass: 'role-stat-icon-4' },
+  { title: 'Total Students', value: '120', change: 'Demo data', icon: Users, iconClass: 'role-stat-icon-1' },
+  { title: 'Total Teachers', value: '15', change: 'Demo data', icon: UserCheck, iconClass: 'role-stat-icon-2' },
+  { title: 'Classes', value: '6 - 12', change: 'Active grades', icon: BookOpen, iconClass: 'role-stat-icon-3' },
+  { title: 'Active Courses', value: '10', change: 'Current term', icon: BarChart3, iconClass: 'role-stat-icon-4' },
 ]
 
 const quickActions = [
@@ -96,15 +96,15 @@ const quickActions = [
 ]
 
 const teacherOverview = [
-  { id: 1, name: 'Dr. Rajesh Kumar', initials: 'DRK', subject: 'Mathematics', email: 'rajesh@school.edu', phone: '+91 98765 43211', students: 120, courses: 3 },
-  { id: 2, name: 'Ms. Priya Patel', initials: 'MPP', subject: 'Science', email: 'priya@school.edu', phone: '+91 98765 43213', students: 110, courses: 2 },
-  { id: 3, name: 'Mr. Sharma', initials: 'MS', subject: 'English', email: 'sharma@school.edu', phone: '+91 98765 43215', students: 115, courses: 3 },
+  { id: 1, name: 'Anjali Sharma', initials: 'AS', subject: 'Mathematics', email: 'anjali@school.edu', phone: '+91 98765 43211', students: 120, courses: 3 },
+  { id: 2, name: 'Ravi Kumar', initials: 'RK', subject: 'Science', email: 'ravi@school.edu', phone: '+91 98765 43213', students: 110, courses: 2 },
+  { id: 3, name: 'Meera Joshi', initials: 'MJ', subject: 'English', email: 'meera@school.edu', phone: '+91 98765 43215', students: 115, courses: 3 },
 ]
 
 const studentOverview = [
-  { id: 1, name: 'Aarav Mehta', className: 'Class 6', performance: '91.7%', attendance: '95%' },
-  { id: 2, name: 'Diya Sharma', className: 'Class 7', performance: '90%', attendance: '98%' },
-  { id: 3, name: 'Rohan Verma', className: 'Class 8', performance: '82.3%', attendance: '92%' },
+  { id: 1, name: 'Rahul Sharma', className: 'Class 6', performance: '91.7%', attendance: '95%' },
+  { id: 2, name: 'Priya Reddy', className: 'Class 7', performance: '90%', attendance: '98%' },
+  { id: 3, name: 'Arjun Kumar', className: 'Class 8', performance: '82.3%', attendance: '92%' },
 ]
 
 const courseOverview = [
@@ -136,6 +136,28 @@ const includesSearch = (value: string | number | null | undefined, query: string
   String(value ?? '')
     .toLowerCase()
     .includes(query.trim().toLowerCase())
+
+const getInitials = (name: string) =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+
+const createProfileAvatar = (name: string, colorA = '#2563eb', colorB = '#7c3aed') =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${colorA}" />
+          <stop offset="100%" stop-color="${colorB}" />
+        </linearGradient>
+      </defs>
+      <rect width="96" height="96" rx="48" fill="url(#g)" />
+      <text x="48" y="56" text-anchor="middle" font-size="32" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">${getInitials(name)}</text>
+    </svg>
+  `)}`
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -203,7 +225,7 @@ function AdminDashboard() {
     classGrade: 'Class 6',
     status: 'active' as UserStatus,
   })
-  const [dashboardCounts, setDashboardCounts] = useState({ students: 0, teachers: 0 })
+  const [dashboardCounts, setDashboardCounts] = useState({ students: 120, teachers: 15 })
   const [uiNotice, setUiNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   useEffect(() => {
@@ -842,9 +864,9 @@ function AdminDashboard() {
           {statCards.map((card) => {
             const value =
               card.title === 'Total Students'
-                ? String(dashboardCounts.students)
+                ? String(dashboardCounts.students || 120)
                 : card.title === 'Total Teachers'
-                ? String(dashboardCounts.teachers)
+                ? String(dashboardCounts.teachers || 15)
                 : card.value
 
             return (
@@ -854,7 +876,7 @@ function AdminDashboard() {
                 </span>
                 <h2 className="role-muted">{card.title}</h2>
                 <p className="role-big">{value}</p>
-                <p className="role-positive">{card.change === 'Live' ? 'Live from MySQL' : `${card.change} vs last month`}</p>
+                <p className="role-positive">{card.change}</p>
               </article>
             )
           })}
@@ -902,6 +924,7 @@ function AdminDashboard() {
             ))}
           </div>
         </section>
+
       </section>
 
       <aside className="role-secondary">
@@ -934,6 +957,8 @@ function AdminDashboard() {
             )}
           </div>
         </section>
+
+        <AIChat role="admin" />
 
       </aside>
     </main>
@@ -1808,7 +1833,6 @@ function AdminDashboard() {
           </section>
         </div>
       ) : null}
-      <AIChat role="admin" />
     </div>
   )
 }

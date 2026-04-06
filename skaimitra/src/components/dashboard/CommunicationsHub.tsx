@@ -625,6 +625,33 @@ const CommunicationsHub: React.FC<CommunicationsHubProps> = ({ role = 'teacher' 
             </header>
 
             <div className="communications-compose-body">
+              <div className="communications-modal-grid">
+                <div className="communications-delivery-field">
+                  <span className="communications-modal-label">Delivery Type</span>
+                  <div className="communications-delivery-toggle">
+                    {(['Email', 'WhatsApp', 'SMS'] as DeliveryMethod[]).map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        className={formState.deliveryMethod === method ? 'is-active' : ''}
+                        onClick={() => updateForm('deliveryMethod', method)}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label>
+                  <span>Priority</span>
+                  <select value={formState.priority} onChange={(e) => updateForm('priority', e.target.value as PriorityLevel)}>
+                    <option value="Low">Low</option>
+                    <option value="Normal">Normal</option>
+                    <option value="High">High</option>
+                  </select>
+                </label>
+              </div>
+
               <section className="communications-compose-section">
                 <span className="communications-modal-label">Recipients</span>
                 <div className="communications-recipient-tabs">
@@ -691,33 +718,6 @@ const CommunicationsHub: React.FC<CommunicationsHubProps> = ({ role = 'teacher' 
                   </div>
                 )}
               </section>
-
-              <div className="communications-modal-grid">
-                <div className="communications-delivery-field">
-                  <span className="communications-modal-label">Delivery Type</span>
-                  <div className="communications-delivery-toggle">
-                    {(['Email', 'WhatsApp', 'SMS'] as DeliveryMethod[]).map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        className={formState.deliveryMethod === method ? 'is-active' : ''}
-                        onClick={() => updateForm('deliveryMethod', method)}
-                      >
-                        {method}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <label>
-                  <span>Priority</span>
-                  <select value={formState.priority} onChange={(e) => updateForm('priority', e.target.value as PriorityLevel)}>
-                    <option value="Low">Low</option>
-                    <option value="Normal">Normal</option>
-                    <option value="High">High</option>
-                  </select>
-                </label>
-              </div>
 
               {formState.deliveryMethod === 'Email' ? (
                 <>
@@ -805,13 +805,9 @@ const CommunicationsHub: React.FC<CommunicationsHubProps> = ({ role = 'teacher' 
               </label>
 
               {formState.deliveryMethod !== 'SMS' ? (
-                <>
-                  <div className="communications-content-head">
-                    <span>Content</span>
-                    <button type="button" className="communications-ai-link" onClick={() => handleAiAssist()}>
-                      <Sparkles size={14} />
-                      AI Assist
-                    </button>
+                <section className="communications-ai-panel communications-content-combined-panel">
+                  <div className="communications-ai-panel-head">
+                    <strong>Message Content</strong>
                   </div>
                   <textarea
                     className="communications-content-textarea"
@@ -819,32 +815,26 @@ const CommunicationsHub: React.FC<CommunicationsHubProps> = ({ role = 'teacher' 
                     onChange={(e) => updateForm('content', e.target.value)}
                     placeholder="Write your message content here..."
                   />
-
-                  <section className="communications-ai-panel">
-                    <div className="communications-ai-panel-head">
-                      <strong>AI Content Assistant</strong>
-                    </div>
-                    <div className="communications-ai-panel-row">
-                      <input
-                        type="text"
-                        placeholder="Describe what you want to say..."
-                        value={formState.aiContext}
-                        onChange={(e) => updateForm('aiContext', e.target.value)}
-                      />
-                      <button type="button" className="role-primary-btn" onClick={() => handleAiAssist()}>
-                        <Sparkles size={14} />
-                        Generate
+                  <div className="communications-ai-panel-row">
+                    <input
+                      type="text"
+                      placeholder="Describe what you want to say..."
+                      value={formState.aiContext}
+                      onChange={(e) => updateForm('aiContext', e.target.value)}
+                    />
+                    <button type="button" className="role-primary-btn" onClick={() => handleAiAssist()}>
+                      <Sparkles size={14} />
+                      Generate
+                    </button>
+                  </div>
+                  <div className="communications-ai-suggestions">
+                    {suggestionPills.map((pill) => (
+                      <button key={pill} type="button" onClick={() => handleAiAssist(pill)}>
+                        {pill}
                       </button>
-                    </div>
-                    <div className="communications-ai-suggestions">
-                      {suggestionPills.map((pill) => (
-                        <button key={pill} type="button" onClick={() => handleAiAssist(pill)}>
-                          {pill}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                </>
+                    ))}
+                  </div>
+                </section>
               ) : null}
 
               <label>
@@ -868,9 +858,6 @@ const CommunicationsHub: React.FC<CommunicationsHubProps> = ({ role = 'teacher' 
               <button type="button" className="role-secondary-btn" onClick={closeCompose}>Cancel</button>
               <button type="button" className="role-secondary-btn communications-outline-btn" onClick={saveDraft}>Save Draft</button>
               <button type="button" className="role-primary-btn" onClick={sendMessage}>Send Message</button>
-              <button type="button" className="communications-ai-icon-btn" onClick={() => handleAiAssist()} aria-label="AI Assist">
-                <Sparkles size={16} />
-              </button>
             </footer>
           </section>
         </div>

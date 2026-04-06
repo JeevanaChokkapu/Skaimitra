@@ -213,9 +213,11 @@
   display: grid;
   gap: 20px;
   width: 100%;
-  padding: 0.85rem 100px 1rem;
+  max-width: 1400px;
+  padding: 0.85rem clamp(1rem, 4vw, 100px) 1rem;
   min-height: calc(100vh - 180px);
   background: transparent;
+  box-sizing: border-box;
 }
 
 .role-main-admin {
@@ -599,6 +601,11 @@
 .role-main-detail {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
+}
+
+.role-primary,
+.role-secondary {
+  min-width: 0;
 }
 
 .role-detail-card {
@@ -1037,6 +1044,15 @@
   flex-shrink: 0;
 }
 
+.role-admin-avatar-image {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: 0 0 46px;
+  display: block;
+}
+
 .role-admin-staff-copy h4 {
   margin: 0;
   font-size: 1rem;
@@ -1129,40 +1145,20 @@
 }
 
 
-.ai-assistant-widget {
-  position: fixed;
-  bottom: 1.2rem;
-  right: 1.2rem;
-  z-index: 9999;
-}
-
-.ai-assistant-float-btn {
-  height: 58px;
-  width: 58px;
-  border-radius: 50%;
-  border: 0;
-  background: linear-gradient(135deg, #8b1cf7 0%, #a855f7 100%);
-  color: #fff;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0 13px 24px rgba(81, 45, 168, 0.35);
-  cursor: pointer;
-}
-
 .ai-assistant-panel {
-  position: absolute;
-  bottom: 70px;
-  right: 0;
-  width: min(380px, 90vw);
-  max-height: 64vh;
+  width: 100%;
   border-radius: 14px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
+}
+
+.ai-assistant-panel-inline {
+  min-height: 390px;
+  max-height: 430px;
 }
 
 .ai-assistant-header {
@@ -1211,7 +1207,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  background: #f8fafc;
+  background: #f9fafb;
+  min-height: 0;
 }
 
 .ai-chat-empty {
@@ -1307,15 +1304,42 @@
 }
 
 @media (max-width: 768px) {
-  .ai-assistant-panel {
-    width: min(90vw, 95vw);
-    right: 0;
-    left: 4px;
+  .ai-assistant-panel-inline {
+    min-height: 350px;
+    max-height: 400px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .role-main {
+    padding-inline: 1rem;
   }
 
-  .ai-assistant-widget {
-    bottom: 0.8rem;
-    right: 0.8rem;
+  .role-main-admin,
+  .role-main-teacher,
+  .role-main-student {
+    grid-template-columns: 1fr;
+  }
+
+  .role-secondary .role-calendar-card {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .teacher-grade-submission-head,
+  .teacher-grade-submission-user {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .role-calendar-grid {
+    gap: 0.2rem;
+  }
+
+  .role-calendar-grid span,
+  .role-calendar-event-cell {
+    min-height: 1.8rem;
   }
 }
 
@@ -1636,6 +1660,15 @@
   font-size: 0.9rem;
   font-weight: 800;
   flex: 0 0 auto;
+}
+
+.teacher-student-avatar-image {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: 0 0 44px;
+  display: block;
 }
 
 .teacher-grade-avatar {
@@ -2091,6 +2124,95 @@
 .teacher-grade-status-text.is-submitted,
 .teacher-grade-score-text.is-pending {
   color: #d97706;
+}
+
+.teacher-grade-submission-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.teacher-grade-submission-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1rem;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.teacher-grade-submission-card.is-pending {
+  border-color: #fde68a;
+}
+
+.teacher-grade-submission-card.is-graded {
+  border-color: #86efac;
+  background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.teacher-grade-submission-card.is-selected {
+  box-shadow: 0 16px 30px rgba(124, 58, 237, 0.1);
+}
+
+.teacher-grade-submission-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.teacher-grade-submission-user {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.teacher-grade-submission-user strong {
+  display: block;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.teacher-grade-submission-user span {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.teacher-grade-card-status {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.teacher-grade-card-status.is-graded {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.teacher-grade-card-status.is-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.teacher-grade-submission-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.teacher-grade-submission-preview {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.teacher-grade-submission-preview p {
+  margin: 0;
+  color: #334155;
 }
 
 .teacher-upload-dropzone {
@@ -5263,6 +5385,15 @@
   gap: 16px;
 }
 
+.communications-content-combined-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.communications-ai-panel-subhead {
+  padding-top: 0.2rem;
+}
+
 .communications-modal-label,
 .communications-compose-body label > span,
 .communications-content-head span {
@@ -5637,5 +5768,158 @@
   .analytics-summary-grid,
   .analytics-breakdown-stats {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Final responsive overrides */
+@media (max-width: 1024px) {
+  .role-main,
+  .role-main-detail,
+  .role-main-admin,
+  .role-main-teacher,
+  .role-main-student {
+    grid-template-columns: 1fr;
+    padding-inline: 16px;
+    gap: 16px;
+  }
+
+  .role-stat-grid,
+  .role-main-admin .role-stat-grid,
+  .role-main-teacher .role-stat-grid,
+  .role-action-grid,
+  .student-stat-grid,
+  .student-assignment-summary,
+  .student-subject-grid,
+  .analytics-summary-grid,
+  .analytics-chart-grid,
+  .analytics-insights-grid,
+  .teacher-student-profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planner-layout,
+  .planner-mode-grid,
+  .planner-form-grid,
+  .planner-share-grid,
+  .planner-detail-grid,
+  .communications-stats-grid,
+  .communications-channel-grid,
+  .communications-modal-grid,
+  .communications-groups-grid,
+  .profile-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-secondary {
+    width: 100%;
+  }
+
+  .role-secondary .role-calendar-card,
+  .student-dashboard-page .role-calendar-card,
+  .admin-dashboard-page .role-calendar-card,
+  .teacher-dashboard-page .role-calendar-card {
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    margin-inline: 0;
+  }
+
+  .role-calendar-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .role-header {
+    flex-wrap: wrap;
+  }
+
+  .role-header-actions,
+  .communications-controls-right,
+  .communications-compose-actions,
+  .communications-ai-panel-row {
+    flex-wrap: wrap;
+  }
+
+  .role-table-wrap,
+  .role-table-responsive,
+  .communications-page-shell,
+  .planner-builder-stack,
+  .planner-card,
+  .analytics-chart-card,
+  .role-card {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .role-main,
+  .role-main-detail,
+  .role-main-admin,
+  .role-main-teacher,
+  .role-main-student {
+    padding-inline: 12px;
+    gap: 12px;
+  }
+
+  .role-header {
+    padding: 12px;
+  }
+
+  .role-header-actions,
+  .role-user-toolbar,
+  .communications-controls-bar,
+  .communications-controls-right,
+  .communications-compose-actions,
+  .communications-ai-panel-row,
+  .planner-inline-actions,
+  .student-subject-foot,
+  .student-alert-card,
+  .teacher-grade-submission-head,
+  .teacher-grade-submission-user {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .role-stat-grid,
+  .role-main-admin .role-stat-grid,
+  .role-main-teacher .role-stat-grid,
+  .role-action-grid,
+  .student-stat-grid,
+  .student-assignment-summary,
+  .student-subject-grid,
+  .analytics-summary-grid,
+  .teacher-student-profile-grid,
+  .role-user-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .role-main-teacher .role-stat-card,
+  .role-main-admin .role-action-tile,
+  .role-main-admin .role-quick-actions-card {
+    min-height: auto;
+    aspect-ratio: auto;
+  }
+
+  .role-calendar-grid {
+    gap: 0.2rem;
+  }
+
+  .role-calendar-grid span,
+  .role-calendar-event-cell {
+    min-height: 1.8rem;
+    font-size: 0.72rem;
+  }
+
+  .role-calendar-date-number {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+
+  .communications-compose-actions button,
+  .communications-controls-right button,
+  .communications-controls-right input,
+  .communications-ai-panel-row button,
+  .planner-inline-actions button {
+    width: 100%;
   }
 }
