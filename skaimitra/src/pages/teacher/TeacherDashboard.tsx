@@ -985,8 +985,10 @@ function TeacherDashboard() {
   )
 
   const activeTeacherNotifications = showUnreadNotifications ? unreadTeacherAnnouncements : filteredTeacherAnnouncements
-
-  const currentNotification = activeTeacherNotifications[currentNotificationIndex] ?? null
+  const safeNotificationIndex = activeTeacherNotifications.length
+    ? Math.min(currentNotificationIndex, activeTeacherNotifications.length - 1)
+    : 0
+  const currentNotification = activeTeacherNotifications[safeNotificationIndex] ?? null
   const isCurrentNotificationUnread = currentNotification ? !viewedAnnouncementIds.includes(currentNotification.id) : false
 
   const filteredLessonPlans = useMemo(
@@ -1149,17 +1151,6 @@ function TeacherDashboard() {
     setAnnouncements(nextAnnouncements)
     setCalendarNotice({ type: 'success', message: 'Announcement deleted successfully.' })
   }
-
-  useEffect(() => {
-    if (activeTeacherNotifications.length === 0) {
-      if (currentNotificationIndex !== 0) setCurrentNotificationIndex(0)
-      return
-    }
-
-    if (currentNotificationIndex > activeTeacherNotifications.length - 1) {
-      setCurrentNotificationIndex(activeTeacherNotifications.length - 1)
-    }
-  }, [activeTeacherNotifications, currentNotificationIndex])
 
   const markNotificationViewed = (notificationId: number | null) => {
     if (!notificationId) return
@@ -2196,19 +2187,19 @@ function TeacherDashboard() {
                 type="button"
                 className="role-secondary-btn teacher-notification-nav-btn"
                 onClick={handlePreviousNotification}
-                disabled={currentNotificationIndex === 0 || activeTeacherNotifications.length === 0}
+                disabled={safeNotificationIndex === 0 || activeTeacherNotifications.length === 0}
                 aria-label="Previous notification"
               >
                 <ChevronLeft size={16} />
               </button>
               <span className="teacher-notification-count">
-                {activeTeacherNotifications.length === 0 ? '0 / 0' : `${currentNotificationIndex + 1} / ${activeTeacherNotifications.length}`}
+                {activeTeacherNotifications.length === 0 ? '0 / 0' : `${safeNotificationIndex + 1} / ${activeTeacherNotifications.length}`}
               </span>
               <button
                 type="button"
                 className="role-secondary-btn teacher-notification-nav-btn"
                 onClick={handleNextNotification}
-                disabled={activeTeacherNotifications.length === 0 || currentNotificationIndex >= activeTeacherNotifications.length - 1}
+                disabled={activeTeacherNotifications.length === 0 || safeNotificationIndex >= activeTeacherNotifications.length - 1}
                 aria-label="Next notification"
               >
                 <ChevronRight size={16} />

@@ -137,28 +137,6 @@ const includesSearch = (value: string | number | null | undefined, query: string
     .toLowerCase()
     .includes(query.trim().toLowerCase())
 
-const getInitials = (name: string) =>
-  name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-
-const createProfileAvatar = (name: string, colorA = '#2563eb', colorB = '#7c3aed') =>
-  `data:image/svg+xml;utf8,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="${colorA}" />
-          <stop offset="100%" stop-color="${colorB}" />
-        </linearGradient>
-      </defs>
-      <rect width="96" height="96" rx="48" fill="url(#g)" />
-      <text x="48" y="56" text-anchor="middle" font-size="32" font-family="Arial, sans-serif" font-weight="700" fill="#ffffff">${getInitials(name)}</text>
-    </svg>
-  `)}`
-
 function AdminDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('Home')
