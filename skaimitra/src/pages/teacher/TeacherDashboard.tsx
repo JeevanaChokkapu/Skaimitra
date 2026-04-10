@@ -27,6 +27,8 @@ import {
   Upload,
   Users,
   X,
+  ArrowLeft,
+  Sparkles,
 } from 'lucide-react'
 import {
   Bar,
@@ -89,7 +91,7 @@ type TeacherAnnouncement = {
   expiresAt: string
 }
 
-type LessonPlanSource = 'Custom' | 'External' | 'AI'
+type LessonPlanSource = 'Manual' | 'External' | 'AI'
 
 type LessonPlanStatus = 'Draft' | 'Active' | 'Inactive' | 'Deleted'
 
@@ -113,7 +115,7 @@ type LessonPlan = {
   classSections?: string[]
   grade: string
   subject: string
-  type: 'Lesson' | 'Project' | 'Discussion' | 'Custom'
+  type: 'Lesson' | 'Project' | 'Discussion' | 'Manual'
   status: LessonPlanStatus
   description: string
   complianceCode: string
@@ -132,7 +134,7 @@ type LessonPlan = {
   publishedAt?: string
   externalUrl?: string
   aiPrompt?: string
-  shareScope?: 'Private' | 'Global' | 'Selected Users'
+  shareScope?: 'Private' | 'All Users' | 'Selected Users'
   sharedWith?: string[]
   assets?: LessonPlanAsset[]
 }
@@ -141,7 +143,7 @@ type PlannerWorkspaceTab = 'lesson' | 'lab'
 
 type PlannerView = 'summary' | 'builder'
 
-type ShareVisibility = 'private' | 'global' | 'users'
+type ShareVisibility = 'private' | 'all users' | 'users'
 
 type LabActivity = {
   id: number
@@ -168,7 +170,7 @@ type LabActivity = {
   publishedAt?: string
   externalUrl?: string
   aiPrompt?: string
-  shareScope?: 'Private' | 'Global' | 'Selected Users'
+  shareScope?: 'Private' | 'All Users' | 'Selected Users'
   sharedWith?: string[]
   assets?: LessonPlanAsset[]
 }
@@ -193,6 +195,7 @@ type LessonPlanFormState = {
   aiTopic: string
   aiObjective: string
   aiPrompt: string
+  aiDraft: string
   assets: LessonPlanAsset[]
   shareEnabled: boolean
   shareScope: ShareVisibility
@@ -217,6 +220,7 @@ type LabActivityFormState = {
   result: string
   externalUrl: string
   aiPrompt: string
+  aiDraft: string
   assets: LessonPlanAsset[]
   shareEnabled: boolean
   shareScope: ShareVisibility
@@ -362,7 +366,7 @@ const initialLabActivities: LabActivity[] = [
     procedureSteps: ['Review safety instructions', 'Mix solution samples', 'Record indicator changes'],
     observations: 'Students observed immediate color changes.',
     result: 'Learners successfully classified acids and bases.',
-    source: 'Custom',
+    source: 'Manual',
     complianceCode: 'SCI-LAB-104',
     scheduleDate: '2026-04-15',
     date: '2026-03-25',
@@ -370,7 +374,7 @@ const initialLabActivities: LabActivity[] = [
     createdBy: 'internal',
     createdAt: '2026-03-25',
     updatedAt: '2026-03-27',
-    shareScope: 'Global',
+    shareScope: 'All Users',
     sharedWith: ['All science teachers'],
     assets: [],
   },
@@ -417,7 +421,7 @@ const createEmptyLessonPlanForm = (): LessonPlanFormState => ({
   description: '',
   scheduleDate: '',
   complianceCode: '',
-  source: 'Custom',
+  source: 'Manual',
   className: '',
   objectives: '',
   materials: '',
@@ -427,6 +431,7 @@ const createEmptyLessonPlanForm = (): LessonPlanFormState => ({
   aiTopic: '',
   aiObjective: '',
   aiPrompt: '',
+  aiDraft: '',
   assets: [],
   shareEnabled: false,
   shareScope: 'private',
@@ -443,7 +448,7 @@ const createEmptyLabActivityForm = (): LabActivityFormState => ({
   description: '',
   scheduleDate: '',
   complianceCode: '',
-  source: 'Custom',
+  source: 'Manual',
   objective: '',
   materials: '',
   procedureSteps: [''],
@@ -451,6 +456,7 @@ const createEmptyLabActivityForm = (): LabActivityFormState => ({
   result: '',
   externalUrl: '',
   aiPrompt: '',
+  aiDraft: '',
   assets: [],
   shareEnabled: false,
   shareScope: 'private',
@@ -461,6 +467,20 @@ const assignmentTypeOptions: AssignmentType[] = ['Quiz', 'Paper', 'Homework', 'P
 const assignmentModeOptions: AssignmentMode[] = ['Online', 'Offline']
 const assignmentClassOptions = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12']
 const assignmentSectionOptions = ['A', 'B', 'C']
+const lessonCourseOptions = ['Hindi', 'English', 'Mathematics', 'Science', 'Social Science', 'Computer Science', 'General']
+const classOptions = ['Class VI', 'Class VII', 'Class VIII', 'Class IX', 'Class X', 'Class XI', 'Class XII']
+const lessonPromptSuggestions = [
+  'Create a complete lesson plan for Class 7 English on Grammar (Tenses) with objectives, examples, activities, and assessment.',
+  'Generate a mathematics lesson plan for Class 8 Algebra including step-by-step teaching flow and exercises.',
+  'Prepare a science lesson plan for Class 6 on Electricity with experiment and evaluation methods.',
+  'Design an interactive lesson plan using group activities and quizzes for Social Science (Class 7).',
+  'Create a beginner-friendly lesson plan with visual aids and simple assessments.',
+]
+const labPromptSuggestions = [
+  'Create a lab activity for Class 8 Physics on light reflection',
+  'Generate a computer lab activity using Micro:bit',
+  'Design a science experiment for Class 7',
+]
 
 const createEmptyAssignmentForm = (): AssignmentFormState => ({
   assignmentName: '',
@@ -472,7 +492,7 @@ const createEmptyAssignmentForm = (): AssignmentFormState => ({
   subject: '',
   date: '',
   status: 'Draft',
-  source: 'Custom',
+  source: 'Manual',
   description: '',
   instructions: '',
   rubric: '',
@@ -493,7 +513,7 @@ const initialAssignments: AssignmentRecord[] = [
     subject: 'Mathematics',
     date: '2026-04-12',
     status: 'Active',
-    source: 'Custom',
+    source: 'Manual',
     description: 'Assess understanding of algebra basics and equations.',
     instructions: 'Attempt all questions and submit within 30 minutes.',
     rubric: 'Accuracy, steps shown, and completion.',
@@ -689,14 +709,14 @@ const initialLessonPlans: LessonPlan[] = [
     materials: 'Whiteboard, algebra worksheets',
     activities: 'Problem-solving exercises',
     assessment: 'Quiz and assignments',
-    source: 'Custom',
+    source: 'Manual',
     createdBy: 'internal',
     date: '2026-02-20',
     author: 'Skaimitra Mathematics Team',
     createdAt: '2026-02-20',
     updatedAt: '2026-03-29',
     publishedAt: '2026-03-29',
-    shareScope: 'Global',
+    shareScope: 'All Users',
     sharedWith: ['All mathematics teachers'],
     assets: [],
   },
@@ -766,7 +786,7 @@ function TeacherDashboard() {
   const [plannerView, setPlannerView] = useState<PlannerView>('summary')
   const [labSearchTerm, setLabSearchTerm] = useState('')
   const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('')
-  const [assignmentBuilderMode, setAssignmentBuilderMode] = useState<LessonPlanSource>('Custom')
+  const [assignmentBuilderMode, setAssignmentBuilderMode] = useState<LessonPlanSource>('Manual')
   const [isAssignmentBuilderOpen, setIsAssignmentBuilderOpen] = useState(false)
   const [editingAssignmentId, setEditingAssignmentId] = useState<number | null>(null)
   const [gradeSearchTerm, setGradeSearchTerm] = useState('')
@@ -781,6 +801,8 @@ function TeacherDashboard() {
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [teacherName, setTeacherName] = useState('Teacher')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [showLessonPromptSuggestions, setShowLessonPromptSuggestions] = useState(false)
+  const [showLabPromptSuggestions, setShowLabPromptSuggestions] = useState(false)
   const [teacherProfile, setTeacherProfile] = useState<ProfileSettingsData>({
     name: 'Teacher',
     email: 'teacher@skaimitra.com',
@@ -838,8 +860,8 @@ function TeacherDashboard() {
   const [labActivitiesState, setLabActivitiesState] = useState<LabActivity[]>(initialLabActivities)
   const [editingLessonPlanId, setEditingLessonPlanId] = useState<number | null>(null)
   const [editingLabActivityId, setEditingLabActivityId] = useState<number | null>(null)
-  const [lessonBuilderMode, setLessonBuilderMode] = useState<LessonPlanSource>('Custom')
-  const [labBuilderMode, setLabBuilderMode] = useState<LessonPlanSource>('Custom')
+  const [lessonBuilderMode, setLessonBuilderMode] = useState<LessonPlanSource>('Manual')
+  const [labBuilderMode, setLabBuilderMode] = useState<LessonPlanSource>('Manual')
   const [lessonSearchTerm, setLessonSearchTerm] = useState('')
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null)
   const [selectedLabActivity, setSelectedLabActivity] = useState<LabActivity | null>(null)
@@ -861,6 +883,14 @@ function TeacherDashboard() {
       subject: localStorage.getItem('skaimitra_teacher_subject')?.trim() || current.subject,
     }))
   }, [])
+
+  useEffect(() => {
+    if (plannerView !== 'builder') return
+    const handlePop = () => setPlannerView('summary')
+    window.addEventListener('popstate', handlePop)
+    window.history.pushState({ plannerView: 'builder' }, '')
+    return () => window.removeEventListener('popstate', handlePop)
+  }, [plannerView])
 
   useEffect(() => {
     if (!calendarNotice) return
@@ -1378,8 +1408,8 @@ function TeacherDashboard() {
 
   const getShareScopeLabel = (scope: ShareVisibility) => {
     switch (scope) {
-      case 'global':
-        return 'Global'
+      case 'all users':
+        return 'All Users'
       case 'users':
         return 'Selected Users'
       default:
@@ -1391,7 +1421,7 @@ function TeacherDashboard() {
     setPlannerTab('lesson')
     setPlannerView('builder')
     setEditingLessonPlanId(null)
-    setLessonBuilderMode('Custom')
+    setLessonBuilderMode('Manual')
     setLessonPlanForm(createEmptyLessonPlanForm())
     setLessonSharePromptVisible(false)
   }
@@ -1423,7 +1453,7 @@ function TeacherDashboard() {
       aiPrompt: plan.aiPrompt || '',
       assets: plan.assets || [],
       shareEnabled: plan.shareScope ? plan.shareScope !== 'Private' : false,
-      shareScope: plan.shareScope === 'Global' ? 'global' : plan.shareScope === 'Selected Users' ? 'users' : 'private',
+      shareScope: plan.shareScope === 'All Users' ? 'all users' : plan.shareScope === 'Selected Users' ? 'users' : 'private',
       shareUsers: plan.sharedWith?.join(', ') || '',
     })
     setLessonSharePromptVisible(true)
@@ -1433,6 +1463,12 @@ function TeacherDashboard() {
     setPlannerView('summary')
     setEditingLessonPlanId(null)
     setLessonSharePromptVisible(false)
+    navigate(-1)
+  }
+
+  const handlePlannerBack = () => {
+    setPlannerView('summary')
+    navigate(-1)
   }
 
   const updateLessonPlanField = <K extends keyof LessonPlanFormState>(field: K, value: LessonPlanFormState[K]) => {
@@ -1458,7 +1494,11 @@ function TeacherDashboard() {
       return
     }
 
-    const topic = lessonPlanForm.aiTopic.trim() || lessonPlanForm.title.trim() || 'the selected topic'
+    const topic =
+      lessonPlanForm.aiTopic.trim() ||
+      lessonPlanForm.title.trim() ||
+      lessonPlanForm.aiPrompt.trim() ||
+      'the selected topic'
     const learningGoal = lessonPlanForm.aiObjective.trim() || 'build understanding through guided instruction'
 
     setLessonPlanForm((prev) => ({
@@ -1471,6 +1511,9 @@ function TeacherDashboard() {
         prev.activities ||
         `1. Hook learners with a short warm-up on ${topic}.\n2. Model the concept with direct instruction.\n3. Facilitate pair practice and guided discussion.\n4. Close with a reflective check for understanding.`,
       assessment: prev.assessment || 'Quick formative check, class discussion, and independent practice review.',
+      aiDraft:
+        prev.aiDraft ||
+        `Lesson Topic: ${topic}\n\nObjectives:\n- Students will ${learningGoal}.\n\nMaterials:\n- Slides, whiteboard, student notebooks, formative exit ticket\n\nActivities:\n1. Hook learners with a short warm-up on ${topic}.\n2. Model the concept with direct instruction.\n3. Facilitate pair practice and guided discussion.\n4. Close with a reflective check for understanding.\n\nAssessment:\n- Quick formative check, class discussion, and independent practice review.`,
     }))
     setCalendarNotice({ type: 'success', message: 'AI draft generated. You can refine the content before saving.' })
   }
@@ -1513,7 +1556,7 @@ function TeacherDashboard() {
       sharedWith:
         lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'users'
           ? lessonPlanForm.shareUsers.split(',').map((item) => item.trim()).filter(Boolean)
-          : lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'global'
+          : lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'all users'
             ? ['All users']
             : [],
       assets: lessonPlanForm.assets,
@@ -1620,7 +1663,7 @@ function TeacherDashboard() {
     setPlannerTab('lab')
     setPlannerView('builder')
     setEditingLabActivityId(null)
-    setLabBuilderMode('Custom')
+    setLabBuilderMode('Manual')
     setLabActivityForm(createEmptyLabActivityForm())
     setLabSharePromptVisible(false)
   }
@@ -1650,7 +1693,7 @@ function TeacherDashboard() {
       aiPrompt: activity.aiPrompt || '',
       assets: activity.assets || [],
       shareEnabled: activity.shareScope ? activity.shareScope !== 'Private' : false,
-      shareScope: activity.shareScope === 'Global' ? 'global' : activity.shareScope === 'Selected Users' ? 'users' : 'private',
+      shareScope: activity.shareScope === 'All Users' ? 'all users' : activity.shareScope === 'Selected Users' ? 'users' : 'private',
       shareUsers: activity.sharedWith?.join(', ') || '',
     })
     setLabSharePromptVisible(true)
@@ -1660,6 +1703,7 @@ function TeacherDashboard() {
     setPlannerView('summary')
     setEditingLabActivityId(null)
     setLabSharePromptVisible(false)
+    navigate(-1)
   }
 
   const updateLabActivityField = <K extends keyof LabActivityFormState>(field: K, value: LabActivityFormState[K]) => {
@@ -1703,7 +1747,10 @@ function TeacherDashboard() {
       return
     }
 
-    const title = labActivityForm.title.trim() || 'AI Generated Lab Activity'
+    const title =
+      labActivityForm.title.trim() ||
+      labActivityForm.aiPrompt.trim() ||
+      'AI Generated Lab Activity'
     setLabActivityForm((prev) => ({
       ...prev,
       title,
@@ -1716,6 +1763,9 @@ function TeacherDashboard() {
           : ['Review the objective and safety notes', 'Set up the apparatus', 'Run the investigation and capture observations', 'Discuss results as a class'],
       observations: prev.observations || 'Record visible changes, timing, and measurement values.',
       result: prev.result || 'Summarize whether the observed data supports the prediction.',
+      aiDraft:
+        prev.aiDraft ||
+        `Lab Activity: ${title}\n\nObjective:\n- ${prev.objective || `Students will investigate ${title.toLowerCase()} and record evidence-based findings.`}\n\nMaterials:\n- ${prev.materials || 'Safety goggles, worksheet, measuring tools, lab apparatus'}\n\nProcedure:\n1. Review the objective and safety notes.\n2. Set up the apparatus.\n3. Run the investigation and capture observations.\n4. Discuss results as a class.\n\nObservations:\n- ${prev.observations || 'Record visible changes, timing, and measurement values.'}\n\nResult:\n- ${prev.result || 'Summarize whether the observed data supports the prediction.'}`,
     }))
     setCalendarNotice({ type: 'success', message: 'AI scaffold generated for the lab activity.' })
   }
@@ -1756,7 +1806,7 @@ function TeacherDashboard() {
       sharedWith:
         labActivityForm.shareEnabled && labActivityForm.shareScope === 'users'
           ? labActivityForm.shareUsers.split(',').map((item) => item.trim()).filter(Boolean)
-          : labActivityForm.shareEnabled && labActivityForm.shareScope === 'global'
+          : labActivityForm.shareEnabled && labActivityForm.shareScope === 'all users'
             ? ['All users']
             : [],
       assets: labActivityForm.assets,
@@ -1830,7 +1880,7 @@ function TeacherDashboard() {
   const openNewAssignmentBuilder = () => {
     setIsAssignmentBuilderOpen(true)
     setEditingAssignmentId(null)
-    setAssignmentBuilderMode('Custom')
+    setAssignmentBuilderMode('Manual')
     setAssignmentForm(createEmptyAssignmentForm())
   }
 
@@ -2370,7 +2420,7 @@ function TeacherDashboard() {
     </main>
   )
 
-  const plannerModes: LessonPlanSource[] = ['Custom', 'External', 'AI']
+  const plannerModes: LessonPlanSource[] = ['Manual', 'External', 'AI']
 
   const renderShareSettings = (
     type: 'lesson' | 'lab',
@@ -2418,7 +2468,7 @@ function TeacherDashboard() {
             }}
           >
             <option value="private">Private</option>
-            <option value="global">Global</option>
+            <option value="all users">All Users</option>
             <option value="users">Selected Users</option>
           </select>
         </label>
@@ -2470,18 +2520,18 @@ function TeacherDashboard() {
                   className={`planner-summary-card ${selectedPlan?.id === plan.id ? 'is-selected' : ''}`}
                   onClick={() => setSelectedPlan(plan)}
                 >
-                  <div className="planner-summary-head">
-                    <div>
-                      <h3>{plan.title}</h3>
-                      <p className="role-muted">{`${plan.course} • ${plan.module}`}</p>
-                    </div>
+              <div className="planner-summary-head">
+                <div>
+                  <h3>{plan.title}</h3>
+                  <p className="role-muted">{`${plan.course} • ${plan.className || 'Class'}`}</p>
+                </div>
                     <span className={`role-status-badge ${getStatusBadgeClass(plan.status)}`}>{plan.status}</span>
                   </div>
-                  <div className="planner-summary-meta">
-                    <span>{`Grade ${plan.grade || 'N/A'}`}</span>
-                    <span>{plan.type}</span>
-                    <span>{plan.source}</span>
-                  </div>
+              <div className="planner-summary-meta">
+                <span>{plan.className || 'Class N/A'}</span>
+                <span>{plan.type}</span>
+                <span>{plan.source}</span>
+              </div>
                   <p className="planner-summary-text">{plan.description || 'No summary added yet.'}</p>
                   <div className="planner-card-actions">
                     <ActionIconButton icon={Eye} onClick={() => setSelectedPlan(plan)} ariaLabel={`View ${plan.title}`} />
@@ -2524,7 +2574,7 @@ function TeacherDashboard() {
               <div className="planner-detail-head">
                 <div>
                   <h4>{selectedPlan.title}</h4>
-                  <p className="role-muted">{`${selectedPlan.course} • ${selectedPlan.module}`}</p>
+                  <p className="role-muted">{`${selectedPlan.course} • ${selectedPlan.className || 'Class'}`}</p>
                 </div>
                 <span className={`role-status-badge ${getStatusBadgeClass(selectedPlan.status)}`}>{selectedPlan.status}</span>
               </div>
@@ -2573,8 +2623,8 @@ function TeacherDashboard() {
       <section className="role-card planner-card">
         <div className="planner-card-head">
           <div>
-            <h3>Lesson Plan Builder</h3>
-            <p className="role-muted">Build content with custom fields, external sources, or AI. Uploaded assets can be shared globally or with selected users.</p>
+            <h3>Basic Details</h3>
+            <p className="role-muted">Capture course, class, and lesson metadata before building the content.</p>
           </div>
         </div>
 
@@ -2589,9 +2639,11 @@ function TeacherDashboard() {
                 updateLessonPlanField('source', mode)
               }}
             >
-              <span className="planner-mode-icon">{mode === 'Custom' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
-              <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
-              <span>{mode === 'Custom' ? 'Structured sections and custom inputs' : mode === 'External' ? 'Upload files or link external lesson sources' : 'Generate a draft and refine it inline'}</span>
+              <div className="planner-mode-head">
+                <span className="planner-mode-icon">{mode === 'Manual' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
+                <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
+              </div>
+              <span className="planner-mode-desc">{mode === 'Manual' ? 'Structured sections and custom inputs' : mode === 'External' ? 'Upload files or link external lesson sources' : 'Generate a draft and refine it inline'}</span>
             </button>
           ))}
         </div>
@@ -2599,11 +2651,21 @@ function TeacherDashboard() {
         <div className="planner-form-grid">
           <label>
             <span>Course</span>
-            <input type="text" value={lessonPlanForm.course} onChange={(e) => updateLessonPlanField('course', e.target.value)} placeholder="Course" />
+            <select value={lessonPlanForm.course} onChange={(e) => updateLessonPlanField('course', e.target.value)}>
+              <option value="">Select Course</option>
+              {lessonCourseOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </label>
           <label>
-            <span>Module</span>
-            <input type="text" value={lessonPlanForm.module} onChange={(e) => updateLessonPlanField('module', e.target.value)} placeholder="Module" />
+            <span>Class</span>
+            <select value={lessonPlanForm.className} onChange={(e) => updateLessonPlanField('className', e.target.value)}>
+              <option value="">Select Class</option>
+              {classOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Type</span>
@@ -2616,7 +2678,7 @@ function TeacherDashboard() {
             <input type="text" value={lessonPlanForm.complianceCode} onChange={(e) => updateLessonPlanField('complianceCode', e.target.value)} placeholder="CBSE901A / 417" />
           </label>
           <label className="planner-span-2">
-            <span>Lesson Title</span>
+            <span>Topic</span>
             <input type="text" value={lessonPlanForm.title} onChange={(e) => updateLessonPlanField('title', e.target.value)} placeholder="Lesson title" />
           </label>
           <label className="planner-span-2">
@@ -2636,9 +2698,43 @@ function TeacherDashboard() {
         </div>
       </section>
 
-      {lessonBuilderMode !== 'External' ? (
+      {lessonBuilderMode === 'Manual' ? (
         <section className="role-card planner-card">
-          <div className="planner-card-head"><div><h3>{lessonBuilderMode === 'AI' ? 'Generated Lesson Content' : 'Custom Lesson Content'}</h3></div></div>
+          <div className="planner-card-head">
+            <div>
+              <h3>Upload Content</h3>
+              <p className="role-muted">Upload lesson assets and decide how they should be shared.</p>
+            </div>
+          </div>
+          <label className="planner-upload-zone">
+            <Upload size={22} />
+            <span>Drag and drop or select PDF, DOC, PPT, image, or worksheet files</span>
+            <input type="file" multiple onChange={(e) => handleLessonAssetUpload(e.target.files)} />
+          </label>
+          {lessonPlanForm.assets.length ? (
+            <div className="planner-asset-list">
+              {lessonPlanForm.assets.map((asset) => (
+                <div key={asset.id} className="planner-asset-row">
+                  <div>
+                    <strong>{asset.name}</strong>
+                    <span>{asset.type || 'File'}</span>
+                  </div>
+                  <button type="button" className="role-secondary-btn" onClick={() => removeLessonAsset(asset.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {lessonBuilderMode === 'Manual' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head">
+            <div>
+              <h3>Lesson Plan Builder</h3>
+              <p className="role-muted">Build the lesson content manually.</p>
+            </div>
+          </div>
           <div className="planner-form-grid">
             <label className="planner-span-2">
               <span>Learning Objectives</span>
@@ -2674,53 +2770,65 @@ function TeacherDashboard() {
 
       {lessonBuilderMode === 'AI' ? (
         <section className="role-card planner-card">
-          <div className="planner-card-head"><div><h3>AI Assistant</h3><p className="role-muted">Provide a topic and learning goal, then generate an editable draft.</p></div></div>
+          <div className="planner-card-head planner-ai-header">
+            <div>
+              <h3>AI Lesson Generator</h3>
+              <p className="role-muted">Generate structured content using AI.</p>
+            </div>
+          </div>
           <div className="planner-form-grid">
-            <label>
-              <span>Topic</span>
-              <input type="text" value={lessonPlanForm.aiTopic} onChange={(e) => updateLessonPlanField('aiTopic', e.target.value)} placeholder="Topic for AI generation" />
-            </label>
-            <label>
-              <span>Learning Objective</span>
-              <input type="text" value={lessonPlanForm.aiObjective} onChange={(e) => updateLessonPlanField('aiObjective', e.target.value)} placeholder="What should learners achieve?" />
-            </label>
             <label className="planner-span-2">
-              <span>Prompt</span>
-              <textarea value={lessonPlanForm.aiPrompt} onChange={(e) => updateLessonPlanField('aiPrompt', e.target.value)} placeholder="Describe the tone, teaching style, and constraints for the AI output" rows={5} />
+              <div className="planner-ai-prompt-head">
+                <span>Prompt</span>
+                <button
+                  type="button"
+                  className="planner-ai-assist-btn"
+                  onClick={() => setShowLessonPromptSuggestions((prev) => !prev)}
+                >
+                  <Sparkles size={14} />
+                  AI Assist
+                </button>
+              </div>
+              <div className="planner-ai-prompt">
+                <textarea
+                  value={lessonPlanForm.aiPrompt}
+                  onChange={(e) => updateLessonPlanField('aiPrompt', e.target.value)}
+                  placeholder="Create a detailed lesson plan for Class 8 Science including objectives, activities, and assessment..."
+                  rows={4}
+                />
+                {showLessonPromptSuggestions ? (
+                  <div className="planner-ai-suggestions">
+                    {lessonPromptSuggestions.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => {
+                          updateLessonPlanField('aiPrompt', prompt)
+                          setShowLessonPromptSuggestions(false)
+                        }}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </label>
           </div>
           <button type="button" className="role-primary-btn planner-generate-btn" onClick={generateLessonPlanWithAI}>
             Generate Lesson Plan with AI
           </button>
-        </section>
-      ) : null}
-
-      {lessonBuilderMode === 'Custom' ? (
-        <section className="role-card planner-card">
-          <div className="planner-card-head">
-            <div>
-              <h3>Attachments</h3>
-              <p className="role-muted">Upload lesson assets and decide how they should be shared.</p>
-            </div>
+          <div className="planner-ai-output">
+            <label className="planner-span-2">
+              <span>Output Preview</span>
+              <textarea
+                value={lessonPlanForm.aiDraft}
+                onChange={(e) => updateLessonPlanField('aiDraft', e.target.value)}
+                placeholder="Your AI-generated lesson draft will appear here. Edit it before saving."
+                rows={10}
+              />
+            </label>
           </div>
-          <label className="planner-upload-zone">
-            <Upload size={22} />
-            <span>Drag and drop or select PDF, DOC, PPT, image, or worksheet files</span>
-            <input type="file" multiple onChange={(e) => handleLessonAssetUpload(e.target.files)} />
-          </label>
-          {lessonPlanForm.assets.length ? (
-            <div className="planner-asset-list">
-              {lessonPlanForm.assets.map((asset) => (
-                <div key={asset.id} className="planner-asset-row">
-                  <div>
-                    <strong>{asset.name}</strong>
-                    <span>{asset.type || 'File'}</span>
-                  </div>
-                  <button type="button" className="role-secondary-btn" onClick={() => removeLessonAsset(asset.id)}>Remove</button>
-                </div>
-              ))}
-            </div>
-          ) : null}
         </section>
       ) : null}
 
@@ -2745,7 +2853,7 @@ function TeacherDashboard() {
               <Search size={16} />
               <input
                 type="text"
-                placeholder="Search lab activities by title, course, module, grade, or status..."
+                placeholder="Search lab activities by title, course, class, grade, or status..."
                 value={labSearchTerm}
                 onChange={(e) => setLabSearchTerm(e.target.value)}
               />
@@ -2766,12 +2874,12 @@ function TeacherDashboard() {
                   <div className="planner-summary-head">
                     <div>
                       <h3>{activity.title}</h3>
-                      <p className="role-muted">{`${activity.course} • ${activity.module}`}</p>
+                      <p className="role-muted">{`${activity.course} • ${activity.grade || 'Class'}`}</p>
                     </div>
                     <span className={`role-status-badge ${getStatusBadgeClass(activity.status)}`}>{activity.status}</span>
                   </div>
                   <div className="planner-summary-meta">
-                    <span>{`Grade ${activity.grade || 'N/A'}`}</span>
+                    <span>{activity.grade || 'Class N/A'}</span>
                     <span>{activity.type}</span>
                     <span>{activity.source}</span>
                   </div>
@@ -2813,7 +2921,7 @@ function TeacherDashboard() {
               <div className="planner-detail-head">
                 <div>
                   <h4>{selectedLabActivity.title}</h4>
-                  <p className="role-muted">{`${selectedLabActivity.course} • ${selectedLabActivity.module}`}</p>
+                  <p className="role-muted">{`${selectedLabActivity.course} • ${selectedLabActivity.grade || 'Class'}`}</p>
                 </div>
                 <span className={`role-status-badge ${getStatusBadgeClass(selectedLabActivity.status)}`}>{selectedLabActivity.status}</span>
               </div>
@@ -2871,9 +2979,11 @@ function TeacherDashboard() {
                 updateLabActivityField('source', mode)
               }}
             >
-              <span className="planner-mode-icon">{mode === 'Custom' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
-              <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
-              <span>{mode === 'Custom' ? 'Build the experiment manually' : mode === 'External' ? 'Bring in links, files, and references' : 'Generate a scaffold for the lab flow'}</span>
+              <div className="planner-mode-head">
+                <span className="planner-mode-icon">{mode === 'Manual' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
+                <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
+              </div>
+              <span className="planner-mode-desc">{mode === 'Manual' ? 'Build the experiment manually' : mode === 'External' ? 'Bring in links, files, and references' : 'Generate a scaffold for the lab flow'}</span>
             </button>
           ))}
         </div>
@@ -2881,11 +2991,21 @@ function TeacherDashboard() {
         <div className="planner-form-grid">
           <label>
             <span>Course</span>
-            <input type="text" value={labActivityForm.course} onChange={(e) => updateLabActivityField('course', e.target.value)} placeholder="Course" />
+            <select value={labActivityForm.course} onChange={(e) => updateLabActivityField('course', e.target.value)}>
+              <option value="">Select Course</option>
+              {lessonCourseOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </label>
           <label>
-            <span>Module</span>
-            <input type="text" value={labActivityForm.module} onChange={(e) => updateLabActivityField('module', e.target.value)} placeholder="Module" />
+            <span>Class</span>
+            <select value={labActivityForm.grade} onChange={(e) => updateLabActivityField('grade', e.target.value)}>
+              <option value="">Select Class</option>
+              {classOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Type</span>
@@ -2898,8 +3018,8 @@ function TeacherDashboard() {
             <input type="text" value={labActivityForm.complianceCode} onChange={(e) => updateLabActivityField('complianceCode', e.target.value)} placeholder="LAB417 / SCI901A" />
           </label>
           <label className="planner-span-2">
-            <span>Experiment Title</span>
-            <input type="text" value={labActivityForm.title} onChange={(e) => updateLabActivityField('title', e.target.value)} placeholder="Experiment title" />
+            <span>Activity Name</span>
+            <input type="text" value={labActivityForm.title} onChange={(e) => updateLabActivityField('title', e.target.value)} placeholder="Activity name" />
           </label>
           <label className="planner-span-2">
             <span>Description</span>
@@ -2932,62 +3052,73 @@ function TeacherDashboard() {
 
       {labBuilderMode === 'AI' ? (
         <section className="role-card planner-card">
-          <div className="planner-card-head"><div><h3>AI Lab Scaffold</h3><p className="role-muted">Describe the experiment and let AI prepare a first pass for you to edit.</p></div></div>
+          <div className="planner-card-head planner-ai-header">
+            <div>
+              <h3>AI Lab Generator</h3>
+              <p className="role-muted">Generate structured content using AI.</p>
+            </div>
+          </div>
           <div className="planner-form-grid">
             <label className="planner-span-2">
-              <span>Prompt</span>
-              <textarea value={labActivityForm.aiPrompt} onChange={(e) => updateLabActivityField('aiPrompt', e.target.value)} placeholder="Describe the experiment, safety needs, and expected observations" rows={5} />
+              <div className="planner-ai-prompt-head">
+                <span>Prompt</span>
+                <button
+                  type="button"
+                  className="planner-ai-assist-btn"
+                  onClick={() => setShowLabPromptSuggestions((prev) => !prev)}
+                >
+                  <Sparkles size={14} />
+                  AI Assist
+                </button>
+              </div>
+              <div className="planner-ai-prompt">
+                <textarea
+                  value={labActivityForm.aiPrompt}
+                  onChange={(e) => updateLabActivityField('aiPrompt', e.target.value)}
+                  placeholder="Create a detailed lab activity for Class 8 Science including objectives, materials, procedure, and observations..."
+                  rows={4}
+                />
+                {showLabPromptSuggestions ? (
+                  <div className="planner-ai-suggestions">
+                    {labPromptSuggestions.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => {
+                          updateLabActivityField('aiPrompt', prompt)
+                          setShowLabPromptSuggestions(false)
+                        }}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </label>
           </div>
           <button type="button" className="role-primary-btn planner-generate-btn" onClick={generateLabActivityWithAI}>
             Generate Lab Activity with AI
           </button>
+          <div className="planner-ai-output">
+            <label className="planner-span-2">
+              <span>Output Preview</span>
+              <textarea
+                value={labActivityForm.aiDraft}
+                onChange={(e) => updateLabActivityField('aiDraft', e.target.value)}
+                placeholder="Your AI-generated lab draft will appear here. Edit it before saving."
+                rows={10}
+              />
+            </label>
+          </div>
         </section>
       ) : null}
 
-      <section className="role-card planner-card">
-        <div className="planner-card-head"><div><h3>Lab Content</h3></div></div>
-        <div className="planner-form-grid">
-          <label className="planner-span-2">
-            <span>Objective</span>
-            <textarea value={labActivityForm.objective} onChange={(e) => updateLabActivityField('objective', e.target.value)} rows={4} />
-          </label>
-          <label className="planner-span-2">
-            <span>Required Materials</span>
-            <textarea value={labActivityForm.materials} onChange={(e) => updateLabActivityField('materials', e.target.value)} rows={4} />
-          </label>
-          <div className="planner-span-2">
-            <span className="planner-field-label">Procedure Steps</span>
-            <div className="planner-steps-list">
-              {labActivityForm.procedureSteps.map((step, index) => (
-                <div key={`${index}-${step}`} className="planner-step-row">
-                  <span className="planner-step-number">{index + 1}</span>
-                  <textarea value={step} onChange={(e) => updateLabProcedureStep(index, e.target.value)} rows={3} placeholder={`Describe step ${index + 1}`} />
-                  <button type="button" className="role-secondary-btn" onClick={() => removeLabProcedureStep(index)}>Remove</button>
-                </div>
-              ))}
-            </div>
-            <button type="button" className="role-secondary-btn planner-add-step-btn" onClick={addLabProcedureStep}>
-              <Plus size={16} />
-              Add Step
-            </button>
-          </div>
-          <label className="planner-span-2">
-            <span>Observations</span>
-            <textarea value={labActivityForm.observations} onChange={(e) => updateLabActivityField('observations', e.target.value)} rows={4} />
-          </label>
-          <label className="planner-span-2">
-            <span>Result / Conclusion</span>
-            <textarea value={labActivityForm.result} onChange={(e) => updateLabActivityField('result', e.target.value)} rows={4} />
-          </label>
-        </div>
-      </section>
-
-      {labBuilderMode === 'Custom' ? (
+      {labBuilderMode === 'Manual' ? (
         <section className="role-card planner-card">
           <div className="planner-card-head">
             <div>
-              <h3>Attachments</h3>
+              <h3>Upload Content</h3>
               <p className="role-muted">Upload lab manuals, worksheets, images, or safety references.</p>
             </div>
           </div>
@@ -3012,6 +3143,46 @@ function TeacherDashboard() {
         </section>
       ) : null}
 
+      {labBuilderMode === 'Manual' ? (
+        <section className="role-card planner-card">
+          <div className="planner-card-head"><div><h3>Lab Content</h3></div></div>
+          <div className="planner-form-grid">
+            <label className="planner-span-2">
+              <span>Objective</span>
+              <textarea value={labActivityForm.objective} onChange={(e) => updateLabActivityField('objective', e.target.value)} rows={4} />
+            </label>
+            <label className="planner-span-2">
+              <span>Required Materials</span>
+              <textarea value={labActivityForm.materials} onChange={(e) => updateLabActivityField('materials', e.target.value)} rows={4} />
+            </label>
+            <div className="planner-span-2">
+              <span className="planner-field-label">Procedure Steps</span>
+              <div className="planner-steps-list">
+                {labActivityForm.procedureSteps.map((step, index) => (
+                  <div key={`${index}-${step}`} className="planner-step-row">
+                    <span className="planner-step-number">{index + 1}</span>
+                    <textarea value={step} onChange={(e) => updateLabProcedureStep(index, e.target.value)} rows={3} placeholder={`Describe step ${index + 1}`} />
+                    <button type="button" className="role-secondary-btn" onClick={() => removeLabProcedureStep(index)}>Remove</button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="role-secondary-btn planner-add-step-btn" onClick={addLabProcedureStep}>
+                <Plus size={16} />
+                Add Step
+              </button>
+            </div>
+            <label className="planner-span-2">
+              <span>Observations</span>
+              <textarea value={labActivityForm.observations} onChange={(e) => updateLabActivityField('observations', e.target.value)} rows={4} />
+            </label>
+            <label className="planner-span-2">
+              <span>Result / Conclusion</span>
+              <textarea value={labActivityForm.result} onChange={(e) => updateLabActivityField('result', e.target.value)} rows={4} />
+            </label>
+          </div>
+        </section>
+      ) : null}
+
       {renderShareSettings('lab', labSharePromptVisible || labActivityForm.assets.length > 0, labActivityForm.shareEnabled, labActivityForm.shareScope, labActivityForm.shareUsers)}
 
       <section className="role-card planner-card planner-actions-card">
@@ -3028,22 +3199,41 @@ function TeacherDashboard() {
     <main className="role-main role-main-detail planner-page">
       <section className="role-primary">
         <section className="role-section-head role-admin-page-head planner-page-head">
-          <div>
-            <h2>{plannerTab === 'lesson' ? 'Lesson Planning' : 'Lab Activity Designer'}</h2>
+          <div className="planner-header-title">
+            {plannerView === 'builder' ? (
+              <span
+                className="planner-back-icon"
+                role="button"
+                tabIndex={0}
+                onClick={handlePlannerBack}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handlePlannerBack()
+                  }
+                }}
+                aria-label="Go back"
+              >
+                <ArrowLeft size={18} />
+              </span>
+            ) : null}
+            <h2>{plannerTab === 'lesson' ? 'Lesson Planning' : 'Lab Activities'}</h2>
             <p className="role-muted">
               {plannerTab === 'lesson'
                 ? 'Create, duplicate, print, approve, download, and share lesson plans without leaving the teacher dashboard.'
                 : 'Design lab experiences inline with the same builder workflow and sharing controls.'}
             </p>
           </div>
-          <button
-            type="button"
-            className="role-primary-btn"
-            onClick={plannerTab === 'lesson' ? openNewLessonBuilder : openNewLabActivityBuilder}
-          >
-            <Plus size={16} />
-            {plannerTab === 'lesson' ? 'Create Lesson Plan' : 'Create Lab Activity'}
-          </button>
+          {plannerView === 'summary' ? (
+            <button
+              type="button"
+              className="role-primary-btn"
+              onClick={plannerTab === 'lesson' ? openNewLessonBuilder : openNewLabActivityBuilder}
+            >
+              <Plus size={16} />
+              {plannerTab === 'lesson' ? 'Create Lesson Plan' : 'Create Lab Activity'}
+            </button>
+          ) : null}
         </section>
 
         <section className="role-card planner-card planner-tab-shell">
@@ -3259,7 +3449,7 @@ function TeacherDashboard() {
               </div>
 
               <div className="planner-mode-grid">
-                {(['Custom', 'External', 'AI'] as LessonPlanSource[]).map((mode) => (
+                {(['Manual', 'External', 'AI'] as LessonPlanSource[]).map((mode) => (
                   <button
                     key={mode}
                     type="button"
@@ -3269,9 +3459,11 @@ function TeacherDashboard() {
                       updateAssignmentField('source', mode)
                     }}
                   >
-                    <span className="planner-mode-icon">{mode === 'Custom' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
-                    <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
-                    <span>{mode === 'Custom' ? 'Create the assignment manually' : mode === 'External' ? 'Use a file or source link' : 'Generate assignment instructions with AI'}</span>
+                    <div className="planner-mode-head">
+                      <span className="planner-mode-icon">{mode === 'Manual' ? <PenLine size={18} /> : mode === 'External' ? <FolderOpen size={18} /> : <CheckCircle size={18} />}</span>
+                      <strong>{mode === 'AI' ? 'AI Generated' : mode}</strong>
+                    </div>
+                    <span className="planner-mode-desc">{mode === 'Manual' ? 'Create the assignment manually' : mode === 'External' ? 'Use a file or source link' : 'Generate assignment instructions with AI'}</span>
                   </button>
                 ))}
               </div>
@@ -3373,9 +3565,9 @@ function TeacherDashboard() {
               </div>
             </section>
 
-            {assignmentBuilderMode === 'Custom' ? (
+            {assignmentBuilderMode === 'Manual' ? (
               <section className="role-card planner-card">
-                <div className="planner-card-head"><div><h3>Attachments</h3></div></div>
+                <div className="planner-card-head"><div><h3>Upload Content</h3></div></div>
                 <label className="planner-upload-zone">
                   <Upload size={22} />
                   <span>Upload assignment files and support material</span>
@@ -3512,14 +3704,18 @@ function TeacherDashboard() {
                   <span>Select Grading Method</span>
                   <div className="planner-mode-grid">
                     <button type="button" className={`planner-mode-card ${gradeMethod === 'manual' ? 'is-active' : ''}`} onClick={() => setGradeMethod('manual')}>
-                      <span className="planner-mode-icon"><Pencil size={18} /></span>
-                      <strong>Manual Grading</strong>
-                      <span>Enter marks and optional feedback manually.</span>
+                      <div className="planner-mode-head">
+                        <span className="planner-mode-icon"><Pencil size={18} /></span>
+                        <strong>Manual Grading</strong>
+                      </div>
+                      <span className="planner-mode-desc">Enter marks and optional feedback manually.</span>
                     </button>
                     <button type="button" className={`planner-mode-card ${gradeMethod === 'ai' ? 'is-active' : ''}`} onClick={() => setGradeMethod('ai')}>
-                      <span className="planner-mode-icon"><CheckCircle size={18} /></span>
-                      <strong>AI Grading</strong>
-                      <span>Generate marks and feedback, then review before upload.</span>
+                      <div className="planner-mode-head">
+                        <span className="planner-mode-icon"><CheckCircle size={18} /></span>
+                        <strong>AI Grading</strong>
+                      </div>
+                      <span className="planner-mode-desc">Generate marks and feedback, then review before upload.</span>
                     </button>
                   </div>
                 </label>
