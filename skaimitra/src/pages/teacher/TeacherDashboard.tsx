@@ -799,17 +799,17 @@ function TeacherDashboard() {
   const [gradeEvaluation, setGradeEvaluation] = useState<GradeEvaluationEntry>({ score: '', comment: '' })
   const [uploadSearchTerm, setUploadSearchTerm] = useState('')
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
-  const [teacherName, setTeacherName] = useState('Teacher')
+  const [teacherName, setTeacherName] = useState(() => localStorage.getItem('skaimitra_name')?.trim() || 'Teacher')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [showLessonPromptSuggestions, setShowLessonPromptSuggestions] = useState(false)
   const [showLabPromptSuggestions, setShowLabPromptSuggestions] = useState(false)
-  const [teacherProfile, setTeacherProfile] = useState<ProfileSettingsData>({
-    name: 'Teacher',
-    email: 'teacher@skaimitra.com',
-    phone: '+91 98765 43210',
-    subject: 'Mathematics',
+  const [teacherProfile, setTeacherProfile] = useState<ProfileSettingsData>(() => ({
+    name: localStorage.getItem('skaimitra_name')?.trim() || 'Teacher',
+    email: localStorage.getItem('skaimitra_teacher_email')?.trim() || 'teacher@skaimitra.com',
+    phone: localStorage.getItem('skaimitra_teacher_phone')?.trim() || '+91 98765 43210',
+    subject: localStorage.getItem('skaimitra_teacher_subject')?.trim() || 'Mathematics',
     role: 'Teacher',
-  })
+  }))
   const [selectedReportClass, setSelectedReportClass] = useState<(typeof classPerformanceData)[number] | null>(classPerformanceData[1])
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
@@ -864,25 +864,13 @@ function TeacherDashboard() {
   const [labBuilderMode, setLabBuilderMode] = useState<LessonPlanSource>('Manual')
   const [lessonSearchTerm, setLessonSearchTerm] = useState('')
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null)
-  const [selectedLabActivity, setSelectedLabActivity] = useState<LabActivity | null>(null)
+  const [selectedLabActivity, setSelectedLabActivity] = useState<LabActivity | null>(initialLabActivities[0] ?? null)
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRecord | null>(initialAssignments[0] ?? null)
   const [lessonSharePromptVisible, setLessonSharePromptVisible] = useState(false)
   const [labSharePromptVisible, setLabSharePromptVisible] = useState(false)
   const [lessonPlanForm, setLessonPlanForm] = useState<LessonPlanFormState>(() => createEmptyLessonPlanForm())
   const [labActivityForm, setLabActivityForm] = useState<LabActivityFormState>(() => createEmptyLabActivityForm())
   const [assignmentForm, setAssignmentForm] = useState<AssignmentFormState>(() => createEmptyAssignmentForm())
-
-  useEffect(() => {
-    const savedName = localStorage.getItem('skaimitra_name')?.trim()
-    if (savedName) setTeacherName(savedName)
-    setTeacherProfile((current) => ({
-      ...current,
-      name: savedName || current.name,
-      email: localStorage.getItem('skaimitra_teacher_email')?.trim() || current.email,
-      phone: localStorage.getItem('skaimitra_teacher_phone')?.trim() || current.phone,
-      subject: localStorage.getItem('skaimitra_teacher_subject')?.trim() || current.subject,
-    }))
-  }, [])
 
   useEffect(() => {
     if (plannerView !== 'builder') return
@@ -948,12 +936,6 @@ function TeacherDashboard() {
       void loadLessons()
     }
   }, [activeTab])
-
-  useEffect(() => {
-    if (!selectedLabActivity && initialLabActivities.length) {
-      setSelectedLabActivity(initialLabActivities[0])
-    }
-  }, [selectedLabActivity])
 
   const teacherAnnouncements = useMemo(
     () =>
@@ -1451,6 +1433,7 @@ function TeacherDashboard() {
       aiTopic: plan.title,
       aiObjective: plan.objectives,
       aiPrompt: plan.aiPrompt || '',
+      aiDraft: plan.activities || plan.description || '',
       assets: plan.assets || [],
       shareEnabled: plan.shareScope ? plan.shareScope !== 'Private' : false,
       shareScope: plan.shareScope === 'All Users' ? 'all users' : plan.shareScope === 'Selected Users' ? 'users' : 'private',
@@ -1691,6 +1674,7 @@ function TeacherDashboard() {
       result: activity.result,
       externalUrl: activity.externalUrl || '',
       aiPrompt: activity.aiPrompt || '',
+      aiDraft: activity.description || '',
       assets: activity.assets || [],
       shareEnabled: activity.shareScope ? activity.shareScope !== 'Private' : false,
       shareScope: activity.shareScope === 'All Users' ? 'all users' : activity.shareScope === 'Selected Users' ? 'users' : 'private',
