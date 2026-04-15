@@ -109,13 +109,6 @@ function LoginPage() {
     }
   }
 
-  const handleDemoLogin = (role: 'admin' | 'teacher' | 'student', name: string) => {
-    localStorage.setItem('skaimitra_role', role)
-    localStorage.setItem('skaimitra_name', name)
-    localStorage.setItem('skaimitra_class_grade', role === 'student' ? 'Class 6A' : '')
-    routeByRole(role)
-  }
-
   return (
     <div className="login-page">
       <div className="login-card">
