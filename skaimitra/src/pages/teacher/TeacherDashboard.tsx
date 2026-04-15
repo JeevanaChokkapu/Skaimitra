@@ -70,6 +70,7 @@ import {
   type DashboardAnnouncement,
   type InboxMessage,
 } from '../../lib/dashboardData'
+import { jsPDF } from 'jspdf'
 import '../role-dashboard.css'
 
 type TeacherTab =
@@ -295,6 +296,26 @@ type StudentProfileCard = {
 type GradeEvaluationEntry = {
   score: string
   comment: string
+}
+
+type LibraryTab = 'My Library' | 'Public Library' | 'Shared Library'
+
+type ContentVisibility = 'Private' | 'Public' | 'Shared'
+
+type ContentLibraryItem = {
+  id: number
+  title: string
+  subject: string
+  className: string
+  uploadDate: string
+  fileType: 'PDF' | 'PPT' | 'Video' | 'DOC' | 'Link'
+  description: string
+  visibility: ContentVisibility
+  librarySource: 'mine' | 'public' | 'shared'
+  addedBy?: string
+  sharedBy?: string
+  sharedUsers?: string[]
+  link?: string
 }
 
 const navTabs: Array<{ label: TeacherTab; icon: typeof Home }> = [
@@ -623,10 +644,80 @@ const initialSubmittedAssignments: SubmissionRecord[] = [
   },
 ]
 
-const uploads = [
-  { id: 1, title: 'Chapter 4 - Algebra.pdf', type: 'PDF', updated: '2.4 MB • Feb 15, 2026' },
-  { id: 2, title: 'Science Presentation.pptx', type: 'PPTX', updated: '5.1 MB • Feb 14, 2026' },
-  { id: 3, title: 'Lecture Video.mp4', type: 'MP4', updated: '45.3 MB • Feb 13, 2026' },
+const initialContentLibrary: ContentLibraryItem[] = [
+  {
+    id: 1,
+    title: 'Introduction to Algebra Foundations',
+    subject: 'Mathematics',
+    className: 'Class VI',
+    uploadDate: '2026-04-10',
+    fileType: 'PDF',
+    description: 'Teacher lesson slides and guided examples for algebra basics.',
+    visibility: 'Private',
+    librarySource: 'mine',
+    addedBy: 'Teacher',
+  },
+  {
+    id: 2,
+    title: 'Photosynthesis Classroom Deck',
+    subject: 'Science',
+    className: 'Class VIII',
+    uploadDate: '2026-04-08',
+    fileType: 'PPT',
+    description: 'Interactive presentation with diagrams, checkpoints, and recap prompts.',
+    visibility: 'Public',
+    librarySource: 'mine',
+    addedBy: 'Teacher',
+  },
+  {
+    id: 3,
+    title: 'Grammar Revision Video',
+    subject: 'English',
+    className: 'Class VII',
+    uploadDate: '2026-04-03',
+    fileType: 'Video',
+    description: 'Short explainer video covering tense revision and examples.',
+    visibility: 'Public',
+    librarySource: 'public',
+    addedBy: 'Anjali Sharma',
+  },
+  {
+    id: 4,
+    title: 'Electricity Lab Handout',
+    subject: 'Science',
+    className: 'Class VI',
+    uploadDate: '2026-04-11',
+    fileType: 'DOC',
+    description: 'Printable lab worksheet with objectives, safety checks, and observations.',
+    visibility: 'Shared',
+    librarySource: 'shared',
+    sharedBy: 'Ravi Kumar',
+  },
+  {
+    id: 5,
+    title: 'History Timeline Resource Hub',
+    subject: 'Social Science',
+    className: 'Class IX',
+    uploadDate: '2026-04-05',
+    fileType: 'Link',
+    description: 'Curated timeline activities and student exploration links.',
+    visibility: 'Public',
+    librarySource: 'public',
+    addedBy: 'Meera Nair',
+    link: 'https://example.com/history-timeline',
+  },
+  {
+    id: 6,
+    title: 'Creative Writing Prompt Bank',
+    subject: 'English',
+    className: 'Class X',
+    uploadDate: '2026-04-09',
+    fileType: 'PDF',
+    description: 'Shared writing prompts and discussion starters for classroom warmups.',
+    visibility: 'Shared',
+    librarySource: 'shared',
+    sharedBy: 'Priya Reddy',
+  },
 ]
 
 const createResourceThumbnail = (title: string, subtitle: string, bgStart: string, bgEnd: string, badge: string) =>
@@ -798,6 +889,22 @@ function TeacherDashboard() {
   const [gradeMethod, setGradeMethod] = useState<'manual' | 'ai'>('manual')
   const [gradeEvaluation, setGradeEvaluation] = useState<GradeEvaluationEntry>({ score: '', comment: '' })
   const [uploadSearchTerm, setUploadSearchTerm] = useState('')
+  const [activeLibraryTab, setActiveLibraryTab] = useState<LibraryTab>('My Library')
+  const [contentLibraryItems, setContentLibraryItems] = useState<ContentLibraryItem[]>(initialContentLibrary)
+  const [contentClassFilter, setContentClassFilter] = useState('All Classes')
+  const [contentSubjectFilter, setContentSubjectFilter] = useState('All Subjects')
+  const [contentFileTypeFilter, setContentFileTypeFilter] = useState('All Types')
+  const [isContentUploadOpen, setIsContentUploadOpen] = useState(false)
+  const [contentUploadForm, setContentUploadForm] = useState({
+    title: '',
+    subject: '',
+    className: '',
+    fileType: 'PDF' as ContentLibraryItem['fileType'],
+    fileUrl: '',
+    description: '',
+    visibility: 'Private' as ContentVisibility,
+    sharedUsers: '',
+  })
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
   const [teacherName, setTeacherName] = useState(() => localStorage.getItem('skaimitra_name')?.trim() || 'Teacher')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -862,6 +969,9 @@ function TeacherDashboard() {
   const [editingLabActivityId, setEditingLabActivityId] = useState<number | null>(null)
   const [lessonBuilderMode, setLessonBuilderMode] = useState<LessonPlanSource>('Manual')
   const [labBuilderMode, setLabBuilderMode] = useState<LessonPlanSource>('Manual')
+  const [isLessonPreviewOpen, setIsLessonPreviewOpen] = useState(false)
+  const [lessonPreviewTitle, setLessonPreviewTitle] = useState('Lesson Preview')
+  const [lessonPreviewUrl, setLessonPreviewUrl] = useState('')
   const [lessonSearchTerm, setLessonSearchTerm] = useState('')
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null)
   const [selectedLabActivity, setSelectedLabActivity] = useState<LabActivity | null>(initialLabActivities[0] ?? null)
@@ -1086,15 +1196,46 @@ function TeacherDashboard() {
     [gradeClassFilter, gradeSearchTerm, gradeSectionFilter, gradeSubmissions],
   )
 
-  const filteredUploads = useMemo(
-    () =>
-      uploads.filter((item) => {
-        const query = uploadSearchTerm.trim().toLowerCase()
-        if (!query) return true
+  const contentLibraryClassOptions = useMemo(
+    () => ['All Classes', ...new Set(contentLibraryItems.map((item) => item.className))],
+    [contentLibraryItems],
+  )
 
-        return includesSearch(item.id, query) || includesSearch(item.title, query) || includesSearch(item.type, query) || includesSearch(item.updated, query)
+  const contentLibrarySubjectOptions = useMemo(
+    () => ['All Subjects', ...new Set(contentLibraryItems.map((item) => item.subject))],
+    [contentLibraryItems],
+  )
+
+  const contentLibraryFileTypes = useMemo(
+    () => ['All Types', ...new Set(contentLibraryItems.map((item) => item.fileType))],
+    [contentLibraryItems],
+  )
+
+  const filteredLibraryItems = useMemo(
+    () =>
+      contentLibraryItems.filter((item) => {
+        const query = uploadSearchTerm.trim().toLowerCase()
+
+        const matchesTab =
+          activeLibraryTab === 'My Library'
+            ? item.librarySource === 'mine'
+            : activeLibraryTab === 'Public Library'
+              ? item.visibility === 'Public' || item.librarySource === 'public'
+              : item.visibility === 'Shared' || item.librarySource === 'shared'
+
+        const matchesQuery =
+          !query ||
+          includesSearch(item.title, query) ||
+          includesSearch(item.subject, query) ||
+          includesSearch(item.description, query)
+
+        const matchesClass = contentClassFilter === 'All Classes' || item.className === contentClassFilter
+        const matchesSubject = contentSubjectFilter === 'All Subjects' || item.subject === contentSubjectFilter
+        const matchesFileType = contentFileTypeFilter === 'All Types' || item.fileType === contentFileTypeFilter
+
+        return matchesTab && matchesQuery && matchesClass && matchesSubject && matchesFileType
       }),
-    [uploadSearchTerm],
+    [activeLibraryTab, contentClassFilter, contentFileTypeFilter, contentLibraryItems, contentSubjectFilter, uploadSearchTerm],
   )
 
   const filteredResources = useMemo(
@@ -1471,6 +1612,98 @@ function TeacherDashboard() {
     setLessonPlanForm((prev) => ({ ...prev, assets: prev.assets.filter((asset) => asset.id !== assetId) }))
   }
 
+  const openLessonPreview = (title: string, url: string) => {
+    if (!url.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Add a valid external lesson URL before previewing.' })
+      return
+    }
+
+    setLessonPreviewTitle(title)
+    setLessonPreviewUrl(url)
+    setIsLessonPreviewOpen(true)
+  }
+
+  const closeLessonPreview = () => {
+    setIsLessonPreviewOpen(false)
+    setLessonPreviewTitle('Lesson Preview')
+    setLessonPreviewUrl('')
+  }
+
+  const createLessonPdfAsset = () => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const marginX = 48
+    const maxWidth = pageWidth - marginX * 2
+    let cursorY = 56
+
+    const ensurePageSpace = (heightNeeded: number) => {
+      if (cursorY + heightNeeded <= pageHeight - 48) return
+      doc.addPage()
+      cursorY = 56
+    }
+
+    const writeHeading = (text: string, size = 13) => {
+      ensurePageSpace(24)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(size)
+      doc.text(text, marginX, cursorY)
+      cursorY += 20
+    }
+
+    const writeParagraph = (text: string) => {
+      const lines = doc.splitTextToSize(text || 'Not provided.', maxWidth)
+      ensurePageSpace(lines.length * 16 + 6)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+      doc.text(lines, marginX, cursorY)
+      cursorY += lines.length * 16 + 6
+    }
+
+    const writeBulletList = (text: string) => {
+      const rawItems = text
+        .split('\n')
+        .map((item) => item.replace(/^\s*[-\d.]+\s*/, '').trim())
+        .filter(Boolean)
+
+      const items = rawItems.length ? rawItems : [text || 'Not provided.']
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+
+      items.forEach((item) => {
+        const lines = doc.splitTextToSize(item, maxWidth - 18)
+        ensurePageSpace(lines.length * 16 + 4)
+        doc.text('\u2022', marginX, cursorY)
+        doc.text(lines, marginX + 14, cursorY)
+        cursorY += lines.length * 16 + 4
+      })
+    }
+
+    writeHeading(lessonPlanForm.title.trim() || 'AI Generated Lesson Plan', 18)
+    writeParagraph(lessonPlanForm.description.trim() || `Structured lesson plan for ${lessonPlanForm.course || 'the selected subject'}.`)
+    cursorY += 4
+    writeHeading('Objectives')
+    writeBulletList(lessonPlanForm.objectives.trim())
+    cursorY += 4
+    writeHeading('Materials')
+    writeBulletList(lessonPlanForm.materials.trim())
+    cursorY += 4
+    writeHeading('Activities')
+    writeBulletList(lessonPlanForm.activities.trim())
+    cursorY += 4
+    writeHeading('Assessment')
+    writeBulletList(lessonPlanForm.assessment.trim())
+
+    const blob = doc.output('blob')
+    return {
+      id: `lesson-pdf-${Date.now()}`,
+      name: `${(lessonPlanForm.title.trim() || 'lesson-plan').replace(/\s+/g, '-').toLowerCase()}.pdf`,
+      type: 'application/pdf',
+      url: URL.createObjectURL(blob),
+      size: blob.size,
+    } satisfies LessonPlanAsset
+  }
+
   const generateLessonPlanWithAI = () => {
     if (!lessonPlanForm.aiTopic.trim() && !lessonPlanForm.aiPrompt.trim()) {
       setCalendarNotice({ type: 'error', message: 'Add a topic or prompt so AI can generate the lesson plan.' })
@@ -1501,18 +1734,25 @@ function TeacherDashboard() {
     setCalendarNotice({ type: 'success', message: 'AI draft generated. You can refine the content before saving.' })
   }
 
-  const saveLessonPlan = (publish: boolean) => {
-    if (!lessonPlanForm.title.trim() || !lessonPlanForm.course.trim() || !lessonPlanForm.module.trim()) {
-      setCalendarNotice({ type: 'error', message: 'Please complete Course, Module, and Title before saving.' })
+  const saveLessonPlan = (
+    publish: boolean,
+    options?: {
+      assetsOverride?: LessonPlanAsset[]
+      successMessage?: string
+    },
+  ) => {
+    if (!lessonPlanForm.title.trim() || !lessonPlanForm.course.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please complete Course and Topic before saving.' })
       return
     }
 
+    const derivedModule = lessonPlanForm.module.trim() || lessonPlanForm.type
     const now = new Date().toISOString().slice(0, 10)
     const nextPlan: LessonPlan = {
       id: editingLessonPlanId || Date.now(),
       title: lessonPlanForm.title.trim(),
       course: lessonPlanForm.course.trim(),
-      module: lessonPlanForm.module.trim(),
+      module: derivedModule,
       className: lessonPlanForm.className.trim() || `Class ${lessonPlanForm.grade || 'General'}`,
       grade: lessonPlanForm.grade.trim(),
       subject: lessonPlanForm.course.trim(),
@@ -1520,7 +1760,7 @@ function TeacherDashboard() {
       status: publish ? 'Active' : lessonPlanForm.status,
       description: lessonPlanForm.description.trim(),
       complianceCode: lessonPlanForm.complianceCode.trim(),
-      standards: `${lessonPlanForm.course.trim()} - ${lessonPlanForm.module.trim()}`,
+      standards: `${lessonPlanForm.course.trim()} - ${derivedModule}`,
       objectives: lessonPlanForm.objectives.trim(),
       materials: lessonPlanForm.materials.trim(),
       activities: lessonPlanForm.activities.trim(),
@@ -1542,7 +1782,7 @@ function TeacherDashboard() {
           : lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'all users'
             ? ['All users']
             : [],
-      assets: lessonPlanForm.assets,
+      assets: options?.assetsOverride || lessonPlanForm.assets,
     }
 
     setLessonPlansState((prev) => {
@@ -1555,7 +1795,31 @@ function TeacherDashboard() {
     setLessonSharePromptVisible(true)
     setCalendarNotice({
       type: 'success',
-      message: `Lesson plan ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
+      message: options?.successMessage || `Lesson plan ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
+    })
+  }
+
+  const submitExternalLessonPlan = () => {
+    if (!lessonPlanForm.externalUrl.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Add an external lesson URL before submitting.' })
+      return
+    }
+
+    saveLessonPlan(true, { successMessage: 'External lesson submitted and published successfully.' })
+  }
+
+  const publishAiLessonAsPdf = () => {
+    if (!lessonPlanForm.aiDraft.trim() && !lessonPlanForm.objectives.trim() && !lessonPlanForm.activities.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Generate the lesson plan first so there is content to publish.' })
+      return
+    }
+
+    const pdfAsset = createLessonPdfAsset()
+    const nextAssets = [...lessonPlanForm.assets.filter((asset) => asset.type !== 'application/pdf'), pdfAsset]
+    setLessonPlanForm((prev) => ({ ...prev, assets: nextAssets }))
+    saveLessonPlan(true, {
+      assetsOverride: nextAssets,
+      successMessage: 'AI lesson converted to PDF and published successfully.',
     })
   }
 
@@ -1725,6 +1989,84 @@ function TeacherDashboard() {
     setLabActivityForm((prev) => ({ ...prev, assets: prev.assets.filter((asset) => asset.id !== assetId) }))
   }
 
+  const createLabPdfAsset = () => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const marginX = 48
+    const maxWidth = pageWidth - marginX * 2
+    let cursorY = 56
+
+    const ensurePageSpace = (heightNeeded: number) => {
+      if (cursorY + heightNeeded <= pageHeight - 48) return
+      doc.addPage()
+      cursorY = 56
+    }
+
+    const writeHeading = (text: string, size = 13) => {
+      ensurePageSpace(24)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(size)
+      doc.text(text, marginX, cursorY)
+      cursorY += 20
+    }
+
+    const writeParagraph = (text: string) => {
+      const lines = doc.splitTextToSize(text || 'Not provided.', maxWidth)
+      ensurePageSpace(lines.length * 16 + 6)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+      doc.text(lines, marginX, cursorY)
+      cursorY += lines.length * 16 + 6
+    }
+
+    const writeBulletList = (items: string[]) => {
+      const safeItems = items.length ? items : ['Not provided.']
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+
+      safeItems.forEach((item) => {
+        const lines = doc.splitTextToSize(item, maxWidth - 18)
+        ensurePageSpace(lines.length * 16 + 4)
+        doc.text('\u2022', marginX, cursorY)
+        doc.text(lines, marginX + 14, cursorY)
+        cursorY += lines.length * 16 + 4
+      })
+    }
+
+    writeHeading(labActivityForm.title.trim() || 'AI Generated Lab Activity', 18)
+    writeParagraph(labActivityForm.description.trim() || `Structured lab activity for ${labActivityForm.course || 'the selected subject'}.`)
+    cursorY += 4
+    writeHeading('Objective')
+    writeBulletList([labActivityForm.objective.trim()].filter(Boolean))
+    cursorY += 4
+    writeHeading('Materials')
+    writeBulletList(
+      labActivityForm.materials
+        .split('\n')
+        .map((item) => item.replace(/^\s*[-\d.]+\s*/, '').trim())
+        .filter(Boolean),
+    )
+    cursorY += 4
+    writeHeading('Procedure')
+    writeBulletList(labActivityForm.procedureSteps.map((step) => step.trim()).filter(Boolean))
+    cursorY += 4
+    writeHeading('Observations')
+    writeBulletList([labActivityForm.observations.trim()].filter(Boolean))
+    cursorY += 4
+    writeHeading('Result')
+    writeBulletList([labActivityForm.result.trim()].filter(Boolean))
+
+    const blob = doc.output('blob')
+    return {
+      id: `lab-pdf-${Date.now()}`,
+      name: `${(labActivityForm.title.trim() || 'lab-activity').replace(/\s+/g, '-').toLowerCase()}.pdf`,
+      type: 'application/pdf',
+      url: URL.createObjectURL(blob),
+      size: blob.size,
+    } satisfies LessonPlanAsset
+  }
+
   const generateLabActivityWithAI = () => {
     if (!labActivityForm.aiPrompt.trim() && !labActivityForm.title.trim()) {
       setCalendarNotice({ type: 'error', message: 'Describe the lab so AI can scaffold the activity.' })
@@ -1754,18 +2096,25 @@ function TeacherDashboard() {
     setCalendarNotice({ type: 'success', message: 'AI scaffold generated for the lab activity.' })
   }
 
-  const saveLabActivity = (publish: boolean) => {
-    if (!labActivityForm.title.trim() || !labActivityForm.course.trim() || !labActivityForm.module.trim()) {
-      setCalendarNotice({ type: 'error', message: 'Please complete Course, Module, and Experiment Title before saving.' })
+  const saveLabActivity = (
+    publish: boolean,
+    options?: {
+      assetsOverride?: LessonPlanAsset[]
+      successMessage?: string
+    },
+  ) => {
+    if (!labActivityForm.title.trim() || !labActivityForm.course.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please complete Course and Activity Name before saving.' })
       return
     }
 
+    const derivedModule = labActivityForm.module.trim() || labActivityForm.type
     const now = new Date().toISOString().slice(0, 10)
     const nextActivity: LabActivity = {
       id: editingLabActivityId || Date.now(),
       title: labActivityForm.title.trim(),
       course: labActivityForm.course.trim(),
-      module: labActivityForm.module.trim(),
+      module: derivedModule,
       grade: labActivityForm.grade.trim(),
       type: labActivityForm.type,
       status: publish ? 'Active' : labActivityForm.status,
@@ -1793,7 +2142,7 @@ function TeacherDashboard() {
           : labActivityForm.shareEnabled && labActivityForm.shareScope === 'all users'
             ? ['All users']
             : [],
-      assets: labActivityForm.assets,
+      assets: options?.assetsOverride || labActivityForm.assets,
     }
 
     setLabActivitiesState((prev) => {
@@ -1808,7 +2157,31 @@ function TeacherDashboard() {
     setLabSharePromptVisible(true)
     setCalendarNotice({
       type: 'success',
-      message: `Lab activity ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
+      message: options?.successMessage || `Lab activity ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
+    })
+  }
+
+  const submitExternalLabActivity = () => {
+    if (!labActivityForm.externalUrl.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Add an external lab URL before submitting.' })
+      return
+    }
+
+    saveLabActivity(true, { successMessage: 'External lab activity submitted and published successfully.' })
+  }
+
+  const publishAiLabAsPdf = () => {
+    if (!labActivityForm.aiDraft.trim() && !labActivityForm.objective.trim() && !labActivityForm.procedureSteps.some((step) => step.trim())) {
+      setCalendarNotice({ type: 'error', message: 'Generate the lab activity first so there is content to publish.' })
+      return
+    }
+
+    const pdfAsset = createLabPdfAsset()
+    const nextAssets = [...labActivityForm.assets.filter((asset) => asset.type !== 'application/pdf'), pdfAsset]
+    setLabActivityForm((prev) => ({ ...prev, assets: nextAssets }))
+    saveLabActivity(true, {
+      assetsOverride: nextAssets,
+      successMessage: 'AI lab activity converted to PDF and published successfully.',
     })
   }
 
@@ -1904,6 +2277,97 @@ function TeacherDashboard() {
     localStorage.setItem('skaimitra_teacher_email', nextProfile.email)
     localStorage.setItem('skaimitra_teacher_phone', nextProfile.phone)
     localStorage.setItem('skaimitra_teacher_subject', nextProfile.subject)
+  }
+
+  const resetContentUploadForm = () => {
+    setContentUploadForm({
+      title: '',
+      subject: '',
+      className: '',
+      fileType: 'PDF',
+      fileUrl: '',
+      description: '',
+      visibility: 'Private',
+      sharedUsers: '',
+    })
+  }
+
+  const updateContentUploadField = <K extends keyof typeof contentUploadForm>(field: K, value: (typeof contentUploadForm)[K]) => {
+    setContentUploadForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const openContentUploadModal = () => {
+    resetContentUploadForm()
+    setIsContentUploadOpen(true)
+  }
+
+  const closeContentUploadModal = () => {
+    setIsContentUploadOpen(false)
+    resetContentUploadForm()
+  }
+
+  const handleContentLibraryAction = (message: string) => {
+    setCalendarNotice({ type: 'success', message })
+  }
+
+  const deleteLibraryItem = (itemId: number) => {
+    setContentLibraryItems((prev) => prev.filter((item) => item.id !== itemId))
+    handleContentLibraryAction('Content item deleted from your library.')
+  }
+
+  const shareLibraryItem = (item: ContentLibraryItem) => {
+    setContentLibraryItems((prev) =>
+      prev.map((entry) => (entry.id === item.id ? { ...entry, visibility: 'Shared' } : entry)),
+    )
+    handleContentLibraryAction(`"${item.title}" is ready to share with selected users.`)
+  }
+
+  const copyLibraryItemToMyLibrary = (item: ContentLibraryItem) => {
+    const today = new Date().toISOString().slice(0, 10)
+    setContentLibraryItems((prev) => [
+      {
+        ...item,
+        id: Date.now(),
+        uploadDate: today,
+        librarySource: 'mine',
+        visibility: 'Private',
+        addedBy: teacherName,
+        sharedBy: undefined,
+      },
+      ...prev,
+    ])
+    handleContentLibraryAction(`"${item.title}" copied to My Library.`)
+  }
+
+  const submitContentUpload = () => {
+    if (!contentUploadForm.title.trim() || !contentUploadForm.subject.trim() || !contentUploadForm.className.trim()) {
+      setCalendarNotice({ type: 'error', message: 'Please complete title, subject, and class before uploading content.' })
+      return
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const nextItem: ContentLibraryItem = {
+      id: Date.now(),
+      title: contentUploadForm.title.trim(),
+      subject: contentUploadForm.subject.trim(),
+      className: contentUploadForm.className.trim(),
+      uploadDate: today,
+      fileType: contentUploadForm.fileType,
+      description: contentUploadForm.description.trim() || 'Newly uploaded learning material.',
+      visibility: contentUploadForm.visibility,
+      librarySource: 'mine',
+      addedBy: teacherName,
+      sharedUsers:
+        contentUploadForm.visibility === 'Shared'
+          ? contentUploadForm.sharedUsers.split(',').map((item) => item.trim()).filter(Boolean)
+          : undefined,
+      link: contentUploadForm.fileUrl.trim() || undefined,
+    }
+
+    setContentLibraryItems((prev) => [nextItem, ...prev])
+    setActiveLibraryTab('My Library')
+    closeContentUploadModal()
+    handleContentLibraryAction('Content uploaded successfully to your library.')
   }
 
   const updateAssignmentField = <K extends keyof AssignmentFormState>(field: K, value: AssignmentFormState[K]) => {
@@ -2477,6 +2941,80 @@ function TeacherDashboard() {
     </section>
   )
 
+  const renderLessonOutputPreview = () => {
+    const sections = [
+      { title: 'Objectives', content: lessonPlanForm.objectives },
+      { title: 'Materials', content: lessonPlanForm.materials },
+      { title: 'Activities', content: lessonPlanForm.activities },
+      { title: 'Assessment', content: lessonPlanForm.assessment },
+    ].filter((section) => section.content.trim())
+
+    if (!sections.length) {
+      return <p className="role-muted">Generate the lesson to see a structured preview here.</p>
+    }
+
+    return (
+      <div className="planner-preview-stack">
+        <div className="planner-preview-hero">
+          <h4>{lessonPlanForm.title.trim() || 'AI Generated Lesson Plan'}</h4>
+          <p>{lessonPlanForm.description.trim() || 'Structured AI lesson draft ready for PDF publishing.'}</p>
+        </div>
+        {sections.map((section) => (
+          <section key={section.title} className="planner-preview-section">
+            <h5>{section.title}</h5>
+            <ul>
+              {section.content
+                .split('\n')
+                .map((item) => item.replace(/^\s*[-\d.]+\s*/, '').trim())
+                .filter(Boolean)
+                .map((item) => <li key={`${section.title}-${item}`}>{item}</li>)}
+            </ul>
+          </section>
+        ))}
+      </div>
+    )
+  }
+
+  const renderLabOutputPreview = () => {
+    const sections = [
+      { title: 'Objective', items: [labActivityForm.objective] },
+      {
+        title: 'Materials',
+        items: labActivityForm.materials
+          .split('\n')
+          .map((item) => item.replace(/^\s*[-\d.]+\s*/, '').trim())
+          .filter(Boolean),
+      },
+      {
+        title: 'Procedure',
+        items: labActivityForm.procedureSteps.map((step) => step.trim()).filter(Boolean),
+      },
+      { title: 'Observations', items: [labActivityForm.observations].filter(Boolean) },
+      { title: 'Result', items: [labActivityForm.result].filter(Boolean) },
+    ].filter((section) => section.items.length)
+
+    if (!sections.length) {
+      return <p className="role-muted">Generate the lab activity to see a structured preview here.</p>
+    }
+
+    return (
+      <div className="planner-preview-stack">
+        <div className="planner-preview-hero">
+          <h4>{labActivityForm.title.trim() || 'AI Generated Lab Activity'}</h4>
+          <p>{labActivityForm.description.trim() || 'Structured AI lab draft ready for PDF publishing.'}</p>
+        </div>
+        {sections.map((section) => (
+          <section key={section.title} className="planner-preview-section">
+            <h5>{section.title}</h5>
+            <ul>
+              {section.items.map((item) => <li key={`${section.title}-${item}`}>{item}</li>)}
+            </ul>
+          </section>
+        ))}
+      </div>
+    )
+  }
+
   const renderLessonSummary = () => (
     <div className="planner-layout">
       <section className="planner-main-column">
@@ -2749,6 +3287,18 @@ function TeacherDashboard() {
               <input type="url" value={lessonPlanForm.externalUrl} onChange={(e) => updateLessonPlanField('externalUrl', e.target.value)} placeholder="https://example.com/lesson-plan" />
             </label>
           </div>
+          <div className="planner-inline-actions planner-inline-actions-end planner-subsection-actions">
+            <button
+              type="button"
+              className="role-secondary-btn"
+              onClick={() => openLessonPreview(lessonPlanForm.title.trim() || 'External Lesson Plan', lessonPlanForm.externalUrl)}
+            >
+              Preview
+            </button>
+            <button type="button" className="role-primary-btn" onClick={submitExternalLessonPlan}>
+              Submit
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -2803,15 +3353,17 @@ function TeacherDashboard() {
             Generate Lesson Plan with AI
           </button>
           <div className="planner-ai-output">
-            <label className="planner-span-2">
+            <div className="planner-ai-output-head">
               <span>Output Preview</span>
-              <textarea
-                value={lessonPlanForm.aiDraft}
-                onChange={(e) => updateLessonPlanField('aiDraft', e.target.value)}
-                placeholder="Your AI-generated lesson draft will appear here. Edit it before saving."
-                rows={10}
-              />
-            </label>
+              <div className="planner-inline-actions planner-inline-actions-end planner-subsection-actions">
+                <button type="button" className="role-primary-btn" onClick={publishAiLessonAsPdf}>
+                  Use This
+                </button>
+              </div>
+            </div>
+            <div className="planner-ai-output-card">
+              {renderLessonOutputPreview()}
+            </div>
           </div>
         </section>
       ) : null}
@@ -3031,6 +3583,18 @@ function TeacherDashboard() {
               <input type="url" value={labActivityForm.externalUrl} onChange={(e) => updateLabActivityField('externalUrl', e.target.value)} placeholder="https://example.com/lab-activity" />
             </label>
           </div>
+          <div className="planner-inline-actions planner-inline-actions-end planner-subsection-actions">
+            <button
+              type="button"
+              className="role-secondary-btn"
+              onClick={() => openLessonPreview(labActivityForm.title.trim() || 'External Lab Activity', labActivityForm.externalUrl)}
+            >
+              Preview
+            </button>
+            <button type="button" className="role-primary-btn" onClick={submitExternalLabActivity}>
+              Submit
+            </button>
+          </div>
         </section>
       ) : null}
 
@@ -3085,15 +3649,17 @@ function TeacherDashboard() {
             Generate Lab Activity with AI
           </button>
           <div className="planner-ai-output">
-            <label className="planner-span-2">
+            <div className="planner-ai-output-head">
               <span>Output Preview</span>
-              <textarea
-                value={labActivityForm.aiDraft}
-                onChange={(e) => updateLabActivityField('aiDraft', e.target.value)}
-                placeholder="Your AI-generated lab draft will appear here. Edit it before saving."
-                rows={10}
-              />
-            </label>
+              <div className="planner-inline-actions planner-inline-actions-end planner-subsection-actions">
+                <button type="button" className="role-primary-btn" onClick={publishAiLabAsPdf}>
+                  Use This
+                </button>
+              </div>
+            </div>
+            <div className="planner-ai-output-card">
+              {renderLabOutputPreview()}
+            </div>
           </div>
         </section>
       ) : null}
@@ -3798,68 +4364,208 @@ function TeacherDashboard() {
     </main>
   )
 
-  const renderContentUpload = () => (
-    <main className="role-main role-main-detail">
-      <section className="role-primary">
-        <section className="role-section-head role-admin-page-head">
-          <div>
-            <h2>Content Upload</h2>
-            <p className="role-muted">Upload learning materials and resources</p>
-          </div>
-        </section>
+  const renderContentUpload = () => {
+    const libraryTabs: LibraryTab[] = ['My Library', 'Public Library', 'Shared Library']
 
-        <section className="role-card teacher-upload-dropzone">
-          <div className="teacher-upload-icon-wrap">
-            <Upload size={36} />
+    const renderLibraryCardActions = (item: ContentLibraryItem) => {
+      if (activeLibraryTab === 'My Library') {
+        return (
+          <div className="content-library-card-actions">
+            <button type="button" className="content-library-action-btn" onClick={() => handleContentLibraryAction(`Editing "${item.title}" next.`)}>Edit</button>
+            <button type="button" className="content-library-action-btn" onClick={() => deleteLibraryItem(item.id)}>Delete</button>
+            <button type="button" className="content-library-action-btn" onClick={() => shareLibraryItem(item)}>Share</button>
           </div>
-          <h3>Upload Course Content</h3>
-          <p className="role-muted">Drag and drop files or click to browse</p>
-          <button type="button" className="role-primary-btn teacher-select-files-btn">
-            <Upload size={16} />
-            Select Files
-          </button>
-          <p className="role-muted teacher-upload-note">Supported formats: PDF, DOCX, PPTX, MP4, MP3</p>
-        </section>
+        )
+      }
 
-        <section className="role-card role-detail-card teacher-recent-uploads-card">
-          <div className="role-section-head">
+      if (activeLibraryTab === 'Public Library') {
+        return (
+          <div className="content-library-card-actions">
+            <button type="button" className="content-library-action-btn" onClick={() => handleContentLibraryAction(`Preview opened for "${item.title}".`)}>View</button>
+            <button type="button" className="content-library-action-btn" onClick={() => handleContentLibraryAction(`Downloading "${item.title}".`)}>Download</button>
+            <button type="button" className="content-library-action-btn" onClick={() => copyLibraryItemToMyLibrary(item)}>Copy to My Library</button>
+          </div>
+        )
+      }
+
+      return (
+        <div className="content-library-card-actions">
+          <button type="button" className="content-library-action-btn" onClick={() => handleContentLibraryAction(`Preview opened for "${item.title}".`)}>View</button>
+          <button type="button" className="content-library-action-btn" onClick={() => handleContentLibraryAction(`Downloading "${item.title}".`)}>Download</button>
+        </div>
+      )
+    }
+
+    return (
+      <main className="role-main role-main-detail">
+        <section className="role-primary">
+          <section className="role-section-head role-admin-page-head content-library-header">
             <div>
-              <h3 className="role-section-title">Recent Uploads</h3>
+              <h2>Content Library</h2>
+              <p className="role-muted">Upload, organize, and share classroom materials across personal, public, and shared libraries.</p>
             </div>
-          </div>
-          <div className="role-user-toolbar role-user-toolbar-search-only">
-            <div className="role-user-search-wrap">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search uploads by file name, type, date, or ID..."
-                value={uploadSearchTerm}
-                onChange={(e) => setUploadSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="teacher-upload-list">
-            {filteredUploads.length ? filteredUploads.map((item) => (
-              <article key={item.id} className="teacher-upload-row">
-                <div className="teacher-upload-row-main">
-                  <div className="teacher-upload-file-icon">
-                    <Upload size={18} />
-                  </div>
-                  <div>
-                    <h4>{item.title}</h4>
-                    <p className="role-muted">{item.updated}</p>
-                  </div>
-                </div>
-                <button type="button" className="role-secondary-btn teacher-detail-btn">
-                  View
+            <button type="button" className="role-primary-btn" onClick={openContentUploadModal}>
+              <Plus size={16} />
+              Upload Content
+            </button>
+          </section>
+
+          <section className="role-card content-library-shell">
+            <div className="content-library-tabs">
+              {libraryTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`content-library-tab ${activeLibraryTab === tab ? 'is-active' : ''}`}
+                  onClick={() => setActiveLibraryTab(tab)}
+                >
+                  {tab}
                 </button>
-              </article>
-            )) : <p className="role-muted">No uploads match your search.</p>}
-          </div>
+              ))}
+            </div>
+
+            <div className="content-library-controls">
+              <div className="role-user-search-wrap content-library-search">
+                <Search size={16} />
+                <input
+                  type="text"
+                  placeholder="Search by title or subject..."
+                  value={uploadSearchTerm}
+                  onChange={(e) => setUploadSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="content-library-filters">
+                <select value={contentClassFilter} onChange={(e) => setContentClassFilter(e.target.value)}>
+                  {contentLibraryClassOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <select value={contentSubjectFilter} onChange={(e) => setContentSubjectFilter(e.target.value)}>
+                  {contentLibrarySubjectOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <select value={contentFileTypeFilter} onChange={(e) => setContentFileTypeFilter(e.target.value)}>
+                  {contentLibraryFileTypes.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {filteredLibraryItems.length ? (
+              <div className="content-library-grid">
+                {filteredLibraryItems.map((item) => (
+                  <article key={item.id} className="content-library-card">
+                    <div className="content-library-card-head">
+                      <div className="content-library-file-badge">
+                        <Upload size={18} />
+                      </div>
+                      <span className="content-library-file-type">{item.fileType}</span>
+                    </div>
+                    <div className="content-library-card-body">
+                      <h3>{item.title}</h3>
+                      <p className="role-muted">{item.description}</p>
+                      <div className="content-library-meta">
+                        <span>{item.subject}</span>
+                        <span>{item.className}</span>
+                        <span>{item.uploadDate}</span>
+                      </div>
+                      {activeLibraryTab === 'Public Library' && item.addedBy ? <p className="content-library-byline">Added by {item.addedBy}</p> : null}
+                      {activeLibraryTab === 'Shared Library' && item.sharedBy ? <p className="content-library-byline">Shared by {item.sharedBy}</p> : null}
+                    </div>
+                    {renderLibraryCardActions(item)}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="content-library-empty">
+                <div className="teacher-upload-icon-wrap content-library-empty-icon">
+                  <FolderOpen size={30} />
+                </div>
+                <h3>No content available</h3>
+                <p className="role-muted">Adjust your search or upload a new resource to get started.</p>
+                <button type="button" className="role-primary-btn" onClick={openContentUploadModal}>
+                  <Plus size={16} />
+                  Upload Content
+                </button>
+              </div>
+            )}
+          </section>
+
+          {isContentUploadOpen ? (
+            <div className="content-library-modal-backdrop" role="presentation" onClick={closeContentUploadModal}>
+              <div className="content-library-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                <div className="content-library-modal-head">
+                  <div>
+                    <h3>Upload Content</h3>
+                    <p className="role-muted">Add new materials to your library and choose how they should be shared.</p>
+                  </div>
+                  <button type="button" className="role-icon-btn" onClick={closeContentUploadModal} aria-label="Close upload modal">
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="content-library-modal-grid">
+                  <label>
+                    <span>Title</span>
+                    <input type="text" value={contentUploadForm.title} onChange={(e) => updateContentUploadField('title', e.target.value)} />
+                  </label>
+                  <label>
+                    <span>Subject</span>
+                    <select value={contentUploadForm.subject} onChange={(e) => updateContentUploadField('subject', e.target.value)}>
+                      <option value="">Select Subject</option>
+                      {lessonCourseOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Class</span>
+                    <select value={contentUploadForm.className} onChange={(e) => updateContentUploadField('className', e.target.value)}>
+                      <option value="">Select Class</option>
+                      {classOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>File Type</span>
+                    <select value={contentUploadForm.fileType} onChange={(e) => updateContentUploadField('fileType', e.target.value as ContentLibraryItem['fileType'])}>
+                      {['PDF', 'PPT', 'Video', 'DOC', 'Link'].map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </label>
+                  <label className="planner-span-2">
+                    <span>Upload File or Paste Link</span>
+                    <input type="text" value={contentUploadForm.fileUrl} onChange={(e) => updateContentUploadField('fileUrl', e.target.value)} placeholder="Paste a file URL or resource link" />
+                  </label>
+                  <label className="planner-span-2">
+                    <span>Description</span>
+                    <textarea rows={4} value={contentUploadForm.description} onChange={(e) => updateContentUploadField('description', e.target.value)} />
+                  </label>
+                  <label>
+                    <span>Visibility</span>
+                    <select value={contentUploadForm.visibility} onChange={(e) => updateContentUploadField('visibility', e.target.value as ContentVisibility)}>
+                      <option value="Private">Private (My Library)</option>
+                      <option value="Public">Public</option>
+                      <option value="Shared">Shared</option>
+                    </select>
+                  </label>
+                  {contentUploadForm.visibility === 'Shared' ? (
+                    <label>
+                      <span>Select Users</span>
+                      <input
+                        type="text"
+                        value={contentUploadForm.sharedUsers}
+                        onChange={(e) => updateContentUploadField('sharedUsers', e.target.value)}
+                        placeholder="Comma-separated names"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                <div className="content-library-modal-actions">
+                  <button type="button" className="role-secondary-btn" onClick={closeContentUploadModal}>Cancel</button>
+                  <button type="button" className="role-primary-btn" onClick={submitContentUpload}>
+                    <Upload size={16} />
+                    Save Content
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
-      </section>
-    </main>
-  )
+      </main>
+    )
+  }
 
   const renderCommunications = () => <CommunicationsHub role="teacher" />
 
@@ -3955,6 +4661,30 @@ function TeacherDashboard() {
       ) : null}
 
       {content}
+
+      {isLessonPreviewOpen ? (
+        <div className="role-modal-backdrop" role="presentation" onClick={closeLessonPreview}>
+          <section className="role-modal teacher-lesson-modal planner-preview-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="role-modal-head">
+              <h2>{lessonPreviewTitle}</h2>
+              <button type="button" onClick={closeLessonPreview} aria-label="Close lesson preview">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="planner-preview-embed-wrap">
+              <iframe title={lessonPreviewTitle} src={lessonPreviewUrl} className="planner-preview-embed" />
+            </div>
+            <div className="planner-inline-actions planner-inline-actions-end planner-subsection-actions">
+              <button type="button" className="role-secondary-btn" onClick={() => window.open(lessonPreviewUrl, '_blank', 'noopener,noreferrer')}>
+                Open in New Tab
+              </button>
+              <button type="button" className="role-primary-btn" onClick={closeLessonPreview}>
+                Done
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {isAnnouncementOpen && (
         <div className="role-modal-backdrop" role="presentation" onClick={() => setIsAnnouncementOpen(false)}>

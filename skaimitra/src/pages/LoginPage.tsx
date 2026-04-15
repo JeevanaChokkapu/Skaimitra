@@ -5,6 +5,13 @@ import { syncUser } from '../lib/api'
 import { auth, googleProvider, isFirebaseConfigured } from '../lib/firebase'
 import '../App.css'
 
+const demoCredentials = [
+  { email: 'admin@skaimitra.com', password: 'Admin@123', role: 'admin' as const, name: 'Admin Demo', classGrade: '' },
+  { email: 'teacher@skaimitra.com', password: 'Teacher@123', role: 'teacher' as const, name: 'Dr. Rajesh Kumar', classGrade: '' },
+  { email: 'student@skaimitra.com', password: 'Student@123', role: 'student' as const, name: 'Aarav Mehta', classGrade: 'Class 6A' },
+  { email: 'ceo@skaimitra.com', password: 'Ceo@123', role: 'admin' as const, name: 'CEO Demo', classGrade: '' },
+]
+
 function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -35,13 +42,25 @@ function LoginPage() {
     e.preventDefault()
     setErrorMessage('')
 
-    if (!isFirebaseConfigured || !auth) {
-      setErrorMessage('Firebase env is missing. Fill VITE_FIREBASE_* in .env and restart frontend.')
+    if (!email.trim() || !password.trim()) {
+      setErrorMessage('Enter email and password.')
       return
     }
 
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage('Enter email and password.')
+    if (!isFirebaseConfigured || !auth) {
+      const matchedDemoUser = demoCredentials.find(
+        (account) => account.email.toLowerCase() === email.trim().toLowerCase() && account.password === password.trim(),
+      )
+
+      if (!matchedDemoUser) {
+        setErrorMessage('Firebase is not configured. Use one of the demo email/password accounts to continue.')
+        return
+      }
+
+      localStorage.setItem('skaimitra_role', matchedDemoUser.role)
+      localStorage.setItem('skaimitra_name', matchedDemoUser.name)
+      localStorage.setItem('skaimitra_class_grade', matchedDemoUser.classGrade)
+      routeByRole(matchedDemoUser.role)
       return
     }
 
@@ -120,9 +139,6 @@ function LoginPage() {
         </section>
 
         <section className="login-form-wrap">
-          {!isFirebaseConfigured && (
-            <p className="status-message">Firebase is not configured. Please set `VITE_FIREBASE_*` values in `.env`.</p>
-          )}
           <form onSubmit={handleEmailLogin} className="login-form">
             <div className="field">
               <label htmlFor="email">
@@ -155,7 +171,7 @@ function LoginPage() {
               {isLoading ? 'Please wait...' : 'Login'}
             </button>
 
-            <button type="button" className="google-login-btn" onClick={handleGoogleLogin} disabled={isLoading}>
+            <button type="button" className="google-login-btn" onClick={handleGoogleLogin} disabled={isLoading || !isFirebaseConfigured}>
               Continue with Google
             </button>
 
