@@ -181,17 +181,6 @@ function LoginPage() {
                 and <a href="#">Privacy Policy</a>.
               </p>
               <a href="#">Forgot Password?</a>
-              <div className="demo-links">
-                <button type="button" onClick={() => handleDemoLogin('admin', 'Admin Demo')}>
-                  Admin Demo
-                </button>
-                <button type="button" onClick={() => handleDemoLogin('teacher', 'Dr. Rajesh Kumar')}>
-                  Teacher Demo
-                </button>
-                <button type="button" onClick={() => handleDemoLogin('student', 'Aarav Mehta')}>
-                  Student Demo
-                </button>
-              </div>
             </div>
           </form>
 
