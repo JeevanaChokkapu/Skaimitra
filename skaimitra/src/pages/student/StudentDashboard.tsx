@@ -13,14 +13,13 @@ import {
   LogOut,
   Play,
   Search,
-  Settings,
-  X,
 } from 'lucide-react'
 import { fetchCalendarEvents, type CalendarEventRecord } from '../../lib/api'
 import AIChat from '../../components/dashboard/AIChat'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import MessageCenter from '../../components/dashboard/MessageCenter'
-import ProfileSettingsPanel, { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
+import ProfileDrawer from '../../components/dashboard/ProfileDrawer'
+import { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
 import { getInboxMessages, type InboxMessage } from '../../lib/dashboardData'
 import '../role-dashboard.css'
 
@@ -100,50 +99,59 @@ const includesSearch = (value: string | number | null | undefined, query: string
     .toLowerCase()
     .includes(query.trim().toLowerCase())
 
+const getStoredStudentValue = (key: string, fallback = '') => {
+  if (typeof window === 'undefined') return fallback
+  return window.localStorage.getItem(key)?.trim() || fallback
+}
+
+const getDefaultStudentProfile = (): ProfileSettingsData => ({
+  username: getStoredStudentValue('skaimitra_student_username', 'aarav.mehta'),
+  email: getStoredStudentValue('skaimitra_student_email', 'student@skaimitra.com'),
+  firstName: getStoredStudentValue('skaimitra_student_first_name', 'Aarav'),
+  lastName: getStoredStudentValue('skaimitra_student_last_name', 'Mehta'),
+  address: getStoredStudentValue('skaimitra_student_address', 'Flat 14, Green Valley Residency, Hyderabad'),
+  phone: getStoredStudentValue('skaimitra_student_phone', '+91 98765 41000'),
+  homePhone: getStoredStudentValue('skaimitra_student_home_phone', '+91 040 2211 3400'),
+  whatsAppPhone: getStoredStudentValue('skaimitra_student_whatsapp_phone', '+91 98765 41000'),
+  schoolId: getStoredStudentValue('skaimitra_student_school_id', 'STD-601'),
+  status: getStoredStudentValue('skaimitra_student_status', 'Active'),
+  role: 'Student',
+  subject: getStoredStudentValue('skaimitra_student_subject', 'General Learning'),
+})
+
 function StudentDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<StudentTab>('Home')
   const [subjectSearchTerm, setSubjectSearchTerm] = useState('')
   const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('')
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
-  const [studentName, setStudentName] = useState('Aarav Mehta')
-  const [studentClassSection, setStudentClassSection] = useState('Class 6A')
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [studentProfile, setStudentProfile] = useState<ProfileSettingsData>({
-    name: 'Aarav Mehta',
-    email: 'student@skaimitra.com',
-    phone: '+91 98765 41000',
-    subject: 'General Learning',
-    role: 'Student',
+  const [studentProfile, setStudentProfile] = useState<ProfileSettingsData>(() => getDefaultStudentProfile())
+  const [studentName, setStudentName] = useState(() => {
+    const profile = getDefaultStudentProfile()
+    return `${profile.firstName} ${profile.lastName}`.trim()
   })
+  const [studentClassSection] = useState(() => getStoredStudentValue('skaimitra_class_grade', 'Class 6A'))
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventRecord[]>([])
 
-  useEffect(() => {
-    const savedName = localStorage.getItem('skaimitra_name')?.trim()
-    if (savedName) setStudentName(savedName)
-
-    const savedClassGrade = localStorage.getItem('skaimitra_class_grade')?.trim()
-    if (savedClassGrade) setStudentClassSection(savedClassGrade)
-
-    setStudentProfile((current) => ({
-      ...current,
-      name: savedName || current.name,
-      email: localStorage.getItem('skaimitra_student_email')?.trim() || current.email,
-      phone: localStorage.getItem('skaimitra_student_phone')?.trim() || current.phone,
-      subject: localStorage.getItem('skaimitra_student_subject')?.trim() || current.subject,
-    }))
-  }, [])
-
   const saveStudentProfile = (nextProfile: ProfileSettingsData) => {
     setStudentProfile(nextProfile)
-    setStudentName(nextProfile.name)
-    localStorage.setItem('skaimitra_name', nextProfile.name)
+    const nextName = `${nextProfile.firstName} ${nextProfile.lastName}`.trim()
+    setStudentName(nextName)
+    localStorage.setItem('skaimitra_name', nextName)
+    localStorage.setItem('skaimitra_student_username', nextProfile.username)
     localStorage.setItem('skaimitra_student_email', nextProfile.email)
+    localStorage.setItem('skaimitra_student_first_name', nextProfile.firstName)
+    localStorage.setItem('skaimitra_student_last_name', nextProfile.lastName)
+    localStorage.setItem('skaimitra_student_address', nextProfile.address)
     localStorage.setItem('skaimitra_student_phone', nextProfile.phone)
-    localStorage.setItem('skaimitra_student_subject', nextProfile.subject)
+    localStorage.setItem('skaimitra_student_home_phone', nextProfile.homePhone)
+    localStorage.setItem('skaimitra_student_whatsapp_phone', nextProfile.whatsAppPhone)
+    localStorage.setItem('skaimitra_student_school_id', nextProfile.schoolId)
+    localStorage.setItem('skaimitra_student_status', nextProfile.status)
+    localStorage.setItem('skaimitra_student_subject', nextProfile.subject || '')
   }
 
   useEffect(() => {
@@ -254,9 +262,7 @@ function StudentDashboard() {
               <Bell size={20} />
               {messages.length > 0 ? <span className="role-dot" /> : null}
             </button>
-            <button type="button" className="role-icon-btn" aria-label="Settings" onClick={() => setIsSettingsOpen(true)}>
-              <Settings size={20} />
-            </button>
+            <ProfileDrawer profile={studentProfile} onSave={saveStudentProfile} onLogout={() => navigate('/')} />
             <button type="button" className="role-logout-btn" onClick={() => navigate('/')}>
               <LogOut size={16} />
               Logout
@@ -524,24 +530,6 @@ function StudentDashboard() {
         onClose={() => setIsMessagesOpen(false)}
         onSelect={setSelectedMessageId}
       />
-      {isSettingsOpen ? (
-        <div className="role-modal-backdrop" role="presentation" onClick={() => setIsSettingsOpen(false)}>
-          <section className="role-modal teacher-lesson-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div className="role-modal-head">
-              <h2>System Settings</h2>
-              <button type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close system settings">
-                <X size={18} />
-              </button>
-            </div>
-            <ProfileSettingsPanel
-              title="Student Profile"
-              subtitle="Review and update your profile details."
-              profile={studentProfile}
-              onSave={saveStudentProfile}
-            />
-          </section>
-        </div>
-      ) : null}
     </div>
   )
 }

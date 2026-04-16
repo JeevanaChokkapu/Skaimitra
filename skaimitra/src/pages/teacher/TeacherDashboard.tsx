@@ -22,7 +22,6 @@ import {
   Download,
   CheckCircle,
   Search,
-  Settings,
   Trash2,
   Upload,
   Users,
@@ -53,7 +52,8 @@ import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
 import ActionIconButton from '../../components/dashboard/ActionIconButton'
 import AIChat from '../../components/dashboard/AIChat'
 import MessageCenter from '../../components/dashboard/MessageCenter'
-import ProfileSettingsPanel, { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
+import ProfileDrawer from '../../components/dashboard/ProfileDrawer'
+import { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
 import {
@@ -585,6 +585,26 @@ const gradeStudentProfiles: StudentProfileCard[] = [
   { id: 4, name: 'Sneha Patel', className: 'Class 9', section: 'A', initials: 'SP' },
 ]
 
+const getStoredTeacherValue = (key: string, fallback = '') => {
+  if (typeof window === 'undefined') return fallback
+  return window.localStorage.getItem(key)?.trim() || fallback
+}
+
+const getDefaultTeacherProfile = (): ProfileSettingsData => ({
+  username: getStoredTeacherValue('skaimitra_teacher_username', 'teacher.skaimitra'),
+  email: getStoredTeacherValue('skaimitra_teacher_email', 'teacher@skaimitra.com'),
+  firstName: getStoredTeacherValue('skaimitra_teacher_first_name', 'Teacher'),
+  lastName: getStoredTeacherValue('skaimitra_teacher_last_name', 'User'),
+  address: getStoredTeacherValue('skaimitra_teacher_address', 'Faculty Residence, SkaiMitra Campus'),
+  phone: getStoredTeacherValue('skaimitra_teacher_phone', '+91 98765 42000'),
+  homePhone: getStoredTeacherValue('skaimitra_teacher_home_phone', '+91 040 4200 2200'),
+  whatsAppPhone: getStoredTeacherValue('skaimitra_teacher_whatsapp_phone', '+91 98765 42000'),
+  schoolId: getStoredTeacherValue('skaimitra_teacher_school_id', 'TCH-104'),
+  status: getStoredTeacherValue('skaimitra_teacher_status', 'Active'),
+  role: 'Teacher',
+  subject: getStoredTeacherValue('skaimitra_teacher_subject', 'Science'),
+})
+
 const initialSubmittedAssignments: SubmissionRecord[] = [
   {
     id: 1,
@@ -906,17 +926,13 @@ function TeacherDashboard() {
     sharedUsers: '',
   })
   const [resourceSearchTerm, setResourceSearchTerm] = useState('')
-  const [teacherName, setTeacherName] = useState(() => localStorage.getItem('skaimitra_name')?.trim() || 'Teacher')
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [teacherProfile, setTeacherProfile] = useState<ProfileSettingsData>(() => getDefaultTeacherProfile())
+  const [teacherName, setTeacherName] = useState(() => {
+    const profile = getDefaultTeacherProfile()
+    return `${profile.firstName} ${profile.lastName}`.trim()
+  })
   const [showLessonPromptSuggestions, setShowLessonPromptSuggestions] = useState(false)
   const [showLabPromptSuggestions, setShowLabPromptSuggestions] = useState(false)
-  const [teacherProfile, setTeacherProfile] = useState<ProfileSettingsData>(() => ({
-    name: localStorage.getItem('skaimitra_name')?.trim() || 'Teacher',
-    email: localStorage.getItem('skaimitra_teacher_email')?.trim() || 'teacher@skaimitra.com',
-    phone: localStorage.getItem('skaimitra_teacher_phone')?.trim() || '+91 98765 43210',
-    subject: localStorage.getItem('skaimitra_teacher_subject')?.trim() || 'Mathematics',
-    role: 'Teacher',
-  }))
   const [selectedReportClass, setSelectedReportClass] = useState<(typeof classPerformanceData)[number] | null>(classPerformanceData[1])
   const [messages, setMessages] = useState<InboxMessage[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
@@ -2272,11 +2288,20 @@ function TeacherDashboard() {
 
   const saveTeacherProfile = (nextProfile: ProfileSettingsData) => {
     setTeacherProfile(nextProfile)
-    setTeacherName(nextProfile.name)
-    localStorage.setItem('skaimitra_name', nextProfile.name)
+    const nextName = `${nextProfile.firstName} ${nextProfile.lastName}`.trim()
+    setTeacherName(nextName)
+    localStorage.setItem('skaimitra_name', nextName)
+    localStorage.setItem('skaimitra_teacher_username', nextProfile.username)
     localStorage.setItem('skaimitra_teacher_email', nextProfile.email)
+    localStorage.setItem('skaimitra_teacher_first_name', nextProfile.firstName)
+    localStorage.setItem('skaimitra_teacher_last_name', nextProfile.lastName)
+    localStorage.setItem('skaimitra_teacher_address', nextProfile.address)
     localStorage.setItem('skaimitra_teacher_phone', nextProfile.phone)
-    localStorage.setItem('skaimitra_teacher_subject', nextProfile.subject)
+    localStorage.setItem('skaimitra_teacher_home_phone', nextProfile.homePhone)
+    localStorage.setItem('skaimitra_teacher_whatsapp_phone', nextProfile.whatsAppPhone)
+    localStorage.setItem('skaimitra_teacher_school_id', nextProfile.schoolId)
+    localStorage.setItem('skaimitra_teacher_status', nextProfile.status)
+    localStorage.setItem('skaimitra_teacher_subject', nextProfile.subject || '')
   }
 
   const resetContentUploadForm = () => {
@@ -4629,9 +4654,7 @@ function TeacherDashboard() {
               <Bell size={20} />
               {messages.length > 0 ? <span className="role-dot" /> : null}
             </button>
-            <button type="button" className="role-icon-btn" aria-label="Settings" onClick={() => setIsSettingsOpen(true)}>
-              <Settings size={20} />
-            </button>
+            <ProfileDrawer profile={teacherProfile} onSave={saveTeacherProfile} onLogout={() => navigate('/')} />
             <button type="button" className="role-logout-btn" onClick={() => navigate('/')}>
               <LogOut size={16} />
               Logout
@@ -4865,24 +4888,6 @@ function TeacherDashboard() {
         onPrev={goToPreviousMessage}
         onNext={goToNextMessage}
       />
-      {isSettingsOpen ? (
-        <div className="role-modal-backdrop" role="presentation" onClick={() => setIsSettingsOpen(false)}>
-          <section className="role-modal teacher-lesson-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div className="role-modal-head">
-              <h2>System Settings</h2>
-              <button type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close system settings">
-                <X size={18} />
-              </button>
-            </div>
-            <ProfileSettingsPanel
-              title="Teacher Profile"
-              subtitle="Review and update your teacher details."
-              profile={teacherProfile}
-              onSave={saveTeacherProfile}
-            />
-          </section>
-        </div>
-      ) : null}
     </div>
   )
 }

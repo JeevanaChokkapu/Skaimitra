@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft,
   BarChart3,
   Bell,
   BookOpen,
@@ -39,8 +38,10 @@ import {
 import AIChat from '../../components/dashboard/AIChat'
 import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
 import MessageCenter from '../../components/dashboard/MessageCenter'
+import ProfileDrawer from '../../components/dashboard/ProfileDrawer'
 import ProfileSettingsPanel, { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
+import SchoolSettingsForm, { type SchoolSettingsData } from '../../components/dashboard/SchoolSettingsForm'
 import {
   createFallbackCalendarEvent,
   deleteFallbackCalendarEvent,
@@ -74,6 +75,7 @@ const navTabs = [
   { label: 'Home', icon: Home },
   { label: 'Teachers', icon: UserCheck },
   { label: 'Students', icon: Users },
+  { label: 'Users', icon: Users },
   { label: 'Courses', icon: BookOpen },
   { label: 'Reports', icon: ClipboardList },
   { label: 'Communications', icon: MessageSquare },
@@ -119,7 +121,7 @@ const resourceItems = [
   { id: 3, title: 'Assessment Policy Pack', type: 'Policy', owner: 'Exams Team' },
 ]
 
-const roleOptions: Role[] = ['parent', 'teacher', 'admin', 'student']
+const roleOptions: Role[] = ['admin', 'teacher', 'student']
 const gradeOptions = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12']
 const toTitle = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 const ADMIN_SEEN_MESSAGES_KEY = 'skaimitra_seen_messages_admin'
@@ -136,6 +138,42 @@ const includesSearch = (value: string | number | null | undefined, query: string
   String(value ?? '')
     .toLowerCase()
     .includes(query.trim().toLowerCase())
+
+const getStoredValue = (key: string, fallback = '') => {
+  if (typeof window === 'undefined') return fallback
+  return window.localStorage.getItem(key)?.trim() || fallback
+}
+
+const getDefaultAdminProfile = (): ProfileSettingsData => ({
+  username: getStoredValue('skaimitra_admin_username', 'admin.skaimitra'),
+  email: getStoredValue('skaimitra_admin_email', 'admin@skaimitra.com'),
+  firstName: getStoredValue('skaimitra_admin_first_name', 'Admin'),
+  lastName: getStoredValue('skaimitra_admin_last_name', 'User'),
+  address: getStoredValue('skaimitra_admin_address', 'SkaiMitra Head Office, Hyderabad'),
+  phone: getStoredValue('skaimitra_admin_phone', '+91 98765 40000'),
+  homePhone: getStoredValue('skaimitra_admin_home_phone', '+91 040 4000 1200'),
+  whatsAppPhone: getStoredValue('skaimitra_admin_whatsapp_phone', '+91 98765 40000'),
+  schoolId: getStoredValue('skaimitra_admin_school_id', 'ADM-001'),
+  status: getStoredValue('skaimitra_admin_status', 'Active'),
+  role: 'Admin',
+  subject: getStoredValue('skaimitra_admin_subject', 'Administration'),
+})
+
+const getDefaultSchoolSettings = (): SchoolSettingsData => ({
+  schoolName: getStoredValue('skaimitra_school_name', 'SkaiMitra Public School'),
+  licenseNumber: getStoredValue('skaimitra_school_license', 'LIC-2026-1842'),
+  address: getStoredValue('skaimitra_school_address', '12 Knowledge Park Road, Hyderabad, Telangana'),
+  locationType: (getStoredValue('skaimitra_school_location_type', 'Urban') as SchoolSettingsData['locationType']) || 'Urban',
+  contactPerson: getStoredValue('skaimitra_school_contact_person', 'Rohan Verma'),
+  phoneNumber: getStoredValue('skaimitra_school_phone', '+91 98765 43000'),
+  whatsappPhoneNumber: getStoredValue('skaimitra_school_whatsapp', '+91 98765 43001'),
+  email: getStoredValue('skaimitra_school_email', 'info@skaimitra.com'),
+  faxNumber: getStoredValue('skaimitra_school_fax', '040-4210-2200'),
+  websiteUrl: getStoredValue('skaimitra_school_website', 'https://www.skaimitra.com'),
+  mapAddressUrl: getStoredValue('skaimitra_school_map_url', 'https://maps.google.com/?q=SkaiMitra+Public+School'),
+  academicAffiliation: getStoredValue('skaimitra_school_affiliation', 'CBSE Senior Secondary Affiliation'),
+  logoName: getStoredValue('skaimitra_school_logo_name', 'SkaiMitra_LogoV2.0.jpg'),
+})
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -154,15 +192,12 @@ function AdminDashboard() {
   const [userError, setUserError] = useState('')
   const [userInfo, setUserInfo] = useState('')
   const [editingUserId, setEditingUserId] = useState<number | null>(null)
-  const [adminName, setAdminName] = useState('Admin')
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [adminProfile, setAdminProfile] = useState<ProfileSettingsData>({
-    name: 'Admin',
-    email: 'admin@skaimitra.com',
-    phone: '+91 98765 40000',
-    subject: 'Administration',
-    role: 'Admin',
+  const [adminProfile, setAdminProfile] = useState<ProfileSettingsData>(() => getDefaultAdminProfile())
+  const [adminName, setAdminName] = useState(() => {
+    const profile = getDefaultAdminProfile()
+    return `${profile.firstName} ${profile.lastName}`.trim()
   })
+  const [schoolSettings, setSchoolSettings] = useState<SchoolSettingsData>(() => getDefaultSchoolSettings())
   const [announcements, setAnnouncements] = useState<DashboardAnnouncement[]>(() => loadAnnouncements())
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventRecord[]>([])
   const [isMessagesOpen, setIsMessagesOpen] = useState(false)
@@ -205,18 +240,6 @@ function AdminDashboard() {
   })
   const [dashboardCounts, setDashboardCounts] = useState({ students: 120, teachers: 15 })
   const [uiNotice, setUiNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-
-  useEffect(() => {
-    const savedName = localStorage.getItem('skaimitra_name')?.trim()
-    if (savedName) setAdminName(savedName)
-    setAdminProfile((current) => ({
-      ...current,
-      name: savedName || current.name,
-      email: localStorage.getItem('skaimitra_admin_email')?.trim() || current.email,
-      phone: localStorage.getItem('skaimitra_admin_phone')?.trim() || current.phone,
-      subject: localStorage.getItem('skaimitra_admin_subject')?.trim() || current.subject,
-    }))
-  }, [])
 
   useEffect(() => {
     if (!uiNotice) return
@@ -430,11 +453,37 @@ function AdminDashboard() {
 
   const saveAdminProfile = (nextProfile: ProfileSettingsData) => {
     setAdminProfile(nextProfile)
-    setAdminName(nextProfile.name)
-    localStorage.setItem('skaimitra_name', nextProfile.name)
+    const nextName = `${nextProfile.firstName} ${nextProfile.lastName}`.trim()
+    setAdminName(nextName)
+    localStorage.setItem('skaimitra_name', nextName)
+    localStorage.setItem('skaimitra_admin_username', nextProfile.username)
     localStorage.setItem('skaimitra_admin_email', nextProfile.email)
+    localStorage.setItem('skaimitra_admin_first_name', nextProfile.firstName)
+    localStorage.setItem('skaimitra_admin_last_name', nextProfile.lastName)
+    localStorage.setItem('skaimitra_admin_address', nextProfile.address)
     localStorage.setItem('skaimitra_admin_phone', nextProfile.phone)
-    localStorage.setItem('skaimitra_admin_subject', nextProfile.subject)
+    localStorage.setItem('skaimitra_admin_home_phone', nextProfile.homePhone)
+    localStorage.setItem('skaimitra_admin_whatsapp_phone', nextProfile.whatsAppPhone)
+    localStorage.setItem('skaimitra_admin_school_id', nextProfile.schoolId)
+    localStorage.setItem('skaimitra_admin_status', nextProfile.status)
+    localStorage.setItem('skaimitra_admin_subject', nextProfile.subject || '')
+  }
+
+  const saveSchoolSettings = (nextSettings: SchoolSettingsData) => {
+    setSchoolSettings(nextSettings)
+    localStorage.setItem('skaimitra_school_name', nextSettings.schoolName)
+    localStorage.setItem('skaimitra_school_license', nextSettings.licenseNumber)
+    localStorage.setItem('skaimitra_school_address', nextSettings.address)
+    localStorage.setItem('skaimitra_school_location_type', nextSettings.locationType)
+    localStorage.setItem('skaimitra_school_contact_person', nextSettings.contactPerson)
+    localStorage.setItem('skaimitra_school_phone', nextSettings.phoneNumber)
+    localStorage.setItem('skaimitra_school_whatsapp', nextSettings.whatsappPhoneNumber)
+    localStorage.setItem('skaimitra_school_email', nextSettings.email)
+    localStorage.setItem('skaimitra_school_fax', nextSettings.faxNumber)
+    localStorage.setItem('skaimitra_school_website', nextSettings.websiteUrl)
+    localStorage.setItem('skaimitra_school_map_url', nextSettings.mapAddressUrl)
+    localStorage.setItem('skaimitra_school_affiliation', nextSettings.academicAffiliation)
+    localStorage.setItem('skaimitra_school_logo_name', nextSettings.logoName)
   }
 
   const getAuthToken = useCallback(async () => {
@@ -489,20 +538,14 @@ function AdminDashboard() {
   }, [getAuthToken])
 
   useEffect(() => {
-    if (viewMode !== 'dashboard') return
+    if (viewMode !== 'dashboard' || activeTab !== 'Home') return
     void loadDashboardCounts()
-  }, [viewMode, loadDashboardCounts])
+  }, [activeTab, viewMode, loadDashboardCounts])
 
   useEffect(() => {
-    if (viewMode !== 'userManagement') return
+    if (viewMode !== 'userManagement' && activeTab !== 'Users') return
     void loadUsers()
-  }, [viewMode, loadUsers])
-
-  const handleBackToDashboard = () => {
-    setViewMode('dashboard')
-    setUserError('')
-    setUserInfo('')
-  }
+  }, [activeTab, viewMode, loadUsers])
 
   const handleCreateUser = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -869,8 +912,14 @@ function AdminDashboard() {
                 type="button"
                 className="role-action-tile"
                 onClick={() => {
-                  if (action.title === 'User Management') setViewMode('userManagement')
-                  if (action.title === 'Role Permissions') setActiveTab('System Settings')
+                  if (action.title === 'User Management') {
+                    setActiveTab('Users')
+                    setViewMode('userManagement')
+                  }
+                  if (action.title === 'Role Permissions') {
+                    setActiveTab('System Settings')
+                    setViewMode('dashboard')
+                  }
                   if (action.title === 'Course Management') setActiveTab('Courses')
                   if (action.title === 'View Reports') setActiveTab('Reports')
                 }}
@@ -1006,7 +1055,14 @@ function AdminDashboard() {
             <h2>Teachers Management</h2>
             <p className="role-muted">Manage teaching staff and their courses</p>
           </div>
-          <button type="button" className="role-primary-btn" onClick={() => setViewMode('userManagement')}>
+          <button
+            type="button"
+            className="role-primary-btn"
+            onClick={() => {
+              setActiveTab('Users')
+              setViewMode('userManagement')
+            }}
+          >
             View All Users
           </button>
         </section>
@@ -1093,7 +1149,14 @@ function AdminDashboard() {
             <h2>Students Management</h2>
             <p className="role-muted">Monitor student enrolment and performance</p>
           </div>
-          <button type="button" className="role-primary-btn" onClick={() => setViewMode('userManagement')}>
+          <button
+            type="button"
+            className="role-primary-btn"
+            onClick={() => {
+              setActiveTab('Users')
+              setViewMode('userManagement')
+            }}
+          >
             View All Users
           </button>
         </section>
@@ -1248,6 +1311,116 @@ function AdminDashboard() {
 
   const renderCommunicationsTab = () => <CommunicationsHub role="admin" />
 
+  const renderUsersTab = () => (
+    <main className="role-main role-user-main">
+      {userError && <p className="role-user-error">{userError}</p>}
+      {userInfo && <p className="role-user-info">{userInfo}</p>}
+
+      <section className="role-user-stats">
+        <article className="role-card role-user-stat-card">
+          <div>
+            <p className="role-muted">Total Users</p>
+            <p className="role-user-stat-value">{userStats.totalUsers}</p>
+          </div>
+          <Users size={28} className="role-user-stat-icon icon-blue" />
+        </article>
+        <article className="role-card role-user-stat-card">
+          <div>
+            <p className="role-muted">Students</p>
+            <p className="role-user-stat-value">{userStats.students}</p>
+          </div>
+          <UserPlus size={28} className="role-user-stat-icon icon-green" />
+        </article>
+        <article className="role-card role-user-stat-card">
+          <div>
+            <p className="role-muted">Teachers</p>
+            <p className="role-user-stat-value">{userStats.teachers}</p>
+          </div>
+          <UserPlus size={28} className="role-user-stat-icon icon-purple" />
+        </article>
+        <article className="role-card role-user-stat-card">
+          <div>
+            <p className="role-muted">Active</p>
+            <p className="role-user-stat-value">{userStats.activeUsers}</p>
+          </div>
+          <span className="role-status-badge status-active">Active</span>
+        </article>
+      </section>
+
+      <section className="role-card role-user-toolbar">
+        <div className="role-user-search-wrap">
+          <Search size={16} />
+          <input
+            type="text"
+            placeholder="Search users by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as 'All' | Role)}>
+          <option value="All">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="teacher">Teacher</option>
+          <option value="student">Student</option>
+        </select>
+        <button type="button" className="role-user-add-btn" onClick={handleOpenAddModal}>
+          <Plus size={16} />
+          Add User
+        </button>
+      </section>
+
+      <section className="role-card role-detail-card">
+        <div className="role-section-head">
+          <div>
+            <h2>Users</h2>
+            <p className="role-muted">Search and manage admins, teachers, and students from one place.</p>
+          </div>
+        </div>
+        {isUsersLoading && <p className="role-muted">Loading users...</p>}
+        <div className="role-table-wrap">
+          <table className="role-table role-user-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.name}</td>
+                  <td>
+                    <span className={`role-pill role-pill-${user.role}`}>{toTitle(user.role)}</span>
+                  </td>
+                  <td>{user.email}</td>
+                  <td>
+                    <span className={`role-status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}`}>
+                      {toTitle(user.status)}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="role-user-actions">
+                      <button type="button" aria-label="Edit user" onClick={() => handleOpenEditModal(user)}>
+                        <Pencil size={15} />
+                      </button>
+                      <button type="button" aria-label="Delete user" onClick={() => handleDeleteUser(user.id)}>
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!isUsersLoading && filteredUsers.length === 0 ? <p className="role-muted">No users match your search.</p> : null}
+        </div>
+      </section>
+    </main>
+  )
+
   const renderTabContent = () => {
     if (activeTab === 'Home') return renderDashboardHome()
     if (activeTab === 'Teachers') {
@@ -1255,6 +1428,9 @@ function AdminDashboard() {
     }
     if (activeTab === 'Students') {
       return renderStudentsTab()
+    }
+    if (activeTab === 'Users') {
+      return renderUsersTab()
     }
     if (activeTab === 'Courses') {
       return renderCoursesTab()
@@ -1298,12 +1474,21 @@ function AdminDashboard() {
         'Search resources by title, owner, type, or ID...',
       )
     }
+    if (activeTab === 'System Settings') {
+      return (
+        <main className="role-main role-main-detail">
+          <section className="role-primary">
+            <SchoolSettingsForm settings={schoolSettings} onSave={saveSchoolSettings} />
+          </section>
+        </main>
+      )
+    }
     return (
       <main className="role-main role-main-detail">
         <section className="role-primary">
           <section className="role-card role-detail-card">
             <ProfileSettingsPanel
-              title="System Settings"
+              title="Admin Profile"
               subtitle="Review and update your admin profile details."
               profile={adminProfile}
               onSave={saveAdminProfile}
@@ -1326,7 +1511,7 @@ function AdminDashboard() {
             <div>
               <h1 className="role-brand-title">SkaiMitra</h1>
               <p className="role-brand-subtitle">
-                {viewMode === 'userManagement' ? 'User Management' : `Welcome back, ${adminName}`}
+                {activeTab === 'Users' ? 'User Management' : `Welcome back, ${adminName}`}
               </p>
             </div>
           </div>
@@ -1340,9 +1525,7 @@ function AdminDashboard() {
               <Bell size={20} />
               {unseenMessages.length > 0 ? <span className="role-dot" /> : null}
             </button>
-            <button type="button" className="role-icon-btn" aria-label="Settings" onClick={() => setIsSettingsOpen(true)}>
-              <Settings size={20} />
-            </button>
+            <ProfileDrawer profile={adminProfile} onSave={saveAdminProfile} onLogout={() => navigate('/')} />
             <button type="button" className="role-logout-btn" onClick={() => navigate('/')}>
               <LogOut size={16} />
               Logout
@@ -1350,21 +1533,24 @@ function AdminDashboard() {
           </div>
         </header>
 
-        {viewMode === 'dashboard' && (
-          <nav className="role-tabs admin-role-tabs">
-            {navTabs.map((tab) => (
-              <button
-                key={tab.label}
-                type="button"
-                className={activeTab === tab.label ? 'is-active' : ''}
-                onClick={() => setActiveTab(tab.label)}
-              >
-                <tab.icon size={18} strokeWidth={2.4} className="role-tab-icon" />
-                <span className="role-tab-label">{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        )}
+        <nav className="role-tabs admin-role-tabs">
+          {navTabs.map((tab) => (
+            <button
+              key={tab.label}
+              type="button"
+              className={activeTab === tab.label ? 'is-active' : ''}
+              onClick={() => {
+                setActiveTab(tab.label)
+                setViewMode(tab.label === 'Users' ? 'userManagement' : 'dashboard')
+                setUserError('')
+                setUserInfo('')
+              }}
+            >
+              <tab.icon size={18} strokeWidth={2.4} className="role-tab-icon" />
+              <span className="role-tab-label">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
       </section>
 
       {uiNotice ? (
@@ -1373,125 +1559,7 @@ function AdminDashboard() {
         </div>
       ) : null}
 
-      {viewMode === 'dashboard' ? (
-        renderTabContent()
-      ) : (
-        <main className="role-main role-user-main">
-          <section className="role-user-back-row">
-            <button type="button" className="role-user-back-btn" onClick={handleBackToDashboard}>
-              <ArrowLeft size={16} />
-              Back to Dashboard
-            </button>
-          </section>
-
-          {userError && <p className="role-user-error">{userError}</p>}
-          {userInfo && <p className="role-user-info">{userInfo}</p>}
-
-          <section className="role-user-stats">
-            <article className="role-card role-user-stat-card">
-              <div>
-                <p className="role-muted">Total Users</p>
-                <p className="role-user-stat-value">{userStats.totalUsers}</p>
-              </div>
-              <Users size={28} className="role-user-stat-icon icon-blue" />
-            </article>
-            <article className="role-card role-user-stat-card">
-              <div>
-                <p className="role-muted">Students</p>
-                <p className="role-user-stat-value">{userStats.students}</p>
-              </div>
-              <UserPlus size={28} className="role-user-stat-icon icon-green" />
-            </article>
-            <article className="role-card role-user-stat-card">
-              <div>
-                <p className="role-muted">Teachers</p>
-                <p className="role-user-stat-value">{userStats.teachers}</p>
-              </div>
-              <UserPlus size={28} className="role-user-stat-icon icon-purple" />
-            </article>
-            <article className="role-card role-user-stat-card">
-              <div>
-                <p className="role-muted">Active</p>
-                <p className="role-user-stat-value">{userStats.activeUsers}</p>
-              </div>
-              <span className="role-status-badge status-active">Active</span>
-            </article>
-          </section>
-
-          <section className="role-card role-user-toolbar">
-            <div className="role-user-search-wrap">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search users by name, email, role, class, or ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as 'All' | Role)}>
-              <option value="All">All Roles</option>
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>
-                  {toTitle(role)}
-                </option>
-              ))}
-            </select>
-            <button type="button" className="role-user-add-btn" onClick={handleOpenAddModal}>
-              <Plus size={16} />
-              Add User
-            </button>
-          </section>
-
-          <section className="role-card">
-            <h2>All Users ({filteredUsers.length})</h2>
-            {isUsersLoading && <p className="role-muted">Loading users...</p>}
-            <div className="role-table-wrap">
-              <table className="role-table role-user-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Class/Subject</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>
-                        <span className={`role-pill role-pill-${user.role}`}>{toTitle(user.role)}</span>
-                      </td>
-                      <td>{user.classSubject}</td>
-                      <td>{user.phone || 'N/A'}</td>
-                      <td>
-                        <span className={`role-status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}`}>
-                          {toTitle(user.status)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="role-user-actions">
-                          <button type="button" aria-label="Edit user" onClick={() => handleOpenEditModal(user)}>
-                            <Pencil size={15} />
-                          </button>
-                          <button type="button" aria-label="Delete user" onClick={() => handleDeleteUser(user.id)}>
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!isUsersLoading && filteredUsers.length === 0 ? <p className="role-muted">No users match your search.</p> : null}
-            </div>
-          </section>
-        </main>
-      )}
+      {renderTabContent()}
 
       {isAddUserOpen && (
         <div className="role-modal-backdrop" role="presentation" onClick={() => setIsAddUserOpen(false)}>
@@ -1793,24 +1861,6 @@ function AdminDashboard() {
         onClose={handleCloseNotifications}
         onSelect={handleSelectNotification}
       />
-      {isSettingsOpen ? (
-        <div className="role-modal-backdrop" role="presentation" onClick={() => setIsSettingsOpen(false)}>
-          <section className="role-modal teacher-lesson-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <div className="role-modal-head">
-              <h2>System Settings</h2>
-              <button type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close system settings">
-                <X size={18} />
-              </button>
-            </div>
-            <ProfileSettingsPanel
-              title="Admin Profile"
-              subtitle="Review and update your admin profile details."
-              profile={adminProfile}
-              onSave={saveAdminProfile}
-            />
-          </section>
-        </div>
-      ) : null}
     </div>
   )
 }

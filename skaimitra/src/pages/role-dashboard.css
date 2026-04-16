@@ -128,6 +128,235 @@
   background: #e2e8f0;
 }
 
+.profile-drawer-trigger {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.profile-drawer-avatar {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.22);
+}
+
+.profile-drawer-avatar-trigger {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.78rem;
+}
+
+.profile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  z-index: 80;
+  display: flex;
+  justify-content: flex-end;
+  backdrop-filter: blur(2px);
+}
+
+.profile-drawer {
+  width: min(360px, 100vw);
+  height: 100vh;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: -18px 0 40px rgba(15, 23, 42, 0.16);
+  padding: 1.25rem;
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  overflow-y: auto;
+  animation: profileDrawerSlideIn 0.3s ease;
+}
+
+.profile-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.profile-drawer-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.profile-drawer-identity-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.profile-drawer-identity-copy h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.profile-drawer-identity-copy p,
+.profile-drawer-identity-copy span {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.profile-drawer-close {
+  border: 0;
+  background: #f1f5f9;
+  border-radius: 999px;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #334155;
+}
+
+.profile-drawer-divider {
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.profile-drawer-section,
+.profile-drawer-actions {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.profile-drawer-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.profile-drawer-section-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.profile-drawer-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 0.8rem;
+}
+
+.profile-drawer-details div,
+.profile-drawer-form label {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.profile-drawer-details span,
+.profile-drawer-form span {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-drawer-details strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.profile-drawer-detail-span,
+.profile-drawer-form-span,
+.profile-drawer-inline-actions {
+  grid-column: 1 / -1;
+}
+
+.profile-drawer-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.profile-drawer-form input,
+.profile-drawer-form textarea {
+  width: 100%;
+  border: 1px solid #dbe4ec;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0.8rem 0.85rem;
+  font: inherit;
+}
+
+.profile-drawer-form input {
+  height: 42px;
+  padding-block: 0;
+}
+
+.profile-drawer-form textarea {
+  resize: vertical;
+}
+
+.profile-drawer-form input:focus,
+.profile-drawer-form textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.profile-drawer-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-drawer-actions {
+  margin-top: 0.2rem;
+}
+
+.profile-drawer-actions .role-primary-btn,
+.profile-drawer-actions .role-secondary-btn,
+.profile-drawer-logout {
+  width: 100%;
+  justify-content: center;
+}
+
+.profile-drawer-logout {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+  border-radius: 10px;
+  height: 42px;
+  font: inherit;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+@keyframes profileDrawerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .role-dot {
   position: absolute;
   top: 0.35rem;
@@ -1604,12 +1833,40 @@
   color: #0f172a;
 }
 
+.profile-settings-grid textarea,
+.profile-settings-grid select {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0.8rem 0.85rem;
+  font: inherit;
+  color: #0f172a;
+  resize: vertical;
+}
+
 .profile-settings-grid input:read-only {
   background: #f8fafc;
   color: #475569;
 }
 
+.profile-settings-grid textarea:read-only {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.profile-settings-grid select:disabled {
+  background: #f8fafc;
+  color: #475569;
+}
+
 .profile-settings-grid input:focus {
+  border-color: #7c3aed;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.profile-settings-grid textarea:focus,
+.profile-settings-grid select:focus {
   border-color: #7c3aed;
   outline: none;
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
@@ -1628,6 +1885,43 @@
 
 .profile-settings-actions {
   margin-top: 0.2rem;
+}
+
+.profile-password-card,
+.school-settings-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.profile-password-head,
+.school-settings-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-password-head h4,
+.school-settings-section-head h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.school-settings-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.school-logo-upload {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
 }
 
 .teacher-student-profile-grid {
@@ -6355,7 +6649,9 @@
   .communications-channel-grid,
   .communications-modal-grid,
   .communications-groups-grid,
-  .profile-settings-grid {
+  .profile-settings-grid,
+  .profile-drawer-details,
+  .profile-drawer-form {
     grid-template-columns: 1fr;
   }
 
@@ -6398,6 +6694,10 @@
   .role-card {
     min-width: 0;
   }
+
+  .profile-drawer {
+    width: min(360px, 100vw);
+  }
 }
 
 @media (max-width: 640px) {
@@ -6424,7 +6724,9 @@
   .student-subject-foot,
   .student-alert-card,
   .teacher-grade-submission-head,
-  .teacher-grade-submission-user {
+  .teacher-grade-submission-user,
+  .profile-drawer-head,
+  .profile-drawer-identity {
     flex-direction: column;
     align-items: stretch;
   }
@@ -6468,7 +6770,14 @@
   .communications-controls-right button,
   .communications-controls-right input,
   .communications-ai-panel-row button,
-  .planner-inline-actions button {
+  .planner-inline-actions button,
+  .profile-drawer-inline-actions button {
     width: 100%;
+  }
+
+  .profile-drawer {
+    width: 100vw;
+    max-width: 100vw;
+    padding: 1rem;
   }
 }
