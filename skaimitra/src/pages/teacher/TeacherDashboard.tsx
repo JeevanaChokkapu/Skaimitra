@@ -4,6 +4,7 @@ import {
   Bell,
   BarChart,
   BookOpen,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -75,7 +76,7 @@ import '../role-dashboard.css'
 
 type TeacherTab =
   | 'Home'
-
+  | 'Course Calendar'
   | 'Lesson Planning'
   | 'Assignments'
   | 'Grades'
@@ -320,6 +321,7 @@ type ContentLibraryItem = {
 
 const navTabs: Array<{ label: TeacherTab; icon: typeof Home }> = [
   { label: 'Home', icon: Home },
+  { label: 'Course Calendar', icon: CalendarDays },
   { label: 'Lesson Planning', icon: FlaskConical },
   { label: 'Assignments', icon: ClipboardList },
   { label: 'Grades', icon: PenLine },
@@ -362,14 +364,448 @@ const statCards = [
   { title: 'Avg. Performance', value: '82%', icon: GraduationCap, iconClass: 'role-stat-icon-4' },
 ]
 
+type CourseCalendarGrade = 'Grade 6' | 'Grade 7' | 'Grade 8'
+
+type CourseCalendarSubjectCard = {
+  unitName: string
+  topicTitle: string
+  description: string
+  duration: string
+  dateRange: string
+  accentClass: string
+}
+
+type CourseCalendarLegendItem = {
+  label: string
+  accentClass: string
+}
+
+type CourseCalendarLesson = {
+  period: string
+  title: string
+  description: string
+  accentClass: string
+}
+
+type CourseCalendarWeek = {
+  label: string
+  dateRange: string
+  lessons: CourseCalendarLesson[]
+}
+
+type CourseCalendarMonth = {
+  month: string
+  year: string
+  weeks: CourseCalendarWeek[]
+}
+
+type CourseCalendarGradeData = {
+  subtitle: string
+  subjectCards: CourseCalendarSubjectCard[]
+  legend: CourseCalendarLegendItem[]
+  months: CourseCalendarMonth[]
+}
+
+const courseCalendarGrades: CourseCalendarGrade[] = ['Grade 6', 'Grade 7', 'Grade 8']
+
+const courseCalendarData: Record<CourseCalendarGrade, CourseCalendarGradeData> = {
+  'Grade 6': {
+    subtitle: 'CBSE Skill Curriculum • Academic Year 2026–2027',
+    subjectCards: [
+      {
+        unitName: 'AI - 901B - Unit 1',
+        topicTitle: 'AI Around Us',
+        description: 'Introduce intelligent systems through school and home examples with simple ethical prompts.',
+        duration: '8 periods',
+        dateRange: 'Jul 1 - Jul 19',
+        accentClass: 'ai-unit-1',
+      },
+      {
+        unitName: 'Coding Foundations',
+        topicTitle: 'Sequencing & Patterns',
+        description: 'Build algorithm thinking using unplugged activities and visual flow patterns.',
+        duration: '6 periods',
+        dateRange: 'Jul 20 - Aug 8',
+        accentClass: 'coding',
+      },
+      {
+        unitName: 'Design Thinking',
+        topicTitle: 'Empathy in Everyday Problems',
+        description: 'Help learners observe real classroom challenges and frame user-friendly solutions.',
+        duration: '5 periods',
+        dateRange: 'Aug 10 - Aug 28',
+        accentClass: 'design-thinking',
+      },
+    ],
+    legend: [
+      { label: 'AI Unit 1', accentClass: 'ai-unit-1' },
+      { label: 'AI Unit 2', accentClass: 'ai-unit-2' },
+      { label: 'Coding', accentClass: 'coding' },
+      { label: 'Design Thinking', accentClass: 'design-thinking' },
+      { label: 'Break / no class', accentClass: 'break' },
+    ],
+    months: [
+      {
+        month: 'July',
+        year: '2026',
+        weeks: [
+          {
+            label: 'Week 1',
+            dateRange: 'Jul 6 - 10',
+            lessons: [
+              { period: 'Period 1', title: 'What is AI?', description: 'Discover familiar AI examples in phones, maps, and recommendations.', accentClass: 'ai-unit-1' },
+              { period: 'Period 2', title: 'Smart Choices', description: 'Discuss where AI helps and where human judgement still matters.', accentClass: 'ai-unit-1' },
+            ],
+          },
+          {
+            label: 'Week 2',
+            dateRange: 'Jul 13 - 17',
+            lessons: [
+              { period: 'Period 3', title: 'Pattern Hunt', description: 'Identify patterns in classroom routines and data sorting games.', accentClass: 'coding' },
+              { period: 'Period 4', title: 'Simple Instructions', description: 'Write step-by-step commands for everyday tasks.', accentClass: 'coding' },
+            ],
+          },
+          {
+            label: 'Week 3',
+            dateRange: 'Jul 20 - 24',
+            lessons: [],
+          },
+          {
+            label: 'Week 4',
+            dateRange: 'Jul 27 - 31',
+            lessons: [],
+          },
+        ],
+      },
+      {
+        month: 'August',
+        year: '2026',
+        weeks: [
+          {
+            label: 'Week 1',
+            dateRange: 'Aug 3 - 7',
+            lessons: [
+              { period: 'Period 5', title: 'Empathy Walk', description: 'Observe student needs around library and classroom spaces.', accentClass: 'design-thinking' },
+              { period: 'Period 6', title: 'Problem Statements', description: 'Turn observations into clear challenge statements.', accentClass: 'design-thinking' },
+            ],
+          },
+          {
+            label: 'Week 2',
+            dateRange: 'Aug 10 - 14',
+            lessons: [
+              { period: 'Period 7', title: 'No Class / Reflection', description: 'Review learning checkpoints and complete portfolio reflection.', accentClass: 'break' },
+            ],
+          },
+          {
+            label: 'Week 3',
+            dateRange: 'Aug 17 - 21',
+            lessons: [],
+          },
+          {
+            label: 'Week 4',
+            dateRange: 'Aug 24 - 28',
+            lessons: [],
+          },
+        ],
+      },
+    ],
+  },
+  'Grade 7': {
+    subtitle: 'CBSE Skill Curriculum • Academic Year 2026–2027',
+    subjectCards: [
+      {
+        unitName: 'AI - 901B - Unit 1',
+        topicTitle: 'Data, Decisions, and Bias',
+        description: 'Explore how datasets shape AI outputs and why fairness matters in everyday systems.',
+        duration: '10 periods',
+        dateRange: 'Jul 1 - Jul 26',
+        accentClass: 'ai-unit-1',
+      },
+      {
+        unitName: 'AI - 901B - Unit 2',
+        topicTitle: 'Problem Solving with AI',
+        description: 'Map use cases, model workflows, and identify suitable classroom AI applications.',
+        duration: '8 periods',
+        dateRange: 'Aug 1 - Aug 24',
+        accentClass: 'ai-unit-2',
+      },
+      {
+        unitName: 'Coding',
+        topicTitle: 'Block Logic to Interactive Projects',
+        description: 'Create small interactive programs with conditions, loops, and event triggers.',
+        duration: '12 periods',
+        dateRange: 'Sep 1 - Oct 5',
+        accentClass: 'coding',
+      },
+      {
+        unitName: 'Design Thinking',
+        topicTitle: 'Prototype for School Impact',
+        description: 'Frame learner-led solutions for attendance, communication, and collaboration challenges.',
+        duration: '6 periods',
+        dateRange: 'Oct 8 - Oct 30',
+        accentClass: 'design-thinking',
+      },
+    ],
+    legend: [
+      { label: 'AI Unit 1', accentClass: 'ai-unit-1' },
+      { label: 'AI Unit 2', accentClass: 'ai-unit-2' },
+      { label: 'Coding', accentClass: 'coding' },
+      { label: 'Design Thinking', accentClass: 'design-thinking' },
+      { label: 'Break / no class', accentClass: 'break' },
+    ],
+    months: [
+      {
+        month: 'July',
+        year: '2026',
+        weeks: [
+          {
+            label: 'Week 1',
+            dateRange: 'Jul 6 - 10',
+            lessons: [
+              { period: 'Period 1', title: 'AI and Data Inputs', description: 'Understand how data collection influences machine decisions.', accentClass: 'ai-unit-1' },
+              { period: 'Period 2', title: 'Bias in Real Life', description: 'Review simple scenarios where unfair data creates skewed results.', accentClass: 'ai-unit-1' },
+            ],
+          },
+          {
+            label: 'Week 2',
+            dateRange: 'Jul 13 - 17',
+            lessons: [
+              { period: 'Period 3', title: 'Training vs Testing', description: 'Compare sample data for teaching and checking AI systems.', accentClass: 'ai-unit-1' },
+              { period: 'Period 4', title: 'Responsible AI Discussion', description: 'Debate accountability using school-friendly examples.', accentClass: 'ai-unit-1' },
+            ],
+          },
+          {
+            label: 'Week 3',
+            dateRange: 'Jul 20 - 24',
+            lessons: [],
+          },
+          {
+            label: 'Week 4',
+            dateRange: 'Jul 27 - 31',
+            lessons: [],
+          },
+        ],
+      },
+      {
+        month: 'August',
+        year: '2026',
+        weeks: [
+          {
+            label: 'Week 1',
+            dateRange: 'Aug 3 - 7',
+            lessons: [
+              { period: 'Period 5', title: 'AI Problem Mapping', description: 'Choose a school problem and map where AI could support it.', accentClass: 'ai-unit-2' },
+              { period: 'Period 6', title: 'Workflow Design', description: 'Sequence input, process, output, and feedback loops.', accentClass: 'ai-unit-2' },
+            ],
+          },
+          {
+            label: 'Week 2',
+            dateRange: 'Aug 10 - 14',
+            lessons: [
+              { period: 'Period 7', title: 'Logic with Conditions', description: 'Build if/else pathways inside a guided coding challenge.', accentClass: 'coding' },
+              { period: 'Period 8', title: 'Loop Lab', description: 'Use repeated blocks to streamline animations and tasks.', accentClass: 'coding' },
+            ],
+          },
+          {
+            label: 'Week 3',
+            dateRange: 'Aug 17 - 21',
+            lessons: [],
+          },
+          {
+            label: 'Week 4',
+            dateRange: 'Aug 24 - 28',
+            lessons: [],
+          },
+        ],
+      },
+      {
+        month: 'September',
+        year: '2026',
+        weeks: [
+          {
+            label: 'Week 1',
+            dateRange: 'Sep 7 - 11',
+            lessons: [
+              { period: 'Period 9', title: 'Interactive Story Build', description: 'Create event-driven screens with user input triggers.', accentClass: 'coding' },
+              { period: 'Period 10', title: 'Debugging Sprint', description: 'Find logic issues and refine project flow with peers.', accentClass: 'coding' },
+            ],
+          },
+          {
+            label: 'Week 2',
+            dateRange: 'Sep 14 - 18',
+            lessons: [
+              { period: 'Period 11', title: 'Empathy Interviews', description: 'Interview classmates to identify a shared school challenge.', accentClass: 'design-thinking' },
+              { period: 'Period 12', title: 'Prototype Planning', description: 'Sketch quick solutions and choose the strongest concept.', accentClass: 'design-thinking' },
+            ],
+          },
+          {
+            label: 'Week 3',
+            dateRange: 'Sep 21 - 25',
+            lessons: [],
+          },
+          {
+            label: 'Week 4',
+            dateRange: 'Sep 28 - 30',
+            lessons: [],
+          },
+        ],
+      },
+    ],
+  },
+  'Grade 8': {
+    subtitle: 'CBSE Skill Curriculum • Academic Year 2026–2027',
+    subjectCards: [
+      {
+        unitName: 'AI - 901B - Unit 1',
+        topicTitle: 'AI Project Foundations',
+        description: 'Translate community or school needs into problem statements with measurable outcomes.',
+        duration: '9 periods',
+        dateRange: 'Jul 1 - Jul 22',
+        accentClass: 'ai-unit-1',
+      },
+      {
+        unitName: 'Coding',
+        topicTitle: 'App Logic and UI Flow',
+        description: 'Connect coding logic to screen design, testing, and iterative improvement.',
+        duration: '12 periods',
+        dateRange: 'Jul 24 - Aug 30',
+        accentClass: 'coding',
+      },
+      {
+        unitName: 'Design Thinking',
+        topicTitle: 'Prototype, Test, Improve',
+        description: 'Move from wireframes to tested prototypes with peer feedback and iteration loops.',
+        duration: '8 periods',
+        dateRange: 'Sep 2 - Sep 28',
+        accentClass: 'design-thinking',
+      },
+    ],
+    legend: [
+      { label: 'AI Unit 1', accentClass: 'ai-unit-1' },
+      { label: 'AI Unit 2', accentClass: 'ai-unit-2' },
+      { label: 'Coding', accentClass: 'coding' },
+      { label: 'Design Thinking', accentClass: 'design-thinking' },
+      { label: 'Break / no class', accentClass: 'break' },
+    ],
+    months: [
+      {
+        month: 'July',
+        year: '2026',
+        weeks: [
+          {
+            label: 'Week 1',
+            dateRange: 'Jul 6 - 10',
+            lessons: [
+              { period: 'Period 1', title: 'Need Finding', description: 'Identify authentic student pain points worth solving.', accentClass: 'ai-unit-1' },
+              { period: 'Period 2', title: 'Success Metrics', description: 'Define how improvement will be measured in a school context.', accentClass: 'ai-unit-1' },
+            ],
+          },
+          {
+            label: 'Week 2',
+            dateRange: 'Jul 13 - 17',
+            lessons: [
+              { period: 'Period 3', title: 'Screen Flow Planning', description: 'Outline user journeys before building a digital solution.', accentClass: 'coding' },
+              { period: 'Period 4', title: 'App Components', description: 'Arrange interface blocks with input, output, and feedback.', accentClass: 'coding' },
+            ],
+          },
+          {
+            label: 'Week 3',
+            dateRange: 'Jul 20 - 24',
+            lessons: [],
+          },
+          {
+            label: 'Week 4',
+            dateRange: 'Jul 27 - 31',
+            lessons: [],
+          },
+        ],
+      },
+      {
+        month: 'August',
+        year: '2026',
+        weeks: [
+          {
+            label: 'Week 1',
+            dateRange: 'Aug 3 - 7',
+            lessons: [
+              { period: 'Period 5', title: 'Prototype Build', description: 'Construct the first version with functionality and structure.', accentClass: 'design-thinking' },
+              { period: 'Period 6', title: 'Peer Test Round', description: 'Collect observation-based feedback from classmates.', accentClass: 'design-thinking' },
+            ],
+          },
+          {
+            label: 'Week 2',
+            dateRange: 'Aug 10 - 14',
+            lessons: [
+              { period: 'Period 7', title: 'Iteration Review', description: 'Refine the solution based on usability and value.', accentClass: 'design-thinking' },
+              { period: 'Period 8', title: 'Break / Exhibition Prep', description: 'Portfolio updates and showcase readiness.', accentClass: 'break' },
+            ],
+          },
+          {
+            label: 'Week 3',
+            dateRange: 'Aug 17 - 21',
+            lessons: [],
+          },
+          {
+            label: 'Week 4',
+            dateRange: 'Aug 24 - 28',
+            lessons: [],
+          },
+        ],
+      },
+    ],
+  },
+}
+
+const emptyCourseCalendarLesson = (): CourseCalendarLesson => ({
+  period: '',
+  title: '',
+  description: '',
+  accentClass: 'break',
+})
+
+const normalizeCourseCalendarWeeks = (weeks: CourseCalendarWeek[]) =>
+  Array.from({ length: 4 }, (_, index) => {
+    const week = weeks[index]
+    if (!week) {
+      return {
+        label: `Week ${index + 1}`,
+        dateRange: 'No schedule',
+        lessons: [emptyCourseCalendarLesson(), emptyCourseCalendarLesson()],
+      }
+    }
+
+    const lessons = Array.from({ length: 2 }, (_, lessonIndex) => week.lessons[lessonIndex] ?? emptyCourseCalendarLesson())
+    return { ...week, lessons }
+  })
+
 const pendingGrading = [
   { assignment: 'Algebra Quiz - Chapter 4', dueDate: '20 Feb 2026', course: 'Mathematics', assignmentType: 'Quiz', className: 'Class 6', section: 'A' },
   { assignment: 'Geometry Assignment', dueDate: '22 Feb 2026', course: 'Mathematics', assignmentType: 'Assignment', className: 'Class 7', section: 'B' },
 ]
 
-const recentActivity = [
-  { title: 'New submission', desc: 'Aarav Mehta submitted Algebra Quiz', time: '2 hours ago' },
-  { title: 'Assignment graded', desc: 'Completed grading for 5 students', time: '4 hours ago' },
+type TimetableClass = {
+  day: string
+  period: string
+  time: string
+  start: string
+  end: string
+  className: string
+  section: string
+  subject: string
+}
+
+const teacherTimetable: TimetableClass[] = [
+  { day: 'Monday', period: 'Period 1', time: '09:00 - 09:45', start: '09:00', end: '09:45', className: 'Grade 6', section: 'A', subject: 'Mathematics' },
+  { day: 'Monday', period: 'Period 2', time: '10:00 - 10:45', start: '10:00', end: '10:45', className: 'Grade 7', section: 'B', subject: 'Science' },
+  { day: 'Tuesday', period: 'Period 1', time: '10:00 - 10:45', start: '10:00', end: '10:45', className: 'Grade 7', section: 'A', subject: 'Mathematics' },
+  { day: 'Tuesday', period: 'Period 2', time: '11:00 - 11:45', start: '11:00', end: '11:45', className: 'Grade 8', section: 'B', subject: 'Science' },
+  { day: 'Tuesday', period: 'Period 3', time: '12:00 - 12:45', start: '12:00', end: '12:45', className: 'Grade 6', section: 'A', subject: 'Computer Science' },
+  { day: 'Wednesday', period: 'Period 1', time: '09:30 - 10:15', start: '09:30', end: '10:15', className: 'Grade 8', section: 'A', subject: 'AI' },
+  { day: 'Wednesday', period: 'Period 2', time: '10:30 - 11:15', start: '10:30', end: '11:15', className: 'Grade 7', section: 'C', subject: 'Design Thinking' },
+  { day: 'Thursday', period: 'Period 1', time: '09:00 - 09:45', start: '09:00', end: '09:45', className: 'Grade 6', section: 'B', subject: 'Science' },
+  { day: 'Thursday', period: 'Period 2', time: '10:00 - 10:45', start: '10:00', end: '10:45', className: 'Grade 7', section: 'A', subject: 'Mathematics' },
+  { day: 'Friday', period: 'Period 1', time: '09:00 - 09:45', start: '09:00', end: '09:45', className: 'Grade 8', section: 'A', subject: 'Coding' },
+  { day: 'Friday', period: 'Period 2', time: '10:00 - 10:45', start: '10:00', end: '10:45', className: 'Grade 6', section: 'C', subject: 'AI' },
 ]
 
 const initialLabActivities: LabActivity[] = [
@@ -892,6 +1328,7 @@ const createProfileAvatar = (name: string, colorA = '#a855f7', colorB = '#7c3aed
 function TeacherDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TeacherTab>('Home')
+  const [selectedCourseCalendarGrade, setSelectedCourseCalendarGrade] = useState<CourseCalendarGrade>('Grade 7')
   const [homeSearchTerm, setHomeSearchTerm] = useState('')
   const [plannerTab, setPlannerTab] = useState<PlannerWorkspaceTab>('lesson')
   const [plannerView, setPlannerView] = useState<PlannerView>('summary')
@@ -1089,16 +1526,30 @@ function TeacherDashboard() {
     [homeSearchTerm],
   )
 
-  const filteredRecentActivity = useMemo(
-    () =>
-      recentActivity.filter((item) => {
-        const query = homeSearchTerm.trim().toLowerCase()
-        if (!query) return true
+  const todaySchedule = useMemo(() => {
+    const now = new Date()
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' })
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
-        return includesSearch(item.title, query) || includesSearch(item.desc, query) || includesSearch(item.time, query)
-      }),
-    [homeSearchTerm],
-  )
+    const classes = teacherTimetable
+      .filter((item) => item.day === currentDay)
+      .map((item) => {
+        const [startHour, startMinute] = item.start.split(':').map(Number)
+        const [endHour, endMinute] = item.end.split(':').map(Number)
+        const startMinutes = startHour * 60 + startMinute
+        const endMinutes = endHour * 60 + endMinute
+
+        return {
+          ...item,
+          isCurrent: currentMinutes >= startMinutes && currentMinutes <= endMinutes,
+        }
+      })
+
+    return {
+      dayLabel: `${currentDay} Schedule`,
+      classes,
+    }
+  }, [])
 
   const filteredTeacherAnnouncements = useMemo(
     () =>
@@ -2566,7 +3017,47 @@ function TeacherDashboard() {
           ))}
         </div>
 
-        <section className="role-card role-pending-card">
+        <section className="role-card role-pending-card teacher-my-classes-card">
+          <div className="role-section-head">
+            <div>
+              <h2>My Classes</h2>
+              <p className="role-muted">{todaySchedule.dayLabel}</p>
+            </div>
+          </div>
+
+          <div className="role-table-wrap teacher-my-classes-table-wrap">
+            {todaySchedule.classes.length ? (
+              <table className="role-table teacher-my-classes-table">
+                <thead>
+                  <tr>
+                    <th>Period</th>
+                    <th>Time</th>
+                    <th>Class</th>
+                    <th>Section</th>
+                    <th>Subject</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {todaySchedule.classes.map((item) => (
+                    <tr key={`${item.day}-${item.period}-${item.className}-${item.section}`} className={item.isCurrent ? 'is-current-class' : ''}>
+                      <td>{item.period}</td>
+                      <td>{item.time}</td>
+                      <td>{item.className}</td>
+                      <td>{item.section}</td>
+                      <td>{item.subject}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="teacher-my-classes-empty">
+                <p className="role-muted">No classes scheduled for today</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="role-card role-activity-card">
           <div className="role-section-head role-admin-communications-head">
             <div>
               <h2>Grades</h2>
@@ -2614,21 +3105,6 @@ function TeacherDashboard() {
               </tbody>
             </table>
             {filteredPendingGrading.length === 0 ? <p className="role-muted">No grading items match your search.</p> : null}
-          </div>
-        </section>
-
-        <section className="role-card role-activity-card">
-          <h2>Course Activity</h2>
-          <div className="role-activity-list">
-            {filteredRecentActivity.map((item) => (
-              <div key={item.title} className="role-activity-item">
-                <div>
-                  <p>{item.title}</p>
-                  <span>{item.desc}</span>
-                </div>
-                <time>{item.time}</time>
-              </div>
-            ))}
           </div>
         </section>
 
@@ -4592,11 +5068,105 @@ function TeacherDashboard() {
     )
   }
 
+  const renderCourseCalendar = () => {
+    const selectedCalendar = courseCalendarData[selectedCourseCalendarGrade]
+
+    return (
+      <main className="role-main role-main-detail">
+        <section className="role-primary">
+          <section className="role-card role-detail-card course-calendar-shell">
+            <div className="course-calendar-grade-selector">
+              {courseCalendarGrades.map((grade) => (
+                <button
+                  key={grade}
+                  type="button"
+                  className={selectedCourseCalendarGrade === grade ? 'is-active' : ''}
+                  onClick={() => setSelectedCourseCalendarGrade(grade)}
+                >
+                  {grade}
+                </button>
+              ))}
+            </div>
+
+            <div className="course-calendar-head">
+              <div>
+                <h2>{selectedCourseCalendarGrade} — Course Calendar</h2>
+                <p className="role-muted">{selectedCalendar.subtitle}</p>
+              </div>
+            </div>
+
+            <div className="course-calendar-subject-grid">
+              {selectedCalendar.subjectCards.map((card) => (
+                <article key={`${selectedCourseCalendarGrade}-${card.unitName}`} className={`course-calendar-subject-card ${card.accentClass}`}>
+                  <div className="course-calendar-subject-top">
+                    <span className="course-calendar-unit-tag">{card.unitName}</span>
+                    <span className="course-calendar-duration">{card.duration}</span>
+                  </div>
+                  <h3>{card.topicTitle}</h3>
+                  <p>{card.description}</p>
+                  <div className="course-calendar-subject-meta">
+                    <span>{card.dateRange}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="course-calendar-legend">
+              {selectedCalendar.legend.map((item) => (
+                <span key={`${selectedCourseCalendarGrade}-${item.label}`} className={`course-calendar-legend-chip ${item.accentClass}`}>
+                  {item.label}
+                </span>
+              ))}
+            </div>
+
+            <div className="course-calendar-month-stack">
+              {selectedCalendar.months.map((month) => (
+                <section key={`${selectedCourseCalendarGrade}-${month.month}`} className="course-calendar-month-card">
+                  <div className="course-calendar-month-head">
+                    <h3>{month.month}</h3>
+                    <span className="course-calendar-year">{month.year}</span>
+                  </div>
+
+                  <div className="course-calendar-week-stack">
+                    {normalizeCourseCalendarWeeks(month.weeks).map((week) => (
+                      <article key={`${month.month}-${week.label}`} className="course-calendar-week-card">
+                        <div className="course-calendar-week-body">
+                          <div className="course-calendar-week-head">
+                            <h4>{week.label}</h4>
+                            <span>{week.dateRange}</span>
+                          </div>
+                          <div className="course-calendar-lesson-grid">
+                            {week.lessons.map((lesson) => (
+                              <article
+                                key={`${week.label}-${lesson.period || 'empty'}-${lesson.title || lesson.description}`}
+                                className={`course-calendar-lesson-card ${lesson.accentClass} ${lesson.period ? '' : 'is-empty'}`}
+                              >
+                                {lesson.period ? <span className="course-calendar-period">{lesson.period}</span> : null}
+                                {lesson.title ? <h5>{lesson.title}</h5> : <h5 className="course-calendar-empty-title">No lesson scheduled</h5>}
+                                {lesson.description ? <p>{lesson.description}</p> : <p className="course-calendar-empty-copy">Awaiting lesson details</p>}
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </section>
+        </section>
+      </main>
+    )
+  }
+
   const renderCommunications = () => <CommunicationsHub role="teacher" />
 
   let content = renderHome()
 
-  if (activeTab === 'Lesson Planning') {
+  if (activeTab === 'Course Calendar') {
+    content = renderCourseCalendar()
+  } else if (activeTab === 'Lesson Planning') {
     content = renderLessonPlanningWorkspace()
   } else if (activeTab === 'Assignments') {
     content = renderAssignments()

@@ -60,6 +60,7 @@ import '../role-dashboard.css'
 type Role = 'student' | 'teacher' | 'admin' | 'parent'
 type UserStatus = 'active' | 'inactive'
 type ViewMode = 'dashboard' | 'userManagement'
+type SystemSettingsView = 'grid' | 'schoolSettings' | 'systemConfig' | 'preferences'
 
 type UserRow = {
   id: number
@@ -95,6 +96,38 @@ const quickActions = [
   { title: 'Role Permissions', desc: 'Manage user roles and access', icon: Settings },
   { title: 'Course Management', desc: 'Create and manage courses', icon: BookOpen },
   { title: 'View Reports', desc: 'Access analytics and insights', icon: BarChart3 },
+]
+
+const systemSettingsCards: Array<{
+  key: SystemSettingsView | 'userManagement'
+  title: string
+  desc: string
+  icon: typeof Settings
+}> = [
+  {
+    key: 'schoolSettings',
+    title: 'School Settings',
+    desc: 'Manage school details, contact info, and branding',
+    icon: BookOpen,
+  },
+  {
+    key: 'systemConfig',
+    title: 'System Configuration',
+    desc: 'Configure system-level settings and integrations',
+    icon: Settings,
+  },
+  {
+    key: 'preferences',
+    title: 'System Preferences',
+    desc: 'Customize UI behavior and application preferences',
+    icon: BarChart3,
+  },
+  {
+    key: 'userManagement',
+    title: 'User Management',
+    desc: 'Manage users, roles, and permissions',
+    icon: Users,
+  },
 ]
 
 const teacherOverview = [
@@ -178,6 +211,7 @@ const getDefaultSchoolSettings = (): SchoolSettingsData => ({
 function AdminDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('Home')
+  const [systemSettingsView, setSystemSettingsView] = useState<SystemSettingsView>('grid')
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [users, setUsers] = useState<UserRow[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -911,17 +945,18 @@ function AdminDashboard() {
                 key={action.title}
                 type="button"
                 className="role-action-tile"
-                onClick={() => {
-                  if (action.title === 'User Management') {
-                    setActiveTab('Users')
-                    setViewMode('userManagement')
-                  }
-                  if (action.title === 'Role Permissions') {
-                    setActiveTab('System Settings')
-                    setViewMode('dashboard')
-                  }
-                  if (action.title === 'Course Management') setActiveTab('Courses')
-                  if (action.title === 'View Reports') setActiveTab('Reports')
+                  onClick={() => {
+                    if (action.title === 'User Management') {
+                      setActiveTab('Users')
+                      setViewMode('userManagement')
+                    }
+                    if (action.title === 'Role Permissions') {
+                      setActiveTab('System Settings')
+                      setSystemSettingsView('grid')
+                      setViewMode('dashboard')
+                    }
+                    if (action.title === 'Course Management') setActiveTab('Courses')
+                    if (action.title === 'View Reports') setActiveTab('Reports')
                 }}
               >
                 <div className="role-action-content">
@@ -1475,10 +1510,133 @@ function AdminDashboard() {
       )
     }
     if (activeTab === 'System Settings') {
+      if (systemSettingsView === 'schoolSettings') {
+        return (
+          <main className="role-main role-main-detail">
+            <section className="role-primary">
+              <div className="role-card-actions admin-settings-back-row">
+                <button type="button" className="role-secondary-btn" onClick={() => setSystemSettingsView('grid')}>
+                  {'<-'}
+                </button>
+              </div>
+              <SchoolSettingsForm settings={schoolSettings} onSave={saveSchoolSettings} />
+            </section>
+          </main>
+        )
+      }
+
+      if (systemSettingsView === 'systemConfig') {
+        return (
+          <main className="role-main role-main-detail">
+            <section className="role-primary">
+              <section className="role-card role-detail-card admin-settings-detail-card">
+                <div className="role-card-actions admin-settings-back-row">
+                  <button type="button" className="role-secondary-btn" onClick={() => setSystemSettingsView('grid')}>
+                    {'<-'}
+                  </button>
+                </div>
+                <div className="planner-card-head profile-settings-head">
+                  <div>
+                    <h2>System Configuration</h2>
+                    <p className="role-muted">Configure system-level settings and integrations.</p>
+                  </div>
+                </div>
+                <div className="profile-settings-grid">
+                  <label>
+                    <span>Authentication Provider</span>
+                    <input type="text" value="Firebase Authentication" readOnly />
+                  </label>
+                  <label>
+                    <span>Primary Database</span>
+                    <input type="text" value="Cloud Firestore" readOnly />
+                  </label>
+                  <label>
+                    <span>Email Notifications</span>
+                    <input type="text" value="Enabled" readOnly />
+                  </label>
+                  <label>
+                    <span>Calendar Sync</span>
+                    <input type="text" value="Internal Scheduler + Fallback Sync" readOnly />
+                  </label>
+                </div>
+              </section>
+            </section>
+          </main>
+        )
+      }
+
+      if (systemSettingsView === 'preferences') {
+        return (
+          <main className="role-main role-main-detail">
+            <section className="role-primary">
+              <section className="role-card role-detail-card admin-settings-detail-card">
+                <div className="role-card-actions admin-settings-back-row">
+                  <button type="button" className="role-secondary-btn" onClick={() => setSystemSettingsView('grid')}>
+                    {'<-'}
+                  </button>
+                </div>
+                <div className="planner-card-head profile-settings-head">
+                  <div>
+                    <h2>System Preferences</h2>
+                    <p className="role-muted">Customize UI behavior and application preferences.</p>
+                  </div>
+                </div>
+                <div className="profile-settings-grid">
+                  <label>
+                    <span>Default Dashboard View</span>
+                    <input type="text" value="Overview with analytics widgets" readOnly />
+                  </label>
+                  <label>
+                    <span>Theme Preference</span>
+                    <input type="text" value="Light mode" readOnly />
+                  </label>
+                  <label>
+                    <span>Notifications Panel</span>
+                    <input type="text" value="Enabled for admins" readOnly />
+                  </label>
+                  <label>
+                    <span>Activity Summaries</span>
+                    <input type="text" value="Compact digest enabled" readOnly />
+                  </label>
+                </div>
+              </section>
+            </section>
+          </main>
+        )
+      }
+
       return (
         <main className="role-main role-main-detail">
           <section className="role-primary">
-            <SchoolSettingsForm settings={schoolSettings} onSave={saveSchoolSettings} />
+            <section className="role-card role-quick-actions-card admin-settings-grid-card">
+              <h3 className="role-section-title">System Settings</h3>
+              <div className="role-action-grid">
+                {systemSettingsCards.map((item) => (
+                  <button
+                    key={item.title}
+                    type="button"
+                    className="role-action-tile"
+                    onClick={() => {
+                      if (item.key === 'userManagement') {
+                        setActiveTab('Users')
+                        setViewMode('userManagement')
+                        return
+                      }
+
+                      setSystemSettingsView(item.key)
+                    }}
+                  >
+                    <div className="role-action-content">
+                      <div className="role-action-head">
+                        <item.icon size={16} />
+                        <span className="role-action-title">{item.title}</span>
+                      </div>
+                      <p className="role-action-desc">{item.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
           </section>
         </main>
       )
@@ -1541,6 +1699,7 @@ function AdminDashboard() {
               className={activeTab === tab.label ? 'is-active' : ''}
               onClick={() => {
                 setActiveTab(tab.label)
+                if (tab.label === 'System Settings') setSystemSettingsView('grid')
                 setViewMode(tab.label === 'Users' ? 'userManagement' : 'dashboard')
                 setUserError('')
                 setUserInfo('')

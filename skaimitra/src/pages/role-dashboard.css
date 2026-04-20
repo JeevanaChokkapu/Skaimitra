@@ -480,6 +480,21 @@
   align-content: stretch;
 }
 
+.admin-settings-grid-card {
+  width: 100%;
+  aspect-ratio: auto;
+}
+
+.admin-settings-back-row {
+  margin: 0 0 0.9rem;
+  justify-content: flex-start;
+}
+
+.admin-settings-detail-card {
+  display: grid;
+  gap: 1rem;
+}
+
 .role-main-teacher {
   grid-template-columns: 2fr 1fr;
 }
@@ -846,6 +861,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  padding :10 px 0.5rem;
   margin-bottom: 1rem;
 }
 
@@ -924,6 +940,332 @@
   justify-content: flex-end;
 }
 
+.teacher-dashboard-page .role-card.course-calendar-shell,
+.course-calendar-shell {
+  display: grid;
+  gap: 20px;
+  background: #eef1f5;
+  border-color: #eef1f5;
+  box-shadow: none;
+}
+
+.course-calendar-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.course-calendar-grade-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.course-calendar-grade-selector button {
+  border: 1px solid #ddd6fe;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #6d28d9;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 0.78rem 1.1rem;
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.course-calendar-grade-selector button.is-active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-color: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(124, 58, 237, 0.18);
+}
+
+.course-calendar-subject-grid,
+.course-calendar-lesson-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.course-calendar-subject-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.course-calendar-subject-card {
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e9ddff;
+  box-shadow: 0 12px 30px rgba(76, 29, 149, 0.08);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  border-top: 5px solid #a78bfa;
+}
+
+.course-calendar-subject-card h3,
+.course-calendar-month-head h3,
+.course-calendar-week-head h4,
+.course-calendar-lesson-card h5 {
+  margin: 0;
+}
+
+.course-calendar-subject-card p,
+.course-calendar-lesson-card p {
+  margin: 0;
+  color: #5b6474;
+  line-height: 1.55;
+}
+
+.course-calendar-subject-top,
+.course-calendar-subject-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.course-calendar-unit-tag,
+.course-calendar-duration {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.course-calendar-unit-tag {
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.course-calendar-duration {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.course-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.course-calendar-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.course-calendar-month-stack,
+.course-calendar-week-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.course-calendar-month-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.course-calendar-month-card,
+.course-calendar-week-card {
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid #e9ddff;
+  padding: 16px;
+}
+
+.course-calendar-month-head,
+.course-calendar-week-head {
+  margin-bottom: 14px;
+}
+
+.course-calendar-month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.course-calendar-year {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.course-calendar-week-card {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.course-calendar-week-body {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.course-calendar-week-head {
+  margin-bottom: 0;
+  min-height: 110px;
+  border-radius: 12px;
+  background: #eef2f7;
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.course-calendar-week-head h4 {
+  font-size: 0.92rem;
+  color: #334155;
+}
+
+.course-calendar-week-head span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.course-calendar-lesson-grid {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.course-calendar-lesson-card {
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #f8f4ff;
+  border: 1px solid #eadcff;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  min-height: 110px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.course-calendar-period {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 8px;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.8);
+  color: #6d28d9;
+}
+
+.course-calendar-lesson-card h5 {
+  font-size: 0.84rem;
+  line-height: 1.28;
+  color: #4c1d95;
+}
+
+.course-calendar-lesson-card p {
+  font-size: 0.72rem;
+  line-height: 1.38;
+  color: #64748b;
+}
+
+.course-calendar-lesson-card.is-empty {
+  background: #f8fafc;
+  border-style: dashed;
+  border-color: #d7deea;
+}
+
+.course-calendar-empty-title {
+  color: #94a3b8;
+}
+
+.course-calendar-empty-copy {
+  color: #a8b2c1;
+}
+
+.course-calendar-subject-card.ai-unit-1,
+.course-calendar-legend-chip.ai-unit-1,
+.course-calendar-lesson-card.ai-unit-1 {
+  border-color: #c4b5fd;
+}
+
+.course-calendar-subject-card.ai-unit-1 {
+  border-top-color: #8b5cf6;
+}
+
+.course-calendar-legend-chip.ai-unit-1,
+.course-calendar-lesson-card.ai-unit-1 {
+  background: #f5f3ff;
+}
+
+.course-calendar-subject-card.ai-unit-2,
+.course-calendar-legend-chip.ai-unit-2,
+.course-calendar-lesson-card.ai-unit-2 {
+  border-color: #d8b4fe;
+}
+
+.course-calendar-subject-card.ai-unit-2 {
+  border-top-color: #c026d3;
+}
+
+.course-calendar-legend-chip.ai-unit-2,
+.course-calendar-lesson-card.ai-unit-2 {
+  background: #fdf4ff;
+}
+
+.course-calendar-subject-card.coding,
+.course-calendar-legend-chip.coding,
+.course-calendar-lesson-card.coding {
+  border-color: #bfdbfe;
+}
+
+.course-calendar-subject-card.coding {
+  border-top-color: #3b82f6;
+}
+
+.course-calendar-legend-chip.coding,
+.course-calendar-lesson-card.coding {
+  background: #eff6ff;
+}
+
+.course-calendar-subject-card.design-thinking,
+.course-calendar-legend-chip.design-thinking,
+.course-calendar-lesson-card.design-thinking {
+  border-color: #fbcfe8;
+}
+
+.course-calendar-subject-card.design-thinking {
+  border-top-color: #ec4899;
+}
+
+.course-calendar-legend-chip.design-thinking,
+.course-calendar-lesson-card.design-thinking {
+  background: #fdf2f8;
+}
+
+.course-calendar-subject-card.break,
+.course-calendar-legend-chip.break,
+.course-calendar-lesson-card.break {
+  border-color: #cbd5e1;
+}
+
+.course-calendar-subject-card.break {
+  border-top-color: #94a3b8;
+}
+
+.course-calendar-legend-chip.break,
+.course-calendar-lesson-card.break {
+  background: #f8fafc;
+}
+
 .role-flex {
   display: flex;
 }
@@ -980,6 +1322,27 @@
   .role-card-actions {
     flex-wrap: wrap;
     justify-content: space-between;
+  }
+
+  .course-calendar-subject-grid,
+  .course-calendar-lesson-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .course-calendar-month-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .course-calendar-week-body {
+    grid-template-columns: 1fr;
+  }
+
+  .course-calendar-week-head {
+    min-height: auto;
+  }
+
+  .course-calendar-lesson-grid {
+    grid-column: auto;
   }
 
   .role-table th,
@@ -1792,6 +2155,75 @@
   color: #475569;
 }
 
+.teacher-my-classes-card {
+    display: grid;
+    gap: 0;
+}
+
+.teacher-my-classes-card .role-section-head {
+  margin-bottom: 0;
+}
+
+.teacher-my-classes-card .role-table-wrap {
+  margin-top: 0;
+}
+
+.teacher-my-classes-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.teacher-my-classes-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.teacher-my-classes-table thead th {
+  background: #eef2f7;
+  color: #334155;
+  font-weight: 700;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #dbe3ee;
+}
+
+.teacher-my-classes-table tbody td {
+  padding: 0.9rem 1rem;
+  color: #334155;
+  border-bottom: 1px solid #e6edf5;
+}
+
+.teacher-my-classes-table tbody tr:nth-child(even) {
+  background: #fdfefe;
+}
+
+.teacher-my-classes-table tbody tr:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.teacher-my-classes-table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.teacher-my-classes-table tbody tr.is-current-class {
+  background: #f5f3ff;
+}
+
+.teacher-my-classes-table tbody tr.is-current-class td:first-child {
+  border-left: 4px solid #7c3aed;
+}
+
+.teacher-my-classes-empty {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  padding: 1rem;
+  text-align: center;
+}
+
 .profile-settings-panel {
   display: grid;
   gap: 1.1rem;
@@ -1885,6 +2317,33 @@
 
 .profile-settings-actions {
   margin-top: 0.2rem;
+}
+
+.dashboard-form-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  margin-top: 0.6rem;
+  padding-top: 0.8rem;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0) 0%, rgba(248, 250, 252, 0.94) 34%, #f8fafc 100%);
+}
+
+.dashboard-form-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 0.95rem 0 0;
+}
+
+.role-edit-btn {
+  border: 1px solid #d8b4fe;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, #f5edff 0%, #ede9fe 100%);
+  color: #7c3aed;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.82rem 1.2rem;
+  cursor: pointer;
 }
 
 .profile-password-card,
@@ -5875,6 +6334,15 @@
     justify-content: stretch;
   }
 
+  .dashboard-form-footer-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dashboard-form-footer-actions button {
+    width: 100%;
+  }
+
   .planner-inline-actions button,
   .planner-actions-card button {
     width: 100%;
@@ -6636,6 +7104,8 @@
   .analytics-summary-grid,
   .analytics-chart-grid,
   .analytics-insights-grid,
+  .course-calendar-subject-grid,
+  .course-calendar-month-stack,
   .teacher-student-profile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -6739,6 +7209,8 @@
   .student-assignment-summary,
   .student-subject-grid,
   .analytics-summary-grid,
+  .course-calendar-subject-grid,
+  .course-calendar-month-stack,
   .teacher-student-profile-grid,
   .role-user-stats {
     grid-template-columns: 1fr;

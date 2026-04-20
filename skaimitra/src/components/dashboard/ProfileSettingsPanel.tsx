@@ -86,6 +86,16 @@ function ProfileSettingsPanel({
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleEdit = () => {
+    setForm(profile)
+    setIsEditing(true)
+  }
+
+  const handleCancel = () => {
+    setForm(profile)
+    setIsEditing(false)
+  }
+
   const handleSave = () => {
     onSave(form)
     setIsEditing(false)
@@ -119,9 +129,6 @@ function ProfileSettingsPanel({
           <h3>{title}</h3>
           <p className="role-muted">{subtitle}</p>
         </div>
-        <button type="button" className="role-secondary-btn" onClick={() => setIsEditing((prev) => !prev)}>
-          {isEditing ? 'Cancel' : 'Edit'}
-        </button>
       </div>
 
       {successMessage ? <p className="profile-settings-success">{successMessage}</p> : null}
@@ -205,10 +212,23 @@ function ProfileSettingsPanel({
         ) : null}
       </section>
 
-      <div className="planner-inline-actions planner-inline-actions-end profile-settings-actions">
-        <button type="button" className="role-primary-btn" onClick={handleSave} disabled={!isEditing}>
-          Save Changes
-        </button>
+      <div className="dashboard-form-footer">
+        <div className="dashboard-form-footer-actions">
+          {isEditing ? (
+            <>
+              <button type="button" className="role-secondary-btn" onClick={handleCancel}>
+                Cancel
+              </button>
+              <button type="button" className="role-primary-btn" onClick={handleSave}>
+                Save Changes
+              </button>
+            </>
+          ) : (
+            <button type="button" className="role-edit-btn" onClick={handleEdit}>
+              Edit
+            </button>
+          )}
+        </div>
       </div>
     </section>
   )

@@ -42,6 +42,16 @@ function SchoolSettingsForm({ settings, onSave }: SchoolSettingsFormProps) {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleEdit = () => {
+    setForm(settings)
+    setIsEditing(true)
+  }
+
+  const handleCancel = () => {
+    setForm(settings)
+    setIsEditing(false)
+  }
+
   const handleSave = () => {
     onSave(form)
     setIsEditing(false)
@@ -54,14 +64,6 @@ function SchoolSettingsForm({ settings, onSave }: SchoolSettingsFormProps) {
         <div>
           <h2>School Settings</h2>
           <p className="role-muted">Manage school details, academic metadata, and public contact information.</p>
-        </div>
-        <div className="planner-inline-actions">
-          <button type="button" className="role-secondary-btn" onClick={() => setIsEditing((prev) => !prev)}>
-            {isEditing ? 'Cancel' : 'Edit'}
-          </button>
-          <button type="button" className="role-primary-btn" onClick={handleSave} disabled={!isEditing}>
-            Save Changes
-          </button>
         </div>
       </div>
 
@@ -168,6 +170,25 @@ function SchoolSettingsForm({ settings, onSave }: SchoolSettingsFormProps) {
             </label>
           </div>
         </section>
+      </div>
+
+      <div className="dashboard-form-footer">
+        <div className="dashboard-form-footer-actions">
+          {isEditing ? (
+            <>
+              <button type="button" className="role-secondary-btn" onClick={handleCancel}>
+                Cancel
+              </button>
+              <button type="button" className="role-primary-btn" onClick={handleSave}>
+                Save Changes
+              </button>
+            </>
+          ) : (
+            <button type="button" className="role-edit-btn" onClick={handleEdit}>
+              Edit
+            </button>
+          )}
+        </div>
       </div>
     </section>
   )
