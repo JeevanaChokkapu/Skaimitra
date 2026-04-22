@@ -52,8 +52,11 @@ import {
 import AudienceMultiSelect from '../../components/dashboard/AudienceMultiSelect'
 import ActionIconButton from '../../components/dashboard/ActionIconButton'
 import AIChat from '../../components/dashboard/AIChat'
+import BackArrowHeader from '../../components/dashboard/BackArrowHeader'
+import CourseCalendarAccordion from '../../components/dashboard/CourseCalendarAccordion'
 import MessageCenter from '../../components/dashboard/MessageCenter'
 import ProfileDrawer from '../../components/dashboard/ProfileDrawer'
+import SharingSelector from '../../components/dashboard/SharingSelector'
 import { type ProfileSettingsData } from '../../components/dashboard/ProfileSettingsPanel'
 import RoleCalendar from '../../components/dashboard/RoleCalendar'
 import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
@@ -145,14 +148,14 @@ type PlannerWorkspaceTab = 'lesson' | 'lab'
 
 type PlannerView = 'summary' | 'builder'
 
-type ShareVisibility = 'private' | 'all users' | 'users'
-
 type LabActivity = {
   id: number
   title: string
   course: string
   module: string
   grade: string
+  classNames?: string[]
+  classSections?: string[]
   type: 'Experiment' | 'Demonstration' | 'Observation'
   status: LessonPlanStatus
   description: string
@@ -200,8 +203,8 @@ type LessonPlanFormState = {
   aiDraft: string
   assets: LessonPlanAsset[]
   shareEnabled: boolean
-  shareScope: ShareVisibility
-  shareUsers: string
+  sharedClasses: string[]
+  sharedSections: string[]
 }
 
 type LabActivityFormState = {
@@ -225,8 +228,8 @@ type LabActivityFormState = {
   aiDraft: string
   assets: LessonPlanAsset[]
   shareEnabled: boolean
-  shareScope: ShareVisibility
-  shareUsers: string
+  sharedClasses: string[]
+  sharedSections: string[]
 }
 
 type AssignmentType = 'Quiz' | 'Paper' | 'Homework' | 'Project'
@@ -891,8 +894,8 @@ const createEmptyLessonPlanForm = (): LessonPlanFormState => ({
   aiDraft: '',
   assets: [],
   shareEnabled: false,
-  shareScope: 'private',
-  shareUsers: '',
+  sharedClasses: [],
+  sharedSections: [],
 })
 
 const createEmptyLabActivityForm = (): LabActivityFormState => ({
@@ -916,8 +919,8 @@ const createEmptyLabActivityForm = (): LabActivityFormState => ({
   aiDraft: '',
   assets: [],
   shareEnabled: false,
-  shareScope: 'private',
-  shareUsers: '',
+  sharedClasses: [],
+  sharedSections: [],
 })
 
 const assignmentTypeOptions: AssignmentType[] = ['Quiz', 'Paper', 'Homework', 'Project']
@@ -926,6 +929,7 @@ const assignmentClassOptions = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Cla
 const assignmentSectionOptions = ['A', 'B', 'C']
 const lessonCourseOptions = ['Hindi', 'English', 'Mathematics', 'Science', 'Social Science', 'Computer Science', 'General']
 const classOptions = ['Class VI', 'Class VII', 'Class VIII', 'Class IX', 'Class X', 'Class XI', 'Class XII']
+const sharingSectionOptions = ['A', 'B', 'C']
 const lessonPromptSuggestions = [
   'Create a complete lesson plan for Class 7 English on Grammar (Tenses) with objectives, examples, activities, and assessment.',
   'Generate a mathematics lesson plan for Class 8 Algebra including step-by-step teaching flow and exercises.',
@@ -1329,6 +1333,8 @@ function TeacherDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TeacherTab>('Home')
   const [selectedCourseCalendarGrade, setSelectedCourseCalendarGrade] = useState<CourseCalendarGrade>('Grade 7')
+  const [expandedCourseCalendarMonthKey, setExpandedCourseCalendarMonthKey] = useState<string | null>(null)
+  const [selectedCourseCalendarWeekKey, setSelectedCourseCalendarWeekKey] = useState<string | null>(null)
   const [homeSearchTerm, setHomeSearchTerm] = useState('')
   const [plannerTab, setPlannerTab] = useState<PlannerWorkspaceTab>('lesson')
   const [plannerView, setPlannerView] = useState<PlannerView>('summary')
@@ -1341,6 +1347,7 @@ function TeacherDashboard() {
   const [gradeClassFilter, setGradeClassFilter] = useState('All Classes')
   const [gradeSectionFilter, setGradeSectionFilter] = useState('All Sections')
   const [gradeSubmissions, setGradeSubmissions] = useState<SubmissionRecord[]>(initialSubmittedAssignments)
+  const [selectedGradeAssignmentKey, setSelectedGradeAssignmentKey] = useState<string | null>(null)
   const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRecord | null>(null)
   const [isGradeEvaluatorOpen, setIsGradeEvaluatorOpen] = useState(false)
   const [gradeMethod, setGradeMethod] = useState<'manual' | 'ai'>('manual')
@@ -1429,8 +1436,6 @@ function TeacherDashboard() {
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null)
   const [selectedLabActivity, setSelectedLabActivity] = useState<LabActivity | null>(initialLabActivities[0] ?? null)
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRecord | null>(initialAssignments[0] ?? null)
-  const [lessonSharePromptVisible, setLessonSharePromptVisible] = useState(false)
-  const [labSharePromptVisible, setLabSharePromptVisible] = useState(false)
   const [lessonPlanForm, setLessonPlanForm] = useState<LessonPlanFormState>(() => createEmptyLessonPlanForm())
   const [labActivityForm, setLabActivityForm] = useState<LabActivityFormState>(() => createEmptyLabActivityForm())
   const [assignmentForm, setAssignmentForm] = useState<AssignmentFormState>(() => createEmptyAssignmentForm())
@@ -1448,6 +1453,11 @@ function TeacherDashboard() {
     const timeoutId = window.setTimeout(() => setCalendarNotice(null), 2600)
     return () => window.clearTimeout(timeoutId)
   }, [calendarNotice])
+
+  useEffect(() => {
+    setExpandedCourseCalendarMonthKey(null)
+    setSelectedCourseCalendarWeekKey(null)
+  }, [selectedCourseCalendarGrade])
 
   useEffect(() => {
     const syncMessages = () => {
@@ -1638,9 +1648,9 @@ function TeacherDashboard() {
     [assignmentRecords, assignmentSearchTerm],
   )
 
-  const filteredGradeRows = useMemo(
-    () =>
-      gradeSubmissions.filter((student) => {
+    const filteredGradeRows = useMemo(
+      () =>
+        gradeSubmissions.filter((student) => {
         const query = gradeSearchTerm.trim().toLowerCase()
         const matchesQuery = !query || (
           includesSearch(student.id, query) ||
@@ -1660,8 +1670,54 @@ function TeacherDashboard() {
 
         return matchesQuery && matchesClass && matchesSection
       }),
-    [gradeClassFilter, gradeSearchTerm, gradeSectionFilter, gradeSubmissions],
-  )
+      [gradeClassFilter, gradeSearchTerm, gradeSectionFilter, gradeSubmissions],
+    )
+
+    const groupedGradeAssignments = useMemo(() => {
+      const grouped = new Map<
+        string,
+        {
+          key: string
+          assignmentName: string
+          className: string
+          section: string
+          subject: string
+          dueDate: string
+          submissions: SubmissionRecord[]
+        }
+      >()
+
+      filteredGradeRows.forEach((submission) => {
+        const key = `${submission.assignmentName}__${submission.className}__${submission.section}`
+        const matchingAssignment = assignmentRecords.find(
+          (item) =>
+            item.assignmentName === submission.assignmentName &&
+            item.className === submission.className &&
+            item.section === submission.section,
+        )
+
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            key,
+            assignmentName: submission.assignmentName,
+            className: submission.className,
+            section: submission.section,
+            subject: submission.subject,
+            dueDate: matchingAssignment?.assignmentDue || submission.submittedOn,
+            submissions: [],
+          })
+        }
+
+        grouped.get(key)?.submissions.push(submission)
+      })
+
+      return Array.from(grouped.values())
+    }, [assignmentRecords, filteredGradeRows])
+
+    const selectedGradeAssignment = useMemo(
+      () => groupedGradeAssignments.find((item) => item.key === selectedGradeAssignmentKey) ?? null,
+      [groupedGradeAssignments, selectedGradeAssignmentKey],
+    )
 
   const contentLibraryClassOptions = useMemo(
     () => ['All Classes', ...new Set(contentLibraryItems.map((item) => item.className))],
@@ -1996,16 +2052,31 @@ function TeacherDashboard() {
     size: file.size,
   })
 
-  const getShareScopeLabel = (scope: ShareVisibility) => {
-    switch (scope) {
-      case 'all users':
-        return 'All Users'
-      case 'users':
-        return 'Selected Users'
-      default:
-        return 'Private'
+  const parseStructuredSharing = (item?: {
+    classNames?: string[]
+    classSections?: string[]
+    sharedWith?: string[]
+  }) => {
+    const derivedClasses = item?.classNames?.filter(Boolean) ?? []
+    const derivedSections = item?.classSections?.filter(Boolean) ?? []
+
+    if (derivedClasses.length || derivedSections.length) {
+      return { classes: derivedClasses, sections: derivedSections }
+    }
+
+    const sharedWith = item?.sharedWith ?? []
+    return {
+      classes: sharedWith.filter((value) => classOptions.includes(value)),
+      sections: sharedWith
+        .map((value) => value.replace(/^Section\s+/i, '').trim())
+        .filter((value) => sharingSectionOptions.includes(value)),
     }
   }
+
+  const buildSharedAudience = (classes: string[], sections: string[]) => [
+    ...classes,
+    ...sections.map((section) => `Section ${section}`),
+  ]
 
   const openNewLessonBuilder = () => {
     setPlannerTab('lesson')
@@ -2013,10 +2084,11 @@ function TeacherDashboard() {
     setEditingLessonPlanId(null)
     setLessonBuilderMode('Manual')
     setLessonPlanForm(createEmptyLessonPlanForm())
-    setLessonSharePromptVisible(false)
   }
 
   const openEditLessonPlanBuilder = (plan: LessonPlan) => {
+    const sharedAudience = parseStructuredSharing(plan)
+
     setPlannerTab('lesson')
     setPlannerView('builder')
     setEditingLessonPlanId(plan.id)
@@ -2044,16 +2116,14 @@ function TeacherDashboard() {
       aiDraft: plan.activities || plan.description || '',
       assets: plan.assets || [],
       shareEnabled: plan.shareScope ? plan.shareScope !== 'Private' : false,
-      shareScope: plan.shareScope === 'All Users' ? 'all users' : plan.shareScope === 'Selected Users' ? 'users' : 'private',
-      shareUsers: plan.sharedWith?.join(', ') || '',
+      sharedClasses: sharedAudience.classes,
+      sharedSections: sharedAudience.sections,
     })
-    setLessonSharePromptVisible(true)
   }
 
   const cancelLessonBuilder = () => {
     setPlannerView('summary')
     setEditingLessonPlanId(null)
-    setLessonSharePromptVisible(false)
     navigate(-1)
   }
 
@@ -2071,7 +2141,6 @@ function TeacherDashboard() {
 
     const nextAssets = Array.from(files).map(createAssetRecord)
     setLessonPlanForm((prev) => ({ ...prev, assets: [...prev.assets, ...nextAssets] }))
-    setLessonSharePromptVisible(true)
     setCalendarNotice({ type: 'success', message: 'Assets uploaded. Choose how you want to share them.' })
   }
 
@@ -2213,14 +2282,24 @@ function TeacherDashboard() {
       return
     }
 
+    if (lessonPlanForm.shareEnabled && !lessonPlanForm.sharedClasses.length && !lessonPlanForm.sharedSections.length) {
+      setCalendarNotice({ type: 'error', message: 'Select at least one class or section before enabling sharing.' })
+      return
+    }
+
     const derivedModule = lessonPlanForm.module.trim() || lessonPlanForm.type
     const now = new Date().toISOString().slice(0, 10)
+    const sharedWith = lessonPlanForm.shareEnabled
+      ? buildSharedAudience(lessonPlanForm.sharedClasses, lessonPlanForm.sharedSections)
+      : []
     const nextPlan: LessonPlan = {
       id: editingLessonPlanId || Date.now(),
       title: lessonPlanForm.title.trim(),
       course: lessonPlanForm.course.trim(),
       module: derivedModule,
       className: lessonPlanForm.className.trim() || `Class ${lessonPlanForm.grade || 'General'}`,
+      classNames: lessonPlanForm.sharedClasses,
+      classSections: lessonPlanForm.sharedSections,
       grade: lessonPlanForm.grade.trim(),
       subject: lessonPlanForm.course.trim(),
       type: lessonPlanForm.type,
@@ -2242,13 +2321,8 @@ function TeacherDashboard() {
       publishedAt: publish ? now : lessonPlansState.find((plan) => plan.id === editingLessonPlanId)?.publishedAt,
       externalUrl: lessonBuilderMode === 'External' ? lessonPlanForm.externalUrl.trim() : undefined,
       aiPrompt: lessonBuilderMode === 'AI' ? lessonPlanForm.aiPrompt.trim() : undefined,
-      shareScope: lessonPlanForm.shareEnabled ? getShareScopeLabel(lessonPlanForm.shareScope) : 'Private',
-      sharedWith:
-        lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'users'
-          ? lessonPlanForm.shareUsers.split(',').map((item) => item.trim()).filter(Boolean)
-          : lessonPlanForm.shareEnabled && lessonPlanForm.shareScope === 'all users'
-            ? ['All users']
-            : [],
+      shareScope: lessonPlanForm.shareEnabled ? 'Selected Users' : 'Private',
+      sharedWith,
       assets: options?.assetsOverride || lessonPlanForm.assets,
     }
 
@@ -2259,7 +2333,6 @@ function TeacherDashboard() {
     })
     setPlannerView('summary')
     setEditingLessonPlanId(null)
-    setLessonSharePromptVisible(true)
     setCalendarNotice({
       type: 'success',
       message: options?.successMessage || `Lesson plan ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
@@ -2379,10 +2452,11 @@ function TeacherDashboard() {
     setEditingLabActivityId(null)
     setLabBuilderMode('Manual')
     setLabActivityForm(createEmptyLabActivityForm())
-    setLabSharePromptVisible(false)
   }
 
   const openEditLabActivityBuilder = (activity: LabActivity) => {
+    const sharedAudience = parseStructuredSharing(activity)
+
     setPlannerTab('lab')
     setPlannerView('builder')
     setEditingLabActivityId(activity.id)
@@ -2408,16 +2482,14 @@ function TeacherDashboard() {
       aiDraft: activity.description || '',
       assets: activity.assets || [],
       shareEnabled: activity.shareScope ? activity.shareScope !== 'Private' : false,
-      shareScope: activity.shareScope === 'All Users' ? 'all users' : activity.shareScope === 'Selected Users' ? 'users' : 'private',
-      shareUsers: activity.sharedWith?.join(', ') || '',
+      sharedClasses: sharedAudience.classes,
+      sharedSections: sharedAudience.sections,
     })
-    setLabSharePromptVisible(true)
   }
 
   const cancelLabActivityBuilder = () => {
     setPlannerView('summary')
     setEditingLabActivityId(null)
-    setLabSharePromptVisible(false)
     navigate(-1)
   }
 
@@ -2448,7 +2520,6 @@ function TeacherDashboard() {
 
     const nextAssets = Array.from(files).map(createAssetRecord)
     setLabActivityForm((prev) => ({ ...prev, assets: [...prev.assets, ...nextAssets] }))
-    setLabSharePromptVisible(true)
     setCalendarNotice({ type: 'success', message: 'Lab assets uploaded. Choose how you want to share them.' })
   }
 
@@ -2575,14 +2646,24 @@ function TeacherDashboard() {
       return
     }
 
+    if (labActivityForm.shareEnabled && !labActivityForm.sharedClasses.length && !labActivityForm.sharedSections.length) {
+      setCalendarNotice({ type: 'error', message: 'Select at least one class or section before enabling sharing.' })
+      return
+    }
+
     const derivedModule = labActivityForm.module.trim() || labActivityForm.type
     const now = new Date().toISOString().slice(0, 10)
+    const sharedWith = labActivityForm.shareEnabled
+      ? buildSharedAudience(labActivityForm.sharedClasses, labActivityForm.sharedSections)
+      : []
     const nextActivity: LabActivity = {
       id: editingLabActivityId || Date.now(),
       title: labActivityForm.title.trim(),
       course: labActivityForm.course.trim(),
       module: derivedModule,
       grade: labActivityForm.grade.trim(),
+      classNames: labActivityForm.sharedClasses,
+      classSections: labActivityForm.sharedSections,
       type: labActivityForm.type,
       status: publish ? 'Active' : labActivityForm.status,
       description: labActivityForm.description.trim(),
@@ -2602,13 +2683,8 @@ function TeacherDashboard() {
       publishedAt: publish ? now : labActivitiesState.find((activity) => activity.id === editingLabActivityId)?.publishedAt,
       externalUrl: labBuilderMode === 'External' ? labActivityForm.externalUrl.trim() : undefined,
       aiPrompt: labBuilderMode === 'AI' ? labActivityForm.aiPrompt.trim() : undefined,
-      shareScope: labActivityForm.shareEnabled ? getShareScopeLabel(labActivityForm.shareScope) : 'Private',
-      sharedWith:
-        labActivityForm.shareEnabled && labActivityForm.shareScope === 'users'
-          ? labActivityForm.shareUsers.split(',').map((item) => item.trim()).filter(Boolean)
-          : labActivityForm.shareEnabled && labActivityForm.shareScope === 'all users'
-            ? ['All users']
-            : [],
+      shareScope: labActivityForm.shareEnabled ? 'Selected Users' : 'Private',
+      sharedWith,
       assets: options?.assetsOverride || labActivityForm.assets,
     }
 
@@ -2621,7 +2697,6 @@ function TeacherDashboard() {
     })
     setPlannerView('summary')
     setEditingLabActivityId(null)
-    setLabSharePromptVisible(true)
     setCalendarNotice({
       type: 'success',
       message: options?.successMessage || `Lab activity ${publish ? 'published' : 'saved as draft'} successfully. Review sharing before distributing it.`,
@@ -2924,6 +2999,26 @@ function TeacherDashboard() {
       score: submission.score === 'Pending' ? '' : submission.score.replace('%', ''),
       comment: submission.status === 'Reviewed' ? 'Reviewed and ready to share with the student.' : '',
     })
+  }
+
+  const handleViewSubmission = (submission: SubmissionRecord) => {
+    setCalendarNotice({ type: 'success', message: `Viewing ${submission.studentName}'s submission.` })
+  }
+
+  const handleDownloadSubmission = (submission: SubmissionRecord) => {
+    setCalendarNotice({ type: 'success', message: `${submission.submissionFile} is ready for download.` })
+  }
+
+  const handleQuickUploadSubmission = (submission: SubmissionRecord) => {
+    if (submission.score === 'Pending') {
+      setCalendarNotice({ type: 'error', message: `Grade ${submission.studentName}'s work before uploading.` })
+      return
+    }
+
+    setGradeSubmissions((prev) =>
+      prev.map((item) => (item.id === submission.id ? { ...item, status: 'Reviewed' } : item)),
+    )
+    setCalendarNotice({ type: 'success', message: `Grade uploaded for ${submission.studentName}.` })
   }
 
   const updateGradeEvaluationField = (field: keyof GradeEvaluationEntry, value: string) => {
@@ -3373,73 +3468,38 @@ function TeacherDashboard() {
 
   const renderShareSettings = (
     type: 'lesson' | 'lab',
-    shareVisible: boolean,
     shareEnabled: boolean,
-    shareScope: ShareVisibility,
-    shareUsers: string,
+    sharedClasses: string[],
+    sharedSections: string[],
   ) => (
-    <section className={`role-card planner-card planner-share-card ${shareVisible ? 'is-highlighted' : ''}`}>
-      <div className="planner-card-head">
-        <div>
-          <h3>Sharing</h3>
-          <p className="role-muted">
-            After uploading assets or saving, decide whether this should stay private, be shared globally, or be sent to selected users.
-          </p>
-        </div>
-      </div>
-      <div className="planner-share-grid">
-        <label className="planner-toggle-field">
-          <span>Allow sharing</span>
-          <input
-            type="checkbox"
-            checked={shareEnabled}
-            onChange={(e) => {
-              if (type === 'lesson') {
-                updateLessonPlanField('shareEnabled', e.target.checked)
-              } else {
-                updateLabActivityField('shareEnabled', e.target.checked)
-              }
-            }}
-          />
-        </label>
-        <label>
-          <span>Share scope</span>
-          <select
-            value={shareScope}
-            disabled={!shareEnabled}
-            onChange={(e) => {
-              const nextValue = e.target.value as ShareVisibility
-              if (type === 'lesson') {
-                updateLessonPlanField('shareScope', nextValue)
-              } else {
-                updateLabActivityField('shareScope', nextValue)
-              }
-            }}
-          >
-            <option value="private">Private</option>
-            <option value="all users">All Users</option>
-            <option value="users">Selected Users</option>
-          </select>
-        </label>
-        {shareEnabled && shareScope === 'users' ? (
-          <label className="planner-span-2">
-            <span>Specific users</span>
-            <input
-              type="text"
-              placeholder="Enter user names separated by commas"
-              value={shareUsers}
-              onChange={(e) => {
-                if (type === 'lesson') {
-                  updateLessonPlanField('shareUsers', e.target.value)
-                } else {
-                  updateLabActivityField('shareUsers', e.target.value)
-                }
-              }}
-            />
-          </label>
-        ) : null}
-      </div>
-    </section>
+    <SharingSelector
+      enabled={shareEnabled}
+      selectedClasses={sharedClasses}
+      selectedSections={sharedSections}
+      classOptions={classOptions}
+      sectionOptions={sharingSectionOptions}
+      onEnabledChange={(enabled) => {
+        if (type === 'lesson') {
+          updateLessonPlanField('shareEnabled', enabled)
+        } else {
+          updateLabActivityField('shareEnabled', enabled)
+        }
+      }}
+      onClassesChange={(values) => {
+        if (type === 'lesson') {
+          updateLessonPlanField('sharedClasses', values)
+        } else {
+          updateLabActivityField('sharedClasses', values)
+        }
+      }}
+      onSectionsChange={(values) => {
+        if (type === 'lesson') {
+          updateLessonPlanField('sharedSections', values)
+        } else {
+          updateLabActivityField('sharedSections', values)
+        }
+      }}
+    />
   )
 
   const renderLessonOutputPreview = () => {
@@ -3869,7 +3929,7 @@ function TeacherDashboard() {
         </section>
       ) : null}
 
-      {renderShareSettings('lesson', lessonSharePromptVisible || lessonPlanForm.assets.length > 0, lessonPlanForm.shareEnabled, lessonPlanForm.shareScope, lessonPlanForm.shareUsers)}
+      {renderShareSettings('lesson', lessonPlanForm.shareEnabled, lessonPlanForm.sharedClasses, lessonPlanForm.sharedSections)}
 
       <section className="role-card planner-card planner-actions-card">
         <div className="planner-inline-actions planner-inline-actions-end">
@@ -3977,6 +4037,10 @@ function TeacherDashboard() {
               <div className="planner-detail-block">
                 <strong>Procedure</strong>
                 <p>{selectedLabActivity.procedureSteps.length ? selectedLabActivity.procedureSteps.join(', ') : 'No procedure added.'}</p>
+              </div>
+              <div className="planner-detail-block">
+                <strong>Shared with</strong>
+                <p>{selectedLabActivity.sharedWith?.length ? selectedLabActivity.sharedWith.join(', ') : 'This item is currently private.'}</p>
               </div>
               <div className="planner-inline-actions">
                 <button type="button" className="role-secondary-btn" onClick={() => openEditLabActivityBuilder(selectedLabActivity)}>Edit</button>
@@ -4234,7 +4298,7 @@ function TeacherDashboard() {
         </section>
       ) : null}
 
-      {renderShareSettings('lab', labSharePromptVisible || labActivityForm.assets.length > 0, labActivityForm.shareEnabled, labActivityForm.shareScope, labActivityForm.shareUsers)}
+      {renderShareSettings('lab', labActivityForm.shareEnabled, labActivityForm.sharedClasses, labActivityForm.sharedSections)}
 
       <section className="role-card planner-card planner-actions-card">
         <div className="planner-inline-actions planner-inline-actions-end">
@@ -4657,97 +4721,106 @@ function TeacherDashboard() {
     <main className="role-main role-main-detail">
       <section className="role-primary">
         {!isGradeEvaluatorOpen ? (
-          <section className="role-card role-detail-card">
-            <div className="role-section-head">
-              <div>
-                <h2>Grades</h2>
-                <p className="role-muted">Find submitted assignments class-wise and section-wise, then review and grade them quickly</p>
+          !selectedGradeAssignment ? (
+            <section className="role-card role-detail-card teacher-grade-assignments-shell">
+              <div className="role-section-head">
+                <div>
+                  <h2>Grades</h2>
+                  <p className="role-muted">Open an assignment to review submissions and grade students faster.</p>
+                </div>
               </div>
-            </div>
-            <div className="role-user-toolbar">
-              <div className="role-user-search-wrap">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Search by student, assignment, subject, class, section, or status..."
-                  value={gradeSearchTerm}
-                  onChange={(e) => setGradeSearchTerm(e.target.value)}
-                />
+              <div className="role-user-toolbar">
+                <div className="role-user-search-wrap">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search by assignment, subject, class, section, or status..."
+                    value={gradeSearchTerm}
+                    onChange={(e) => setGradeSearchTerm(e.target.value)}
+                  />
+                </div>
+                <select value={gradeClassFilter} onChange={(e) => setGradeClassFilter(e.target.value)}>
+                  <option value="All Classes">All Classes</option>
+                  <option value="Class 6">Class 6</option>
+                  <option value="Class 7">Class 7</option>
+                  <option value="Class 8">Class 8</option>
+                  <option value="Class 9">Class 9</option>
+                  <option value="Class 10">Class 10</option>
+                  <option value="Class 11">Class 11</option>
+                  <option value="Class 12">Class 12</option>
+                </select>
+                <select value={gradeSectionFilter} onChange={(e) => setGradeSectionFilter(e.target.value)}>
+                  <option value="All Sections">All Sections</option>
+                  <option value="A">Section A</option>
+                  <option value="B">Section B</option>
+                  <option value="C">Section C</option>
+                </select>
               </div>
-              <select value={gradeClassFilter} onChange={(e) => setGradeClassFilter(e.target.value)}>
-                <option value="All Classes">All Classes</option>
-                <option value="Class 6">Class 6</option>
-                <option value="Class 7">Class 7</option>
-                <option value="Class 8">Class 8</option>
-                <option value="Class 9">Class 9</option>
-                <option value="Class 10">Class 10</option>
-                <option value="Class 11">Class 11</option>
-                <option value="Class 12">Class 12</option>
-              </select>
-              <select value={gradeSectionFilter} onChange={(e) => setGradeSectionFilter(e.target.value)}>
-                <option value="All Sections">All Sections</option>
-                <option value="A">Section A</option>
-                <option value="B">Section B</option>
-                <option value="C">Section C</option>
-              </select>
-            </div>
-            <div className="role-table-wrap">
-              <table className="role-table teacher-grade-table">
-                <thead>
-                  <tr>
-                    <th>Profile</th>
-                    <th>Student</th>
-                    <th>Class</th>
-                    <th>Section</th>
-                    <th>Assignment</th>
-                    <th>Type</th>
-                    <th>Subject</th>
-                    <th>Submitted On</th>
-                    <th>Status</th>
-                    <th>Score</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredGradeRows.map((student) => (
-                    <tr key={student.id}>
-                      <td>
-                        <span className="teacher-student-avatar teacher-grade-avatar">
-                          {gradeStudentProfiles.find((item) => item.name === student.studentName)?.initials ?? getInitials(student.studentName)}
+              <div className="teacher-grade-assignment-grid">
+                {groupedGradeAssignments.map((assignment) => (
+                  <button
+                    key={assignment.key}
+                    type="button"
+                    className="teacher-grade-assignment-card"
+                    onClick={() => setSelectedGradeAssignmentKey(assignment.key)}
+                  >
+                    <strong>{assignment.assignmentName}</strong>
+                    <p>{assignment.subject} • Due: {assignment.dueDate}</p>
+                    <span>Submissions: {assignment.submissions.length}</span>
+                  </button>
+                ))}
+              </div>
+              {groupedGradeAssignments.length === 0 ? <p className="role-muted">No assignments match your selected filters.</p> : null}
+            </section>
+          ) : (
+            <section className="role-card role-detail-card teacher-grade-submission-shell">
+              <BackArrowHeader
+                title={`Assignment: ${selectedGradeAssignment.assignmentName}`}
+                subtitle={`${selectedGradeAssignment.className} - ${selectedGradeAssignment.section}`}
+                onBack={() => setSelectedGradeAssignmentKey(null)}
+              />
+              <div className="teacher-grade-student-list">
+                {selectedGradeAssignment.submissions.map((student) => (
+                  <div key={student.id} className="teacher-grade-student-row">
+                    <div className="teacher-grade-student-main">
+                      <span className="teacher-student-avatar teacher-grade-avatar">
+                        {gradeStudentProfiles.find((item) => item.name === student.studentName)?.initials ?? getInitials(student.studentName)}
+                      </span>
+                      <div>
+                        <strong>{student.studentName}</strong>
+                        <span className={`teacher-grade-status-text ${student.status === 'Reviewed' ? 'is-reviewed' : 'is-submitted'}`}>
+                          {student.status}
                         </span>
-                      </td>
-                      <td>{student.studentName}</td>
-                      <td>{student.className}</td>
-                      <td>{student.section}</td>
-                      <td>{student.assignmentName}</td>
-                      <td>{student.assignmentType}</td>
-                      <td>{student.subject}</td>
-                      <td>{student.submittedOn}</td>
-                      <td>
-                        <span className={`teacher-grade-status-text ${student.status === 'Reviewed' ? 'is-reviewed' : 'is-submitted'}`}>{student.status}</span>
-                      </td>
-                      <td>
-                        <span className={`teacher-grade-score-text ${student.score === 'Pending' ? 'is-pending' : 'is-scored'}`}>{student.score}</span>
-                      </td>
-                      <td>
-                        <button type="button" className="role-secondary-btn teacher-detail-btn" onClick={() => openGradeEvaluator(student)}>
-                          Grade Now
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredGradeRows.length === 0 ? <p className="role-muted">No submitted assignments match your selected class, section, or search.</p> : null}
-            </div>
-          </section>
+                      </div>
+                    </div>
+                    <div className="teacher-grade-student-actions">
+                      <button type="button" className="role-icon-square-btn" title="View submission" aria-label={`View ${student.studentName} submission`} onClick={() => handleViewSubmission(student)}>
+                        <Eye size={16} />
+                      </button>
+                      <button type="button" className="role-icon-square-btn" title="Upload grade" aria-label={`Upload grade for ${student.studentName}`} onClick={() => handleQuickUploadSubmission(student)}>
+                        <Upload size={16} />
+                      </button>
+                      <button type="button" className="role-icon-square-btn" title="Download submission" aria-label={`Download ${student.studentName} submission`} onClick={() => handleDownloadSubmission(student)}>
+                        <Download size={16} />
+                      </button>
+                      <button type="button" className="role-icon-square-btn" title="Grade now" aria-label={`Grade ${student.studentName} now`} onClick={() => openGradeEvaluator(student)}>
+                        <Pencil size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
         ) : (
           <div className="planner-builder-stack">
             <section className="role-card planner-card">
               <div className="planner-card-head">
                 <div>
-                  <h3>Grade Evaluation</h3>
-                  <p className="role-muted">Evaluate the selected student with manual grading or AI-assisted grading.</p>
+                  <h3>{selectedSubmission?.assignmentName || 'Grade Evaluation'}</h3>
+                  <p className="role-muted">
+                    {selectedSubmission ? `${selectedSubmission.className} - ${selectedSubmission.section}` : 'Evaluate the selected submission.'}
+                  </p>
                 </div>
               </div>
               <div className="planner-form-grid">
@@ -4790,7 +4863,7 @@ function TeacherDashboard() {
                   ) : null}
                   <div>
                     <strong>{selectedSubmission?.studentName || ''}</strong>
-                    <span>{selectedSubmission ? `${selectedSubmission.className}${selectedSubmission.section}` : ''}</span>
+                    <span>{selectedSubmission?.status || ''}</span>
                   </div>
                 </div>
                 <span className={`teacher-grade-card-status ${selectedSubmission?.status === 'Reviewed' || gradeEvaluation.score.trim() ? 'is-graded' : 'is-pending'}`}>
@@ -5070,6 +5143,38 @@ function TeacherDashboard() {
 
   const renderCourseCalendar = () => {
     const selectedCalendar = courseCalendarData[selectedCourseCalendarGrade]
+    const accordionMonths = selectedCalendar.months.map((month) => ({
+      key: `${selectedCourseCalendarGrade}-${month.month}`,
+      month: month.month,
+      year: month.year,
+      weeks: normalizeCourseCalendarWeeks(month.weeks).map((week) => ({
+        key: `${selectedCourseCalendarGrade}-${month.month}-${week.label}`,
+        label: week.label,
+        meta: week.dateRange,
+        detail: (
+          <article className="course-calendar-week-card">
+            <div className="course-calendar-week-body">
+              <div className="course-calendar-week-head">
+                <h4>{week.label}</h4>
+                <span>{week.dateRange}</span>
+              </div>
+              <div className="course-calendar-lesson-grid">
+                {week.lessons.map((lesson) => (
+                  <article
+                    key={`${week.label}-${lesson.period || 'empty'}-${lesson.title || lesson.description}`}
+                    className={`course-calendar-lesson-card ${lesson.accentClass} ${lesson.period ? '' : 'is-empty'}`}
+                  >
+                    {lesson.period ? <span className="course-calendar-period">{lesson.period}</span> : null}
+                    {lesson.title ? <h5>{lesson.title}</h5> : <h5 className="course-calendar-empty-title">No lesson scheduled</h5>}
+                    {lesson.description ? <p>{lesson.description}</p> : <p className="course-calendar-empty-copy">Awaiting lesson details</p>}
+                  </article>
+                ))}
+              </div>
+            </div>
+          </article>
+        ),
+      })),
+    }))
 
     return (
       <main className="role-main role-main-detail">
@@ -5119,41 +5224,26 @@ function TeacherDashboard() {
               ))}
             </div>
 
-            <div className="course-calendar-month-stack">
-              {selectedCalendar.months.map((month) => (
-                <section key={`${selectedCourseCalendarGrade}-${month.month}`} className="course-calendar-month-card">
-                  <div className="course-calendar-month-head">
-                    <h3>{month.month}</h3>
-                    <span className="course-calendar-year">{month.year}</span>
-                  </div>
+            <CourseCalendarAccordion
+              months={accordionMonths}
+              expandedMonthKey={expandedCourseCalendarMonthKey}
+              selectedWeekKey={selectedCourseCalendarWeekKey}
+              onMonthToggle={(monthKey) => {
+                setExpandedCourseCalendarMonthKey((currentMonthKey) => {
+                  if (currentMonthKey === monthKey) {
+                    setSelectedCourseCalendarWeekKey(null)
+                    return null
+                  }
 
-                  <div className="course-calendar-week-stack">
-                    {normalizeCourseCalendarWeeks(month.weeks).map((week) => (
-                      <article key={`${month.month}-${week.label}`} className="course-calendar-week-card">
-                        <div className="course-calendar-week-body">
-                          <div className="course-calendar-week-head">
-                            <h4>{week.label}</h4>
-                            <span>{week.dateRange}</span>
-                          </div>
-                          <div className="course-calendar-lesson-grid">
-                            {week.lessons.map((lesson) => (
-                              <article
-                                key={`${week.label}-${lesson.period || 'empty'}-${lesson.title || lesson.description}`}
-                                className={`course-calendar-lesson-card ${lesson.accentClass} ${lesson.period ? '' : 'is-empty'}`}
-                              >
-                                {lesson.period ? <span className="course-calendar-period">{lesson.period}</span> : null}
-                                {lesson.title ? <h5>{lesson.title}</h5> : <h5 className="course-calendar-empty-title">No lesson scheduled</h5>}
-                                {lesson.description ? <p>{lesson.description}</p> : <p className="course-calendar-empty-copy">Awaiting lesson details</p>}
-                              </article>
-                            ))}
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
+                  setSelectedCourseCalendarWeekKey(null)
+                  return monthKey
+                })
+              }}
+              onWeekSelect={(monthKey, weekKey) => {
+                setExpandedCourseCalendarMonthKey(monthKey)
+                setSelectedCourseCalendarWeekKey((currentWeekKey) => (currentWeekKey === weekKey ? null : weekKey))
+              }}
+            />
           </section>
         </section>
       </main>
