@@ -63,7 +63,7 @@ function AddTeacherModal({
               Cancel
             </button>
             <button type="submit" className="role-primary-btn">
-              {mode === 'edit' ? 'Save Changes' : 'Save Teacher'}
+              Save
             </button>
           </div>
         </form>

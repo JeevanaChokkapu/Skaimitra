@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BarChart3,
@@ -19,11 +19,12 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import AddTeacherModal from '../../components/admin/AddTeacherModal'
-import AddStudentModal from '../../components/admin/AddStudentModal'
+import AddQualificationModal from '../../components/admin/AddQualificationModal'
 import AssignTeacherModal from '../../components/admin/AssignTeacherModal'
 import StudentCard from '../../components/admin/StudentCard'
 import TeacherCard from '../../components/admin/TeacherCard'
+import TeacherProfilePage from '../../components/admin/TeacherProfile'
+import StudentProfilePage from '../../components/admin/StudentProfilePage'
 import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
 import {
   createCalendarEvent,
@@ -59,17 +60,29 @@ import {
 } from '../../lib/dashboardData'
 import { auth } from '../../lib/firebase'
 import {
-  buildAssignmentKey,
   createEmptyAssignTeacherForm,
   createEmptyTeacherForm,
+  createEmptyTeacherQualificationForm,
   getTeacherFullName,
+  mergeTeacherAssignments,
+  normalizeTeacherProfile,
+  normalizeTeacherClassGroups,
   type AssignTeacherFormValues,
+  type ParentRelation,
+  type TeacherAssignment,
+  type TeacherQualification,
+  type TeacherQualificationFormValues,
   type TeacherFormValues,
   type TeacherProfile,
+  type TeacherRole,
 } from '../../components/admin/teacherTypes'
 import {
+  createEmptyGuardian,
   createEmptyStudentForm,
+  getStudentFullName,
+  normalizeStudentProfile,
   type StudentFormValues,
+  type GuardianContact,
   type StudentProfile,
 } from '../../components/admin/studentTypes'
 import '../role-dashboard.css'
@@ -160,14 +173,6 @@ const teacherSubjectOptions = [
   'Physical Education',
   'Art & Craft',
 ]
-const teacherCourseOptions = [
-  'Foundation Program',
-  'CBSE Core Curriculum',
-  'STEM Excellence',
-  'Language Enrichment',
-  'Sports & Wellness',
-  'Creative Arts',
-]
 const teacherSectionOptions = ['A', 'B', 'C']
 const defaultTeacherRecords: TeacherProfile[] = [
   {
@@ -176,20 +181,30 @@ const defaultTeacherRecords: TeacherProfile[] = [
     email: 'rajesh@school.edu',
     password: 'Teacher@123',
     firstName: 'Dr. Rajesh',
+    middleName: '',
     lastName: 'Kumar',
     address: '12 Knowledge Park Road, Hyderabad',
+    pincode: '500084',
+    profilePhoto: '',
     phone: '+91 98765 43211',
     homePhone: '+91 040 4000 4201',
     whatsAppPhone: '+91 98765 43211',
     gender: 'Male',
+    roles: ['teacher'],
+    children: [],
+    parentRelationships: [],
     subjectSpecializations: ['Mathematics', 'Computer Science'],
     joiningDate: '2021-06-10',
     priorExperience: '8',
     relievingDate: '',
     assignments: [
-      { id: 'rajesh-assignment-1', course: 'CBSE Core Curriculum', className: 'Class 6', section: 'A', subject: 'Mathematics' },
-      { id: 'rajesh-assignment-2', course: 'CBSE Core Curriculum', className: 'Class 6', section: 'B', subject: 'Mathematics' },
+      {
+        id: 'rajesh-assignment-1',
+        subject: 'Mathematics',
+        classes: [{ className: 'Class 6', sections: ['A', 'B'] }],
+      },
     ],
+    qualifications: [],
   },
   {
     id: 2,
@@ -197,19 +212,30 @@ const defaultTeacherRecords: TeacherProfile[] = [
     email: 'priya@school.edu',
     password: 'Teacher@123',
     firstName: 'Ms. Priya',
+    middleName: '',
     lastName: 'Patel',
     address: '8 Lake View Colony, Hyderabad',
+    pincode: '500081',
+    profilePhoto: '',
     phone: '+91 98765 43213',
     homePhone: '+91 040 4000 4202',
     whatsAppPhone: '+91 98765 43213',
     gender: 'Female',
+    roles: ['teacher'],
+    children: [],
+    parentRelationships: [],
     subjectSpecializations: ['Science'],
     joiningDate: '2022-04-18',
     priorExperience: '6',
     relievingDate: '',
     assignments: [
-      { id: 'priya-assignment-1', course: 'STEM Excellence', className: 'Class 7', section: 'A', subject: 'Science' },
+      {
+        id: 'priya-assignment-1',
+        subject: 'Science',
+        classes: [{ className: 'Class 7', sections: ['A'] }],
+      },
     ],
+    qualifications: [],
   },
   {
     id: 3,
@@ -217,70 +243,137 @@ const defaultTeacherRecords: TeacherProfile[] = [
     email: 'meera@school.edu',
     password: 'Teacher@123',
     firstName: 'Meera',
+    middleName: '',
     lastName: 'Joshi',
     address: '22 Green Valley Street, Hyderabad',
+    pincode: '500032',
+    profilePhoto: '',
     phone: '+91 98765 43215',
     homePhone: '+91 040 4000 4203',
     whatsAppPhone: '+91 98765 43215',
     gender: 'Female',
+    roles: ['teacher'],
+    children: [],
+    parentRelationships: [],
     subjectSpecializations: ['English', 'Hindi'],
     joiningDate: '2020-07-02',
     priorExperience: '10',
     relievingDate: '',
     assignments: [],
+    qualifications: [],
   },
 ]
 const defaultStudentRecords: StudentProfile[] = [
   {
     id: 1,
-    fullName: 'Rahul Sharma',
-    admissionNo: 'ADM-2026-001',
-    rollNo: '12',
-    className: 'Class 6',
-    section: 'A',
-    gradeId: 'GR-06',
-    sectionId: 'SEC-A',
+    firstName: 'Rahul',
+    middleName: '',
+    lastName: 'Sharma',
+    admissionNumber: 'ADM-24001',
+    rollNumber: '06-A-01',
     dateOfBirth: '2013-08-12',
     gender: 'Male',
-    address: '12 Lake View Colony, Hyderabad',
-    guardianName: 'Sanjay Sharma',
-    relation: 'Father',
-    guardianPhone: '+91 98765 44001',
-    guardianEmail: 'sanjay.sharma@email.com',
+    className: 'Class 6',
+    section: 'A',
+    addressLine: '12 Lake View Colony',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    country: 'India',
+    pincode: '500084',
+    profilePhoto: '',
+    mailingAddress: '12 Lake View Colony, Hyderabad, Telangana',
+    permanentAddress: '12 Lake View Colony, Hyderabad, Telangana',
+    email: 'rahul.sharma@student.school.edu',
+    whatsAppPhone: '9876544001',
+    phoneNumber: '9876544001',
+    hasEmergencyContact: false,
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    guardians: [
+      {
+        id: 'guardian-1',
+        name: 'Sanjay Sharma',
+        relation: 'Father',
+        phone: '9876544001',
+        email: 'sanjay.sharma@email.com',
+      },
+    ],
+    username: 'rahul.sharma',
+    password: 'Student@123',
   },
   {
     id: 2,
-    fullName: 'Priya Reddy',
-    admissionNo: 'ADM-2026-002',
-    rollNo: '08',
-    className: 'Class 7',
-    section: 'B',
-    gradeId: 'GR-07',
-    sectionId: 'SEC-B',
+    firstName: 'Priya',
+    middleName: '',
+    lastName: 'Reddy',
+    admissionNumber: 'ADM-24002',
+    rollNumber: '07-A-12',
     dateOfBirth: '2012-03-04',
     gender: 'Female',
-    address: '4 Green Meadows, Hyderabad',
-    guardianName: 'Lakshmi Reddy',
-    relation: 'Mother',
-    guardianPhone: '+91 98765 44002',
-    guardianEmail: 'lakshmi.reddy@email.com',
+    className: 'Class 7',
+    section: 'A',
+    addressLine: '4 Green Meadows',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    country: 'India',
+    pincode: '500081',
+    profilePhoto: '',
+    mailingAddress: '4 Green Meadows, Hyderabad, Telangana',
+    permanentAddress: '4 Green Meadows, Hyderabad, Telangana',
+    email: 'priya.reddy@student.school.edu',
+    whatsAppPhone: '9876544002',
+    phoneNumber: '9876544002',
+    hasEmergencyContact: true,
+    emergencyContactName: 'Ramesh Reddy',
+    emergencyContactPhone: '9876544012',
+    guardians: [
+      {
+        id: 'guardian-2',
+        name: 'Lakshmi Reddy',
+        relation: 'Mother',
+        phone: '9876544002',
+        email: 'lakshmi.reddy@email.com',
+      },
+    ],
+    username: 'priya.reddy',
+    password: 'Student@123',
   },
   {
     id: 3,
-    fullName: 'Arjun Kumar',
-    admissionNo: 'ADM-2026-003',
-    rollNo: '21',
-    className: 'Class 8',
-    section: 'C',
-    gradeId: 'GR-08',
-    sectionId: 'SEC-C',
+    firstName: 'Arjun',
+    middleName: '',
+    lastName: 'Kumar',
+    admissionNumber: 'ADM-24003',
+    rollNumber: '08-B-05',
     dateOfBirth: '2011-11-19',
     gender: 'Male',
-    address: '22 Temple Road, Hyderabad',
-    guardianName: 'Vani Kumar',
-    relation: 'Guardian',
-    guardianPhone: '+91 98765 44003',
-    guardianEmail: 'vani.kumar@email.com',
+    className: 'Class 8',
+    section: 'B',
+    addressLine: '22 Temple Road',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    country: 'India',
+    pincode: '500032',
+    profilePhoto: '',
+    mailingAddress: '22 Temple Road, Hyderabad, Telangana',
+    permanentAddress: '22 Temple Road, Hyderabad, Telangana',
+    email: 'arjun.kumar@student.school.edu',
+    whatsAppPhone: '9876544003',
+    phoneNumber: '9876544003',
+    hasEmergencyContact: true,
+    emergencyContactName: 'Suresh Kumar',
+    emergencyContactPhone: '9876544013',
+    guardians: [
+      {
+        id: 'guardian-3',
+        name: 'Vani Kumar',
+        relation: 'Guardian',
+        phone: '9876544003',
+        email: 'vani.kumar@email.com',
+      },
+    ],
+    username: 'arjun.kumar',
+    password: 'Student@123',
   },
 ]
 
@@ -304,6 +397,8 @@ const resourceItems = [
 
 const roleOptions: Role[] = ['admin', 'teacher', 'student']
 const gradeOptions = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12']
+const studentStateOptions = ['Andhra Pradesh', 'Delhi', 'Karnataka', 'Maharashtra', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh']
+const studentCountryOptions = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia']
 const toTitle = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 const ADMIN_SEEN_MESSAGES_KEY = 'skaimitra_seen_messages_admin'
 const mapSyncedUser = (user: SyncedUser): UserRow => ({
@@ -325,14 +420,29 @@ const getStoredValue = (key: string, fallback = '') => {
   return window.localStorage.getItem(key)?.trim() || fallback
 }
 
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+    reader.onerror = () => reject(new Error('Failed to read file.'))
+    reader.readAsDataURL(file)
+  })
+
 const loadTeacherRecords = (): TeacherProfile[] => {
   if (typeof window === 'undefined') return defaultTeacherRecords
 
   try {
     const raw = window.localStorage.getItem(ADMIN_TEACHERS_KEY)
     if (!raw) return defaultTeacherRecords
-    const parsed = JSON.parse(raw) as TeacherProfile[]
-    return parsed.length ? parsed : defaultTeacherRecords
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return defaultTeacherRecords
+
+    const normalized = parsed.flatMap((teacher, index) => {
+      const record = normalizeTeacherProfile(teacher, Date.now() + index)
+      return record ? [record] : []
+    })
+
+    return normalized.length ? normalized : defaultTeacherRecords
   } catch {
     return defaultTeacherRecords
   }
@@ -344,11 +454,60 @@ const loadStudentRecords = (): StudentProfile[] => {
   try {
     const raw = window.localStorage.getItem(ADMIN_STUDENTS_KEY)
     if (!raw) return defaultStudentRecords
-    const parsed = JSON.parse(raw) as StudentProfile[]
-    return parsed.length ? parsed : defaultStudentRecords
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return defaultStudentRecords
+
+    const normalized = parsed.flatMap((student, index) => {
+      const record = normalizeStudentProfile(student, Date.now() + index)
+      return record ? [record] : []
+    })
+
+    return normalized.length ? normalized : defaultStudentRecords
   } catch {
     return defaultStudentRecords
   }
+}
+
+const getTeacherGuardianContact = (
+  teacherId: number,
+  teacher: Pick<TeacherProfile, 'firstName' | 'middleName' | 'lastName' | 'email' | 'phone' | 'homePhone' | 'whatsAppPhone'>,
+  relation: ParentRelation,
+): GuardianContact => ({
+  id: `teacher-parent-${teacherId}`,
+  name: getTeacherFullName(teacher),
+  relation,
+  phone: teacher.whatsAppPhone || teacher.phone || teacher.homePhone,
+  email: teacher.email,
+})
+
+const syncTeacherParentRelationshipsToStudents = (
+  nextTeacher: TeacherProfile,
+  previousTeacher: TeacherProfile | null,
+  currentStudents: StudentProfile[],
+) => {
+  const previousGuardianId = previousTeacher ? `teacher-parent-${previousTeacher.id}` : null
+  const nextGuardianId = `teacher-parent-${nextTeacher.id}`
+  const parentRoleEnabled = nextTeacher.roles.includes('parent')
+  const selectedStudentIds = new Set(parentRoleEnabled ? nextTeacher.parentRelationships.map((item) => item.studentId) : [])
+  const relationshipMap = new Map(nextTeacher.parentRelationships.map((item) => [item.studentId, item.relation]))
+
+  return currentStudents.map((student) => {
+    const existingGuardians = student.guardians.filter((guardian) => guardian.id !== previousGuardianId && guardian.id !== nextGuardianId)
+    if (!selectedStudentIds.has(student.id)) {
+      return {
+        ...student,
+        guardians: existingGuardians,
+      }
+    }
+
+    return {
+      ...student,
+      guardians: [
+        ...existingGuardians,
+        getTeacherGuardianContact(nextTeacher.id, nextTeacher, relationshipMap.get(student.id) || ''),
+      ],
+    }
+  })
 }
 
 const getDefaultAdminProfile = (): ProfileSettingsData => ({
@@ -453,10 +612,21 @@ function AdminDashboard() {
   const [isAddTeacherOpen, setIsAddTeacherOpen] = useState(false)
   const [editingTeacherId, setEditingTeacherId] = useState<number | null>(null)
   const [teacherForm, setTeacherForm] = useState<TeacherFormValues>(() => createEmptyTeacherForm())
-  const [assignTeacherForm, setAssignTeacherForm] = useState<AssignTeacherFormValues>(() => createEmptyAssignTeacherForm())
+  const [selectedTeacherProfileId, setSelectedTeacherProfileId] = useState<number | null>(null)
   const [selectedTeacherForAssignment, setSelectedTeacherForAssignment] = useState<TeacherProfile | null>(null)
-  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
+  const [assignTeacherForm, setAssignTeacherForm] = useState<AssignTeacherFormValues>(() => createEmptyAssignTeacherForm())
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null)
+  const [, setIsAssignmentEditorOpen] = useState(false)
+  const [isAddQualificationOpen, setIsAddQualificationOpen] = useState(false)
+  const [draftTeacherQualifications, setDraftTeacherQualifications] = useState<TeacherQualification[]>([])
+  const [draftTeacherAssignments, setDraftTeacherAssignments] = useState<TeacherAssignment[]>([])
+  const [qualificationForm, setQualificationForm] = useState<TeacherQualificationFormValues>(() =>
+    createEmptyTeacherQualificationForm(),
+  )
+  const [qualificationFile, setQualificationFile] = useState<File | null>(null)
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null)
+  const [studentPageMode, setStudentPageMode] = useState<'create' | 'edit' | 'view' | null>(null)
+  const [selectedStudentProfileId, setSelectedStudentProfileId] = useState<number | null>(null)
   const [studentForm, setStudentForm] = useState<StudentFormValues>(() => createEmptyStudentForm())
 
   useEffect(() => {
@@ -583,10 +753,12 @@ function AdminDashboard() {
           teacher.subjectSpecializations.some((subject) => includesSearch(subject, query)) ||
           teacher.assignments.some(
             (assignment) =>
-              includesSearch(assignment.course, query) ||
-              includesSearch(assignment.className, query) ||
-              includesSearch(assignment.section, query) ||
-              includesSearch(assignment.subject, query),
+              includesSearch(assignment.subject, query) ||
+              assignment.classes.some(
+                (classGroup) =>
+                  includesSearch(classGroup.className, query) ||
+                  classGroup.sections.some((section) => includesSearch(section, query)),
+              ),
           )
         )
       }),
@@ -595,9 +767,7 @@ function AdminDashboard() {
 
   const teacherStats = useMemo(() => {
     const totalAssignments = teachers.reduce((sum, teacher) => sum + teacher.assignments.length, 0)
-    const activeCourses = new Set(
-      teachers.flatMap((teacher) => teacher.assignments.map((assignment) => assignment.course)),
-    ).size
+    const activeCourses = new Set(teachers.flatMap((teacher) => teacher.assignments.map((assignment) => assignment.subject))).size
     const studentCount = dashboardCounts.students || 120
     const ratio = teachers.length ? `${Math.max(1, Math.round(studentCount / teachers.length))}:1` : '0:1'
 
@@ -609,15 +779,41 @@ function AdminDashboard() {
     }
   }, [dashboardCounts.students, teachers])
 
-  const studentStats = useMemo(() => {
-    const classCounts = gradeOptions.map((className) => ({
-      className,
-      total: students.filter((student) => student.className === className).length,
-    }))
+  const selectedTeacherProfile = useMemo(
+    () => teachers.find((teacher) => teacher.id === selectedTeacherProfileId) || null,
+    [selectedTeacherProfileId, teachers],
+  )
 
+  const draftTeacherProfile = useMemo(
+    () => ({
+      id: 0,
+      ...teacherForm,
+      assignments: draftTeacherAssignments,
+      qualifications: draftTeacherQualifications,
+    }),
+    [draftTeacherAssignments, draftTeacherQualifications, teacherForm],
+  )
+
+  const selectedStudentProfile = useMemo(
+    () => students.find((student) => student.id === selectedStudentProfileId) || null,
+    [selectedStudentProfileId, students],
+  )
+
+  const draftStudentProfile = useMemo(
+    () => ({
+      id: selectedStudentProfileId || 0,
+      ...studentForm,
+      permanentAddress: studentForm.sameAsMailingAddress ? studentForm.mailingAddress : studentForm.permanentAddress,
+    }),
+    [selectedStudentProfileId, studentForm],
+  )
+
+  const studentStats = useMemo(() => {
     return {
       totalStudents: students.length,
-      classCounts,
+      totalGuardians: students.reduce((count, student) => count + student.guardians.length, 0),
+      studentsWithPhotos: students.filter((student) => Boolean(student.profilePhoto)).length,
+      accountReady: students.filter((student) => student.username && student.password).length,
     }
   }, [students])
 
@@ -629,13 +825,24 @@ function AdminDashboard() {
 
         return (
           includesSearch(student.id, query) ||
-          includesSearch(student.fullName, query) ||
-          includesSearch(student.admissionNo, query) ||
-          includesSearch(student.rollNo, query) ||
+          includesSearch(getStudentFullName(student), query) ||
+          includesSearch(student.admissionNumber, query) ||
+          includesSearch(student.rollNumber, query) ||
           includesSearch(student.className, query) ||
           includesSearch(student.section, query) ||
-          includesSearch(student.guardianName, query) ||
-          includesSearch(student.guardianPhone, query)
+          includesSearch(student.email, query) ||
+          includesSearch(student.whatsAppPhone, query) ||
+          includesSearch(student.phoneNumber, query) ||
+          includesSearch(student.city, query) ||
+          includesSearch(student.state, query) ||
+          includesSearch(student.country, query) ||
+          includesSearch(student.username, query) ||
+          student.guardians.some(
+            (guardian) =>
+              includesSearch(guardian.name, query) ||
+              includesSearch(guardian.phone, query) ||
+              includesSearch(guardian.email, query),
+          )
         )
       }),
     [studentSearchTerm, students],
@@ -916,65 +1123,122 @@ function AdminDashboard() {
     setTeacherForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleToggleTeacherSubject = (subject: string) => {
-    setTeacherForm((prev) => ({
-      ...prev,
-      subjectSpecializations: prev.subjectSpecializations.includes(subject)
-        ? prev.subjectSpecializations.filter((item) => item !== subject)
-        : [...prev.subjectSpecializations, subject],
-    }))
+  const handleToggleTeacherRole = (role: TeacherRole) => {
+    setTeacherForm((prev) => {
+      if (role === 'teacher') return prev
+
+      const nextRoles: TeacherRole[] = prev.roles.includes(role)
+        ? prev.roles.filter((item) => item !== role)
+        : [...prev.roles, role]
+
+      const normalizedRoles: TeacherRole[] = nextRoles.includes('teacher') ? nextRoles : ['teacher', ...nextRoles]
+      const parentEnabled = normalizedRoles.includes('parent')
+
+      return {
+        ...prev,
+        roles: normalizedRoles,
+        children: parentEnabled ? prev.children : [],
+        parentRelationships: parentEnabled ? prev.parentRelationships : [],
+      }
+    })
+  }
+
+  const handleToggleTeacherParentStudent = (studentId: number) => {
+    setTeacherForm((prev) => {
+      const exists = prev.parentRelationships.some((item) => item.studentId === studentId)
+      const parentRelationships = exists
+        ? prev.parentRelationships.filter((item) => item.studentId !== studentId)
+        : [...prev.parentRelationships, { studentId, relation: '' as ParentRelation }]
+
+      return {
+        ...prev,
+        parentRelationships,
+        children: parentRelationships.map((item) => item.studentId),
+      }
+    })
+  }
+
+  const handleTeacherParentRelationChange = (studentId: number, relation: ParentRelation) => {
+    setTeacherForm((prev) => {
+      const parentRelationships = prev.parentRelationships.map((item) =>
+        item.studentId === studentId ? { ...item, relation } : item,
+      )
+
+      return {
+        ...prev,
+        parentRelationships,
+        children: parentRelationships.map((item) => item.studentId),
+      }
+    })
+  }
+
+  const handleTeacherPhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const photoUrl = await fileToDataUrl(file)
+      setTeacherForm((prev) => ({ ...prev, profilePhoto: photoUrl }))
+    } catch {
+      setUiNotice({ type: 'error', message: 'Unable to preview the selected teacher profile photo.' })
+    }
   }
 
   const resetTeacherForm = () => {
     setTeacherForm(createEmptyTeacherForm())
+    setDraftTeacherQualifications([])
+    setDraftTeacherAssignments([])
     setEditingTeacherId(null)
   }
 
   const handleOpenAddTeacher = () => {
     resetTeacherForm()
+    setSelectedTeacherProfileId(null)
     setIsAddTeacherOpen(true)
   }
 
-  const handleOpenEditTeacher = (teacher: TeacherProfile) => {
-    setEditingTeacherId(teacher.id)
-    setTeacherForm({
-      username: teacher.username,
-      email: teacher.email,
-      password: teacher.password,
-      firstName: teacher.firstName,
-      lastName: teacher.lastName,
-      address: teacher.address,
-      phone: teacher.phone,
-      homePhone: teacher.homePhone,
-      whatsAppPhone: teacher.whatsAppPhone,
-      gender: teacher.gender,
-      subjectSpecializations: teacher.subjectSpecializations,
-      joiningDate: teacher.joiningDate,
-      priorExperience: teacher.priorExperience,
-      relievingDate: teacher.relievingDate,
-    })
-    setIsAddTeacherOpen(true)
+  const handleOpenTeacherProfile = (teacher: TeacherProfile) => {
+    handleCloseAssignTeacher()
+    setIsAddTeacherOpen(false)
+    setSelectedTeacherProfileId(teacher.id)
+  }
+
+  const handleCloseTeacherProfile = () => {
+    setSelectedTeacherProfileId(null)
+    handleCloseAssignTeacher()
+    setIsAddTeacherOpen(false)
+    setIsAddQualificationOpen(false)
+    setQualificationForm(createEmptyTeacherQualificationForm())
+    setQualificationFile(null)
+    setDraftTeacherQualifications([])
+    setDraftTeacherAssignments([])
   }
 
   const handleSaveTeacher = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    if (!teacherForm.subjectSpecializations.length) {
-      setUiNotice({ type: 'error', message: 'Select at least one subject specialization.' })
-      return
-    }
-
+    const nextTeacherId = editingTeacherId || Date.now()
+    const previousTeacher = editingTeacherId ? teachers.find((teacher) => teacher.id === editingTeacherId) || null : null
     const normalizedTeacher = {
       ...teacherForm,
       username: teacherForm.username.trim(),
       email: teacherForm.email.trim(),
       password: teacherForm.password.trim(),
       firstName: teacherForm.firstName.trim(),
+      middleName: teacherForm.middleName.trim(),
       lastName: teacherForm.lastName.trim(),
       address: teacherForm.address.trim(),
+      pincode: teacherForm.pincode.trim(),
+      profilePhoto: teacherForm.profilePhoto,
       phone: teacherForm.phone.trim(),
       homePhone: teacherForm.homePhone.trim(),
       whatsAppPhone: teacherForm.whatsAppPhone.trim(),
+      roles: Array.from(new Set(teacherForm.roles.includes('teacher') ? teacherForm.roles : ['teacher', ...teacherForm.roles])) as TeacherRole[],
+      parentRelationships: teacherForm.parentRelationships,
+      children: teacherForm.parentRelationships.map((item) => item.studentId),
+      subjectSpecializations: Array.from(
+        new Set([...teacherForm.subjectSpecializations, ...draftTeacherAssignments.map((assignment) => assignment.subject)]),
+      ),
       priorExperience: teacherForm.priorExperience.trim(),
     }
 
@@ -984,8 +1248,11 @@ function AdminDashboard() {
       !normalizedTeacher.firstName ||
       !normalizedTeacher.lastName ||
       !normalizedTeacher.phone ||
+      !normalizedTeacher.homePhone ||
       !normalizedTeacher.address ||
+      !normalizedTeacher.pincode ||
       !normalizedTeacher.gender ||
+      !normalizedTeacher.username ||
       !normalizedTeacher.joiningDate ||
       !normalizedTeacher.priorExperience
     ) {
@@ -998,22 +1265,35 @@ function AdminDashboard() {
       return
     }
 
+    if (normalizedTeacher.roles.includes('parent') && !normalizedTeacher.parentRelationships.length) {
+      setUiNotice({ type: 'error', message: 'Select at least one student when Parent role is enabled.' })
+      return
+    }
+
+    const nextTeacherRecord: TeacherProfile = editingTeacherId
+      ? {
+          ...(previousTeacher || {
+            id: nextTeacherId,
+            assignments: [],
+            qualifications: [],
+          }),
+          ...normalizedTeacher,
+        }
+      : {
+          id: nextTeacherId,
+          ...normalizedTeacher,
+          assignments: draftTeacherAssignments,
+          qualifications: draftTeacherQualifications,
+        }
+
     setTeachers((prev) => {
       if (editingTeacherId) {
-        return prev.map((teacher) =>
-          teacher.id === editingTeacherId ? { ...teacher, ...normalizedTeacher } : teacher,
-        )
+        return prev.map((teacher) => (teacher.id === editingTeacherId ? nextTeacherRecord : teacher))
       }
 
-      return [
-        {
-          id: Date.now(),
-          ...normalizedTeacher,
-          assignments: [],
-        },
-        ...prev,
-      ]
+      return [nextTeacherRecord, ...prev]
     })
+    setStudents((prev) => syncTeacherParentRelationshipsToStudents(nextTeacherRecord, previousTeacher, prev))
 
     setIsAddTeacherOpen(false)
     resetTeacherForm()
@@ -1025,15 +1305,37 @@ function AdminDashboard() {
 
   const resetAssignTeacherForm = () => setAssignTeacherForm(createEmptyAssignTeacherForm())
 
-  const handleOpenAssignTeacher = (teacher: TeacherProfile) => {
+  const handleOpenAssignTeacher = (teacher: TeacherProfile, subject?: string) => {
     setSelectedTeacherForAssignment(teacher)
-    resetAssignTeacherForm()
+    setIsAssignmentEditorOpen(true)
+    setEditingAssignmentId(null)
+    setAssignTeacherForm({
+      ...createEmptyAssignTeacherForm(),
+      subjects: subject ? [subject] : [],
+    })
   }
 
-  const handleAssignTeacherFieldChange = (
-    field: keyof Omit<AssignTeacherFormValues, 'subjects'>,
-    value: string,
-  ) => {
+  const handleOpenEditAssignment = (teacher: TeacherProfile, assignmentId: string) => {
+    const assignment = teacher.assignments.find((item) => item.id === assignmentId)
+    if (!assignment) return
+
+    const [firstClass, ...remainingClasses] = assignment.classes
+
+    setSelectedTeacherForAssignment(teacher)
+    setIsAssignmentEditorOpen(true)
+    setEditingAssignmentId(assignment.id)
+    setAssignTeacherForm({
+      className: firstClass?.className || '',
+      sections: firstClass?.sections || [],
+      subjects: [assignment.subject],
+      classGroups: remainingClasses.map((classGroup) => ({
+        className: classGroup.className,
+        sections: [...classGroup.sections],
+      })),
+    })
+  }
+
+  const handleAssignTeacherFieldChange = (field: 'className', value: string) => {
     setAssignTeacherForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -1046,64 +1348,200 @@ function AdminDashboard() {
     }))
   }
 
+  const handleToggleAssignSection = (section: string) => {
+    setAssignTeacherForm((prev) => ({
+      ...prev,
+      sections: prev.sections.includes(section)
+        ? prev.sections.filter((item) => item !== section)
+        : [...prev.sections, section],
+    }))
+  }
+
   const handleCloseAssignTeacher = () => {
     setSelectedTeacherForAssignment(null)
+    setIsAssignmentEditorOpen(false)
+    setEditingAssignmentId(null)
     resetAssignTeacherForm()
+  }
+
+  const handleQualificationFieldChange = (field: keyof TeacherQualificationFormValues, value: string) => {
+    setQualificationForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleQualificationFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setQualificationFile(event.target.files?.[0] || null)
+  }
+
+  const handleOpenAddQualification = () => {
+    setQualificationForm(createEmptyTeacherQualificationForm())
+    setQualificationFile(null)
+    setIsAddQualificationOpen(true)
+  }
+
+  const handleCloseAddQualification = () => {
+    setIsAddQualificationOpen(false)
+    setQualificationForm(createEmptyTeacherQualificationForm())
+    setQualificationFile(null)
+  }
+
+  const handleSaveQualification = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if ((!selectedTeacherProfile && !isAddTeacherOpen) || !qualificationFile) {
+      setUiNotice({ type: 'error', message: 'Upload a certificate before saving the qualification.' })
+      return
+    }
+
+    const normalizedQualification = {
+      qualification: qualificationForm.qualification.trim(),
+      degree: qualificationForm.degree.trim(),
+      graduationYear: qualificationForm.graduationYear.trim(),
+      institutionName: qualificationForm.institutionName.trim(),
+    }
+
+    if (
+      !normalizedQualification.qualification ||
+      !normalizedQualification.degree ||
+      !normalizedQualification.graduationYear ||
+      !normalizedQualification.institutionName
+    ) {
+      setUiNotice({ type: 'error', message: 'Fill in all qualification details before saving.' })
+      return
+    }
+
+    try {
+      const certificateUrl = await fileToDataUrl(qualificationFile)
+      const nextQualification = {
+        id: `${selectedTeacherProfile?.id || 'draft'}-qualification-${Date.now()}`,
+        ...normalizedQualification,
+        certificateName: qualificationFile.name,
+        certificateUrl,
+      }
+
+      if (selectedTeacherProfile) {
+        setTeachers((prev) =>
+          prev.map((teacher) =>
+            teacher.id === selectedTeacherProfile.id
+              ? {
+                  ...teacher,
+                  qualifications: [nextQualification, ...teacher.qualifications],
+                }
+              : teacher,
+          ),
+        )
+      } else {
+        setDraftTeacherQualifications((prev) => [nextQualification, ...prev])
+      }
+
+      handleCloseAddQualification()
+      setUiNotice({ type: 'success', message: 'Qualification added successfully.' })
+    } catch {
+      setUiNotice({ type: 'error', message: 'Unable to read the certificate file.' })
+    }
+  }
+
+  const handleDeleteQualification = (qualificationId: string) => {
+    if (selectedTeacherProfile) {
+      setTeachers((prev) =>
+        prev.map((teacher) =>
+          teacher.id === selectedTeacherProfile.id
+            ? {
+                ...teacher,
+                qualifications: teacher.qualifications.filter((qualification) => qualification.id !== qualificationId),
+              }
+            : teacher,
+        ),
+      )
+    } else {
+      setDraftTeacherQualifications((prev) => prev.filter((qualification) => qualification.id !== qualificationId))
+    }
+    setUiNotice({ type: 'success', message: 'Qualification removed.' })
   }
 
   const handleAssignTeacher = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!selectedTeacherForAssignment) return
-    if (!assignTeacherForm.course || !assignTeacherForm.className || !assignTeacherForm.section) {
-      setUiNotice({ type: 'error', message: 'Select course, class, and section before assigning.' })
-      return
-    }
     if (!assignTeacherForm.subjects.length) {
       setUiNotice({ type: 'error', message: 'Choose at least one subject to teach.' })
       return
     }
+    if (!assignTeacherForm.classGroups.length && (!assignTeacherForm.className || !assignTeacherForm.sections.length)) {
+      setUiNotice({ type: 'error', message: 'Add at least one class-section combination before assigning.' })
+      return
+    }
 
-    let addedAssignments = 0
+    const pendingClassGroups = normalizeTeacherClassGroups([
+      ...assignTeacherForm.classGroups,
+      {
+        className: assignTeacherForm.className,
+        sections: assignTeacherForm.sections,
+      },
+    ])
+
+    if (selectedTeacherForAssignment.id === 0 && isAddTeacherOpen) {
+      setDraftTeacherAssignments((prev) => {
+        const baseAssignments = editingAssignmentId
+          ? prev.filter((assignment) => assignment.id !== editingAssignmentId)
+          : [...prev]
+
+        return mergeTeacherAssignments([
+          ...baseAssignments,
+          ...assignTeacherForm.subjects.map((subject) => ({
+            id: editingAssignmentId || `draft-${Date.now()}-${subject.replace(/\s+/g, '-').toLowerCase()}`,
+            subject,
+            classes: pendingClassGroups,
+          })),
+        ])
+      })
+
+      handleCloseAssignTeacher()
+      setUiNotice({
+        type: 'success',
+        message: editingAssignmentId ? 'Assignment updated successfully.' : 'Assignment saved successfully.',
+      })
+      return
+    }
 
     setTeachers((prev) =>
       prev.map((teacher) => {
         if (teacher.id !== selectedTeacherForAssignment.id) return teacher
 
-        const existingKeys = new Set(teacher.assignments.map((assignment) => buildAssignmentKey(assignment)))
-        const nextAssignments = [...teacher.assignments]
+        const baseAssignments = editingAssignmentId
+          ? teacher.assignments.filter((assignment) => assignment.id !== editingAssignmentId)
+          : [...teacher.assignments]
 
-        assignTeacherForm.subjects.forEach((subject) => {
-          const nextAssignment = {
-            id: `${teacher.id}-${Date.now()}-${subject.replace(/\s+/g, '-').toLowerCase()}`,
-            course: assignTeacherForm.course,
-            className: assignTeacherForm.className,
-            section: assignTeacherForm.section,
+        const nextAssignments = mergeTeacherAssignments([
+          ...baseAssignments,
+          ...assignTeacherForm.subjects.map((subject) => ({
+            id: editingAssignmentId || `${teacher.id}-${Date.now()}-${subject.replace(/\s+/g, '-').toLowerCase()}`,
             subject,
-          }
+            classes: pendingClassGroups,
+          })),
+        ])
 
-          const assignmentKey = buildAssignmentKey(nextAssignment)
-          if (!existingKeys.has(assignmentKey)) {
-            existingKeys.add(assignmentKey)
-            nextAssignments.unshift(nextAssignment)
-            addedAssignments += 1
-          }
-        })
-
-        return { ...teacher, assignments: nextAssignments }
+        return {
+          ...teacher,
+          assignments: nextAssignments,
+          subjectSpecializations: Array.from(new Set([...teacher.subjectSpecializations, ...nextAssignments.map((assignment) => assignment.subject)])),
+        }
       }),
     )
 
     handleCloseAssignTeacher()
     setUiNotice({
-      type: addedAssignments ? 'success' : 'error',
-      message: addedAssignments
-        ? `Assigned ${addedAssignments} subject${addedAssignments > 1 ? 's' : ''} successfully.`
-        : 'Those assignments already exist for this teacher.',
+      type: 'success',
+      message: editingAssignmentId ? 'Assignment updated successfully.' : 'Assignment saved successfully.',
     })
   }
 
   const handleRemoveTeacherAssignment = (teacherId: number, assignmentId: string) => {
+    if (teacherId === 0 && isAddTeacherOpen) {
+      setDraftTeacherAssignments((prev) => prev.filter((assignment) => assignment.id !== assignmentId))
+      setUiNotice({ type: 'success', message: 'Assignment removed.' })
+      return
+    }
+
     setTeachers((prev) =>
       prev.map((teacher) =>
         teacher.id === teacherId
@@ -1114,8 +1552,54 @@ function AdminDashboard() {
     setUiNotice({ type: 'success', message: 'Assignment removed.' })
   }
 
-  const handleStudentFieldChange = (field: keyof StudentFormValues, value: string) => {
-    setStudentForm((prev) => ({ ...prev, [field]: value }))
+  const handleStudentFieldChange = (field: keyof StudentFormValues, value: string | boolean) => {
+    setStudentForm((prev) => {
+      const next = { ...prev, [field]: value }
+
+      if (field === 'sameAsMailingAddress') {
+        next.sameAsMailingAddress = Boolean(value)
+        next.permanentAddress = value ? prev.mailingAddress : prev.permanentAddress
+      }
+
+      if (field === 'mailingAddress' && prev.sameAsMailingAddress && typeof value === 'string') {
+        next.permanentAddress = value
+      }
+
+      return next
+    })
+  }
+
+  const handleStudentGuardianChange = (guardianId: string, field: keyof GuardianContact, value: string) => {
+    setStudentForm((prev) => ({
+      ...prev,
+      guardians: prev.guardians.map((guardian) => (guardian.id === guardianId ? { ...guardian, [field]: value } : guardian)),
+    }))
+  }
+
+  const handleAddGuardian = () => {
+    setStudentForm((prev) => ({
+      ...prev,
+      guardians: [...prev.guardians, createEmptyGuardian()],
+    }))
+  }
+
+  const handleRemoveGuardian = (guardianId: string) => {
+    setStudentForm((prev) => ({
+      ...prev,
+      guardians: prev.guardians.length > 1 ? prev.guardians.filter((guardian) => guardian.id !== guardianId) : prev.guardians,
+    }))
+  }
+
+  const handleStudentPhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const photoUrl = await fileToDataUrl(file)
+      setStudentForm((prev) => ({ ...prev, profilePhoto: photoUrl }))
+    } catch {
+      setUiNotice({ type: 'error', message: 'Unable to preview the selected profile photo.' })
+    }
   }
 
   const resetStudentForm = () => {
@@ -1123,65 +1607,132 @@ function AdminDashboard() {
     setEditingStudentId(null)
   }
 
+  const handleCloseStudentProfile = () => {
+    setStudentPageMode(null)
+    setSelectedStudentProfileId(null)
+    resetStudentForm()
+  }
+
   const handleOpenAddStudent = () => {
     resetStudentForm()
-    setIsAddStudentOpen(true)
+    setSelectedStudentProfileId(null)
+    setStudentPageMode('create')
   }
 
   const handleOpenEditStudent = (student: StudentProfile) => {
     setEditingStudentId(student.id)
+    setSelectedStudentProfileId(student.id)
     setStudentForm({
-      fullName: student.fullName,
-      admissionNo: student.admissionNo,
-      rollNo: student.rollNo,
-      className: student.className,
-      section: student.section,
-      gradeId: student.gradeId,
-      sectionId: student.sectionId,
+      firstName: student.firstName,
+      middleName: student.middleName,
+      lastName: student.lastName,
+      admissionNumber: student.admissionNumber,
+      rollNumber: student.rollNumber,
       dateOfBirth: student.dateOfBirth,
       gender: student.gender,
-      address: student.address,
-      guardianName: student.guardianName,
-      relation: student.relation,
-      guardianPhone: student.guardianPhone,
-      guardianEmail: student.guardianEmail,
+      className: student.className,
+      section: student.section,
+      addressLine: student.addressLine,
+      city: student.city,
+      state: student.state,
+      country: student.country,
+      pincode: student.pincode,
+      profilePhoto: student.profilePhoto,
+      mailingAddress: student.mailingAddress,
+      permanentAddress: student.permanentAddress,
+      email: student.email,
+      whatsAppPhone: student.whatsAppPhone,
+      phoneNumber: student.phoneNumber,
+      hasEmergencyContact: student.hasEmergencyContact,
+      emergencyContactName: student.emergencyContactName,
+      emergencyContactPhone: student.emergencyContactPhone,
+      guardians: student.guardians.length ? student.guardians.map((guardian) => ({ ...guardian })) : [createEmptyGuardian(student.id)],
+      username: student.username,
+      password: student.password,
+      sameAsMailingAddress: Boolean(student.mailingAddress && student.mailingAddress === student.permanentAddress),
+      sendCredentialsAfterSave: false,
     })
-    setIsAddStudentOpen(true)
+    setStudentPageMode('edit')
   }
 
   const handleSaveStudent = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     const normalizedStudent = {
-      ...studentForm,
-      fullName: studentForm.fullName.trim(),
-      admissionNo: studentForm.admissionNo.trim(),
-      rollNo: studentForm.rollNo.trim(),
+      firstName: studentForm.firstName.trim(),
+      middleName: studentForm.middleName.trim(),
+      lastName: studentForm.lastName.trim(),
+      admissionNumber: studentForm.admissionNumber.trim(),
+      rollNumber: studentForm.rollNumber.trim(),
+      dateOfBirth: studentForm.dateOfBirth.trim(),
+      gender: studentForm.gender,
       className: studentForm.className.trim(),
       section: studentForm.section.trim(),
-      gradeId: studentForm.gradeId.trim() || `GR-${studentForm.className.replace('Class ', '')}`,
-      sectionId: studentForm.sectionId.trim() || `SEC-${studentForm.section}`,
-      dateOfBirth: studentForm.dateOfBirth.trim(),
-      address: studentForm.address.trim(),
-      guardianName: studentForm.guardianName.trim(),
-      guardianPhone: studentForm.guardianPhone.trim(),
-      guardianEmail: studentForm.guardianEmail.trim(),
+      addressLine: studentForm.addressLine.trim(),
+      city: studentForm.city.trim(),
+      state: studentForm.state.trim(),
+      country: studentForm.country.trim(),
+      pincode: studentForm.pincode.trim(),
+      profilePhoto: studentForm.profilePhoto,
+      mailingAddress: studentForm.mailingAddress.trim(),
+      permanentAddress: (studentForm.sameAsMailingAddress ? studentForm.mailingAddress : studentForm.permanentAddress).trim(),
+      email: studentForm.email.trim(),
+      whatsAppPhone: studentForm.whatsAppPhone.trim(),
+      phoneNumber: studentForm.phoneNumber.trim(),
+      hasEmergencyContact: studentForm.hasEmergencyContact,
+      emergencyContactName: studentForm.hasEmergencyContact ? studentForm.emergencyContactName.trim() : '',
+      emergencyContactPhone: studentForm.hasEmergencyContact ? studentForm.emergencyContactPhone.trim() : '',
+      guardians: studentForm.guardians.map((guardian) => ({
+        ...guardian,
+        name: guardian.name.trim(),
+        relation: guardian.relation,
+        phone: guardian.phone.trim(),
+        email: guardian.email.trim(),
+      })),
+      username: studentForm.username.trim(),
+      password: studentForm.password.trim(),
     }
 
+    const hasInvalidPhone =
+      (normalizedStudent.whatsAppPhone && !/^\d+$/.test(normalizedStudent.whatsAppPhone)) ||
+      (normalizedStudent.phoneNumber && !/^\d+$/.test(normalizedStudent.phoneNumber)) ||
+      (normalizedStudent.emergencyContactPhone && !/^\d+$/.test(normalizedStudent.emergencyContactPhone))
+    const hasInvalidGuardianPhone = normalizedStudent.guardians.some((guardian) => guardian.phone && !/^\d+$/.test(guardian.phone))
+    const hasInvalidEmail = normalizedStudent.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedStudent.email)
+    const hasInvalidGuardianEmail = normalizedStudent.guardians.some(
+      (guardian) => guardian.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guardian.email),
+    )
+    const hasIncompleteGuardian = normalizedStudent.guardians.some(
+      (guardian) => !guardian.name || !guardian.relation || !guardian.phone || !guardian.email,
+    )
+
     if (
-      !normalizedStudent.fullName ||
-      !normalizedStudent.admissionNo ||
-      !normalizedStudent.rollNo ||
+      !normalizedStudent.firstName ||
+      !normalizedStudent.lastName ||
       !normalizedStudent.className ||
       !normalizedStudent.section ||
-      !normalizedStudent.dateOfBirth ||
-      !normalizedStudent.gender ||
-      !normalizedStudent.guardianName ||
-      !normalizedStudent.relation ||
-      !normalizedStudent.guardianPhone ||
-      !normalizedStudent.guardianEmail
+      !normalizedStudent.email ||
+      !normalizedStudent.whatsAppPhone ||
+      !normalizedStudent.password ||
+      (normalizedStudent.hasEmergencyContact && (!normalizedStudent.emergencyContactName || !normalizedStudent.emergencyContactPhone)) ||
+      hasIncompleteGuardian
     ) {
-      setUiNotice({ type: 'error', message: 'Fill in all required student details before saving.' })
+      setUiNotice({ type: 'error', message: 'Fill in the required student, guardian, and account details before saving.' })
+      return
+    }
+
+    if (hasInvalidPhone || hasInvalidGuardianPhone) {
+      setUiNotice({ type: 'error', message: 'Phone fields must contain numbers only.' })
+      return
+    }
+
+    if (hasInvalidGuardianEmail) {
+      setUiNotice({ type: 'error', message: 'Enter a valid email address for each guardian.' })
+      return
+    }
+
+    if (hasInvalidEmail) {
+      setUiNotice({ type: 'error', message: 'Enter a valid student email address.' })
       return
     }
 
@@ -1195,11 +1746,16 @@ function AdminDashboard() {
       return [{ id: Date.now(), ...normalizedStudent }, ...prev]
     })
 
-    setIsAddStudentOpen(false)
-    resetStudentForm()
+    handleCloseStudentProfile()
     setUiNotice({
       type: 'success',
-      message: editingStudentId ? 'Student updated successfully.' : 'Student added successfully.',
+      message: studentForm.sendCredentialsAfterSave
+        ? editingStudentId
+          ? 'Student updated successfully. Send action is ready.'
+          : 'Student added successfully. Send action is ready.'
+        : editingStudentId
+          ? 'Student updated successfully.'
+          : 'Student added successfully.',
     })
   }
 
@@ -1212,6 +1768,15 @@ function AdminDashboard() {
   }
 
   const handleViewStudent = (student: StudentProfile) => {
+    setSelectedStudentProfileId(student.id)
+    setStudentPageMode('view')
+    return
+    const primaryGuardian = student.guardians[0]
+    setUiNotice({
+      type: 'success',
+      message: `${getStudentFullName(student)} • ${student.city || student.country || 'Student profile'} • Guardian: ${primaryGuardian?.name || 'Not added'}`,
+    })
+    return
     setUiNotice({
       type: 'success',
       message: `${student.fullName} • ${student.className} ${student.section} • Guardian: ${student.guardianName}`,
@@ -1619,73 +2184,140 @@ function AdminDashboard() {
   )
 
   const renderTeachersTab = () => (
-    <main className="role-main role-main-detail">
-      <section className="role-primary">
-        <section className="role-section-head role-admin-page-head">
-          <div>
-            <h2>Teachers Management</h2>
-            <p className="role-muted">Manage teaching staff and their courses</p>
-          </div>
-          <button type="button" className="role-primary-btn teacher-add-btn" onClick={handleOpenAddTeacher}>
-            <Plus size={16} />
-            Add Teacher
-          </button>
-        </section>
-
-        <section className="role-admin-summary-grid">
-          <article className="role-card role-admin-summary-card">
-            <p className="role-admin-summary-value">{teacherStats.totalTeachers}</p>
-            <p className="role-muted">Total Teachers</p>
-          </article>
-          <article className="role-card role-admin-summary-card">
-            <p className="role-admin-summary-value">{teacherStats.activeCourses}</p>
-            <p className="role-muted">Active Courses</p>
-          </article>
-          <article className="role-card role-admin-summary-card">
-            <p className="role-admin-summary-value">{teacherStats.studentTeacherRatio}</p>
-            <p className="role-muted">Student-Teacher Ratio</p>
-          </article>
-        </section>
-
-        <section className="role-card role-admin-staff-card">
-          <div className="role-section-head role-admin-communications-head teacher-staff-head">
+    isAddTeacherOpen && !editingTeacherId ? (
+      <TeacherProfilePage
+        mode="create"
+        teacher={draftTeacherProfile}
+        subjectOptions={teacherSubjectOptions}
+        students={students}
+        onBack={() => {
+          setIsAddTeacherOpen(false)
+          resetTeacherForm()
+        }}
+        onSubmit={handleSaveTeacher}
+        onFieldChange={handleTeacherFieldChange}
+        onPhotoChange={handleTeacherPhotoChange}
+        onToggleRole={handleToggleTeacherRole}
+        onToggleParentStudent={handleToggleTeacherParentStudent}
+        onParentRelationChange={handleTeacherParentRelationChange}
+        onOpenAssign={() => handleOpenAssignTeacher(draftTeacherProfile)}
+        onEditAssignment={(assignmentId) => handleOpenEditAssignment(draftTeacherProfile, assignmentId)}
+        onRemoveAssignment={(assignmentId) => handleRemoveTeacherAssignment(draftTeacherProfile.id, assignmentId)}
+        onAddQualification={handleOpenAddQualification}
+        onDeleteQualification={handleDeleteQualification}
+      />
+    ) : selectedTeacherProfile ? (
+      <TeacherProfilePage
+        teacher={selectedTeacherProfile}
+        subjectOptions={teacherSubjectOptions}
+        onBack={handleCloseTeacherProfile}
+        onOpenAssign={() => handleOpenAssignTeacher(selectedTeacherProfile)}
+        onEditAssignment={(assignmentId) => handleOpenEditAssignment(selectedTeacherProfile, assignmentId)}
+        onRemoveAssignment={(assignmentId) => handleRemoveTeacherAssignment(selectedTeacherProfile.id, assignmentId)}
+        onAddQualification={handleOpenAddQualification}
+        onDeleteQualification={handleDeleteQualification}
+      />
+    ) : (
+      <main className="role-main role-main-detail">
+        <section className="role-primary">
+          <section className="role-section-head role-admin-page-head">
             <div>
-              <h3 className="role-section-title">Teaching Staff</h3>
-              <p className="role-muted">Add faculty profiles and manage class-section assignments.</p>
+              <h2>Teachers Management</h2>
+              <p className="role-muted">Manage teaching staff and their courses</p>
             </div>
-            <div className="teacher-staff-toolbar">
-              <div className="role-user-search-wrap role-user-search-inline">
-                <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Search teachers by name, subject, email, class, or section..."
-                  value={teacherSearchTerm}
-                  onChange={(e) => setTeacherSearchTerm(e.target.value)}
-                />
+            <button type="button" className="role-primary-btn teacher-add-btn" onClick={handleOpenAddTeacher}>
+              <Plus size={16} />
+              Add Teacher
+            </button>
+          </section>
+
+          <section className="role-admin-summary-grid">
+            <article className="role-card role-admin-summary-card">
+              <p className="role-admin-summary-value">{teacherStats.totalTeachers}</p>
+              <p className="role-muted">Total Teachers</p>
+            </article>
+            <article className="role-card role-admin-summary-card">
+              <p className="role-admin-summary-value">{teacherStats.activeCourses}</p>
+              <p className="role-muted">Active Courses</p>
+            </article>
+            <article className="role-card role-admin-summary-card">
+              <p className="role-admin-summary-value">{teacherStats.studentTeacherRatio}</p>
+              <p className="role-muted">Student-Teacher Ratio</p>
+            </article>
+          </section>
+
+          <section className="role-card role-admin-staff-card">
+            <div className="role-section-head role-admin-communications-head teacher-staff-head">
+              <div>
+                <h3 className="role-section-title">Teaching Staff</h3>
+                <p className="role-muted">Add faculty profiles and manage class-section assignments.</p>
+              </div>
+              <div className="teacher-staff-toolbar">
+                <div className="role-user-search-wrap role-user-search-inline">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search teachers by name, subject, email, class, or section..."
+                    value={teacherSearchTerm}
+                    onChange={(e) => setTeacherSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          <div className="role-admin-staff-list">
-            {filteredTeachers.length ? (
-              filteredTeachers.map((teacher) => (
-                <TeacherCard
-                  key={teacher.id}
-                  teacher={teacher}
-                  onAssign={handleOpenAssignTeacher}
-                  onEdit={handleOpenEditTeacher}
-                  onRemoveAssignment={handleRemoveTeacherAssignment}
-                />
-              ))
-            ) : (
-              <p className="role-muted">No teachers match your search.</p>
-            )}
-          </div>
+            <div className="role-admin-staff-list">
+              {filteredTeachers.length ? (
+                filteredTeachers.map((teacher) => (
+                  <TeacherCard
+                    key={teacher.id}
+                    teacher={teacher}
+                    onView={handleOpenTeacherProfile}
+                    onAssign={handleOpenAssignTeacher}
+                    onEditAssignment={handleOpenEditAssignment}
+                    onRemoveAssignment={handleRemoveTeacherAssignment}
+                  />
+                ))
+              ) : (
+                <p className="role-muted">No teachers match your search.</p>
+              )}
+            </div>
+          </section>
         </section>
-      </section>
-    </main>
+      </main>
+    )
   )
 
-  const renderStudentsTab = () => renderStudentsManagementTab()
+  const renderStudentsTab = () => {
+    if (studentPageMode === 'create' || studentPageMode === 'edit') {
+      return (
+        <StudentProfilePage
+          mode={studentPageMode}
+          student={draftStudentProfile}
+          stateOptions={studentStateOptions}
+          countryOptions={studentCountryOptions}
+          onBack={handleCloseStudentProfile}
+          onSubmit={handleSaveStudent}
+          onFieldChange={handleStudentFieldChange}
+          onGuardianChange={handleStudentGuardianChange}
+          onAddGuardian={handleAddGuardian}
+          onRemoveGuardian={handleRemoveGuardian}
+          onPhotoChange={handleStudentPhotoChange}
+        />
+      )
+    }
+
+    if (studentPageMode === 'view' && selectedStudentProfile) {
+      return (
+        <StudentProfilePage
+          mode="view"
+          student={selectedStudentProfile}
+          onBack={handleCloseStudentProfile}
+          onEdit={() => handleOpenEditStudent(selectedStudentProfile)}
+        />
+      )
+    }
+
+    return renderStudentsManagementTab()
+  }
 
   const renderStudentsManagementTab = () => (
     <main className="role-main role-main-detail">
@@ -1693,11 +2325,10 @@ function AdminDashboard() {
         <section className="role-section-head role-admin-page-head">
           <div>
             <h2>Students Management</h2>
-            <p className="role-muted">Monitor student enrolment and performance</p>
+            <p className="role-muted">Manage a clean, structured onboarding flow for student records.</p>
           </div>
           <button type="button" className="role-primary-btn teacher-add-btn" onClick={handleOpenAddStudent}>
-            <Plus size={16} />
-            Add Student
+            + Add Student
           </button>
         </section>
 
@@ -1706,26 +2337,32 @@ function AdminDashboard() {
             <p className="role-admin-summary-value">{studentStats.totalStudents}</p>
             <p className="role-muted">Total Students</p>
           </article>
-          {studentStats.classCounts.slice(0, 3).map((item) => (
-            <article key={item.className} className="role-card role-admin-summary-card">
-              <p className="role-admin-summary-value">{item.total}</p>
-              <p className="role-muted">{item.className}</p>
-            </article>
-          ))}
+          <article className="role-card role-admin-summary-card">
+            <p className="role-admin-summary-value">{studentStats.totalGuardians}</p>
+            <p className="role-muted">Guardian Records</p>
+          </article>
+          <article className="role-card role-admin-summary-card">
+            <p className="role-admin-summary-value">{studentStats.studentsWithPhotos}</p>
+            <p className="role-muted">Profile Photos Added</p>
+          </article>
+          <article className="role-card role-admin-summary-card">
+            <p className="role-admin-summary-value">{studentStats.accountReady}</p>
+            <p className="role-muted">Accounts Ready</p>
+          </article>
         </section>
 
         <section className="role-card role-admin-staff-card">
           <div className="role-section-head role-admin-communications-head teacher-staff-head">
             <div>
               <h3 className="role-section-title">Student Directory</h3>
-              <p className="role-muted">Add, review, and manage student records with guardian details.</p>
+              <p className="role-muted">Add, review, and manage student profiles with structured contact and guardian details.</p>
             </div>
             <div className="teacher-staff-toolbar">
               <div className="role-user-search-wrap role-user-search-inline">
                 <Search size={16} />
                 <input
                   type="text"
-                  placeholder="Search students by name, admission no, class, guardian, or phone..."
+                  placeholder="Search students by name, username, city, guardian, or phone..."
                   value={studentSearchTerm}
                   onChange={(e) => setStudentSearchTerm(e.target.value)}
                 />
@@ -2184,6 +2821,11 @@ function AdminDashboard() {
                 setViewMode(tab.label === 'Users' ? 'userManagement' : 'dashboard')
                 setUserError('')
                 setUserInfo('')
+                setSelectedTeacherProfileId(null)
+                setSelectedStudentProfileId(null)
+                setStudentPageMode(null)
+                handleCloseAssignTeacher()
+                setIsAddQualificationOpen(false)
               }}
             >
               <tab.icon size={18} strokeWidth={2.4} className="role-tab-icon" />
@@ -2201,46 +2843,29 @@ function AdminDashboard() {
 
       {renderTabContent()}
 
-      <AddTeacherModal
-        isOpen={isAddTeacherOpen}
-        mode={editingTeacherId ? 'edit' : 'create'}
-        values={teacherForm}
-        subjectOptions={teacherSubjectOptions}
-        onClose={() => {
-          setIsAddTeacherOpen(false)
-          resetTeacherForm()
-        }}
-        onSubmit={handleSaveTeacher}
-        onFieldChange={handleTeacherFieldChange}
-        onToggleSubject={handleToggleTeacherSubject}
-      />
-
-      <AddStudentModal
-        isOpen={isAddStudentOpen}
-        mode={editingStudentId ? 'edit' : 'create'}
-        values={studentForm}
-        classOptions={gradeOptions}
-        sectionOptions={teacherSectionOptions}
-        onClose={() => {
-          setIsAddStudentOpen(false)
-          resetStudentForm()
-        }}
-        onSubmit={handleSaveStudent}
-        onFieldChange={handleStudentFieldChange}
+      <AddQualificationModal
+        isOpen={isAddQualificationOpen}
+        values={qualificationForm}
+        certificateName={qualificationFile?.name || ''}
+        onClose={handleCloseAddQualification}
+        onSubmit={handleSaveQualification}
+        onFieldChange={handleQualificationFieldChange}
+        onCertificateChange={handleQualificationFileChange}
       />
 
       <AssignTeacherModal
         isOpen={Boolean(selectedTeacherForAssignment)}
         teacher={selectedTeacherForAssignment}
         values={assignTeacherForm}
-        courseOptions={teacherCourseOptions}
         classOptions={gradeOptions}
         sectionOptions={teacherSectionOptions}
         subjectOptions={teacherSubjectOptions}
+        isEditing={Boolean(editingAssignmentId)}
         onClose={handleCloseAssignTeacher}
         onSubmit={handleAssignTeacher}
         onFieldChange={handleAssignTeacherFieldChange}
         onToggleSubject={handleToggleAssignSubject}
+        onToggleSection={handleToggleAssignSection}
       />
 
       {isAddUserOpen && (
