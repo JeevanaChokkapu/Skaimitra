@@ -1,4 +1,4 @@
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, UserCircle2 } from 'lucide-react'
 import type { TeacherFormValues } from './teacherTypes'
 
 type TeacherProfileEditorProps = {
@@ -25,7 +25,9 @@ function TeacherProfileEditor({
     { label: 'Email', field: 'email', type: 'email', placeholder: 'teacher@school.edu' },
     { label: 'Phone', field: 'phone', type: 'tel', placeholder: '+91 98765 43210' },
     { label: 'Gender', field: 'gender' },
-    { label: 'Username', field: 'username', placeholder: 'teacher.username' },
+    { label: 'Employee ID', field: 'employeeId', placeholder: 'EMP-001' },
+    { label: 'LinkedIn Profile', field: 'linkedInProfile', type: 'url', placeholder: 'https://www.linkedin.com/in/username' },
+    { label: 'Login Username', field: 'username', placeholder: 'teacher.username' },
     { label: 'Password', field: 'password', type: 'password', placeholder: 'Create password' },
     { label: 'WhatsApp Phone', field: 'whatsAppPhone', type: 'tel', placeholder: '+91 98765 43210' },
   ]
@@ -54,8 +56,8 @@ function TeacherProfileEditor({
 
         <section className="teacher-profile-hero">
           <div className="teacher-profile-hero-main">
-            <div className="teacher-card-avatar teacher-profile-hero-avatar">
-              {(values.firstName.charAt(0) + values.lastName.charAt(0)).toUpperCase() || 'NT'}
+            <div className="teacher-card-avatar teacher-profile-hero-avatar teacher-card-avatar-empty" aria-label="No teacher profile photo">
+              <UserCircle2 size={28} />
             </div>
             <div className="teacher-profile-hero-copy">
               <p className="teacher-profile-kicker">Create Teacher Profile</p>

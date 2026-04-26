@@ -1,13 +1,12 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { ArrowLeft, Save, UserCircle2 } from 'lucide-react'
+import { ArrowLeft, Check, Save, UserCircle2 } from 'lucide-react'
 import BasicInfoSection from './BasicInfoSection'
 import QualificationSection from './QualificationSection'
 import SubjectAssignmentsSection from './SubjectAssignmentsSection'
 import {
   getTeacherFullName,
-  getTeacherInitials,
-  splitTeacherAddress,
-  type ParentRelation,
+  teacherContactPersonOptions,
+  type TeacherContactPerson,
   type TeacherFormValues,
   type TeacherProfile,
   type TeacherRole,
@@ -18,6 +17,7 @@ type TeacherProfileViewProps = {
   mode?: 'view'
   teacher: TeacherProfile
   subjectOptions: string[]
+  students: StudentProfile[]
   onBack: () => void
   onOpenAssign: () => void
   onEditAssignment: (assignmentId: string) => void
@@ -37,7 +37,6 @@ type TeacherProfileCreateProps = {
   onPhotoChange: (event: ChangeEvent<HTMLInputElement>) => void
   onToggleRole: (role: TeacherRole) => void
   onToggleParentStudent: (studentId: number) => void
-  onParentRelationChange: (studentId: number, relation: ParentRelation) => void
   onOpenAssign: () => void
   onEditAssignment: (assignmentId: string) => void
   onRemoveAssignment: (assignmentId: string) => void
@@ -53,7 +52,11 @@ const roleLabels: Record<TeacherRole, string> = {
   admin: 'Admin',
 }
 
-const relationOptions: ParentRelation[] = ['Father', 'Mother', 'Guardian']
+const contactPersonLabels: Record<TeacherContactPerson, string> = {
+  self: 'Self',
+  parent: 'Parent',
+  guardian: 'Guardian',
+}
 
 const getStudentClassSection = (student: StudentProfile) => {
   const className = student.className?.trim()
@@ -62,7 +65,7 @@ const getStudentClassSection = (student: StudentProfile) => {
   if (className && section) {
     return {
       full: `${className} ${section}`,
-      compact: `${className.replace(/^Class\s*/i, '')}${section}`,
+      compact: `${className.replace(/^Class\s*/i, '')} ${section}`,
     }
   }
 
@@ -70,7 +73,7 @@ const getStudentClassSection = (student: StudentProfile) => {
   if (match) {
     return {
       full: `Class ${Number(match[1])} ${match[2].toUpperCase()}`,
-      compact: `${Number(match[1])}${match[2].toUpperCase()}`,
+      compact: `${Number(match[1])} ${match[2].toUpperCase()}`,
     }
   }
 
@@ -80,18 +83,24 @@ const getStudentClassSection = (student: StudentProfile) => {
   }
 }
 
+const getStudentRelationshipLabel = (student: StudentProfile) => {
+  if (student.gender === 'Female') return 'daughter'
+  if (student.gender === 'Male') return 'son'
+  return 'student'
+}
+
+const getStudentOptionLabel = (student: StudentProfile) =>
+  `${getStudentFullName(student)} - ${getStudentRelationshipLabel(student)} - ${getStudentClassSection(student).compact}`
+
 function TeacherProfileView(props: TeacherProfileProps) {
   const { teacher, onBack } = props
   const fullName = getTeacherFullName(teacher)
-  const address = splitTeacherAddress(teacher.address)
   const isCreateMode = props.mode === 'create'
   const profilePhoto = teacher.profilePhoto
   const [studentSearchTerm, setStudentSearchTerm] = useState('')
   const isParentRoleSelected = isCreateMode ? props.teacher.roles.includes('parent') : false
 
   const filteredStudents = useMemo(() => {
-    if (!isCreateMode) return []
-
     const query = studentSearchTerm.trim().toLowerCase()
     if (!query) return props.students
 
@@ -99,7 +108,15 @@ function TeacherProfileView(props: TeacherProfileProps) {
       const label = `${getStudentFullName(student)} ${student.rollNumber} ${getStudentClassSection(student).full}`.toLowerCase()
       return label.includes(query)
     })
-  }, [isCreateMode, props, studentSearchTerm])
+  }, [props.students, studentSearchTerm])
+
+  const linkedChildren = useMemo(
+    () =>
+      teacher.parentRelationships
+        .map((relationship) => props.students.find((student) => student.id === relationship.studentId))
+        .filter((student): student is StudentProfile => Boolean(student)),
+    [props.students, teacher.parentRelationships],
+  )
 
   return (
     <main className="role-main role-main-detail">
@@ -119,7 +136,7 @@ function TeacherProfileView(props: TeacherProfileProps) {
               <div className="teacher-profile-section-head">
                 <div>
                   <h3>Primary Information</h3>
-                  <p className="role-muted">Add the same teacher profile details shown in the view page.</p>
+                  
                 </div>
               </div>
 
@@ -130,7 +147,6 @@ function TeacherProfileView(props: TeacherProfileProps) {
                   ) : (
                     <div className="student-profile-photo-placeholder">
                       <UserCircle2 size={56} />
-                      <strong>{getTeacherInitials(teacher)}</strong>
                     </div>
                   )}
                   <label className="student-profile-upload-field">
@@ -171,12 +187,105 @@ function TeacherProfileView(props: TeacherProfileProps) {
                 </label>
 
                 <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>Gender</span>
+                  <select value={teacher.gender} onChange={(event) => props.onFieldChange('gender', event.target.value)}>
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field teacher-profile-field-span-3">
+                  <span>Address</span>
+                  <textarea
+                    rows={4}
+                    placeholder="Enter street address"
+                    value={teacher.address}
+                    onChange={(event) => props.onFieldChange('address', event.target.value)}
+                  />
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>City</span>
+                  <input
+                    type="text"
+                    value={teacher.city}
+                    onChange={(event) => props.onFieldChange('city', event.target.value)}
+                    placeholder="Hyderabad"
+                  />
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>Pincode</span>
+                  <input
+                    type="text"
+                    value={teacher.pincode}
+                    onChange={(event) => props.onFieldChange('pincode', event.target.value)}
+                    placeholder="500001"
+                  />
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>State</span>
+                  <input
+                    type="text"
+                    value={teacher.state}
+                    onChange={(event) => props.onFieldChange('state', event.target.value)}
+                    placeholder="Telangana"
+                  />
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>Country</span>
+                  <input
+                    type="text"
+                    value={teacher.country}
+                    onChange={(event) => props.onFieldChange('country', event.target.value)}
+                    placeholder="India"
+                  />
+                </label>
+                </div>
+              </div>
+            </section>
+
+            <section className="teacher-profile-section">
+              <div className="teacher-profile-section-head">
+                <div>
+                  <h3>Contact Information</h3>
+                  
+                </div>
+              </div>
+
+              <div className="teacher-profile-info-grid teacher-profile-form-grid">
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>Contact Person</span>
+                  <select value={teacher.contactPerson} onChange={(event) => props.onFieldChange('contactPerson', event.target.value)}>
+                    {teacherContactPersonOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
                   <span>Email</span>
                   <input
                     type="email"
                     value={teacher.email}
                     onChange={(event) => props.onFieldChange('email', event.target.value)}
-                    placeholder="teacher@school.edu"
+                    placeholder="contact@school.edu"
+                  />
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>WhatsApp</span>
+                  <input
+                    type="tel"
+                    value={teacher.whatsAppPhone}
+                    onChange={(event) => props.onFieldChange('whatsAppPhone', event.target.value)}
+                    placeholder="+91 98765 43210"
                   />
                 </label>
 
@@ -199,76 +308,40 @@ function TeacherProfileView(props: TeacherProfileProps) {
                     placeholder="+91 040 4000 1200"
                   />
                 </label>
-
-                <label className="teacher-profile-readonly-field teacher-profile-input-field">
-                  <span>WhatsApp Phone</span>
-                  <input
-                    type="tel"
-                    value={teacher.whatsAppPhone}
-                    onChange={(event) => props.onFieldChange('whatsAppPhone', event.target.value)}
-                    placeholder="+91 98765 43210"
-                  />
-                </label>
-
-                <label className="teacher-profile-readonly-field teacher-profile-input-field">
-                  <span>Gender</span>
-                  <select value={teacher.gender} onChange={(event) => props.onFieldChange('gender', event.target.value)}>
-                    <option value="">Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </label>
-
-                <label className="teacher-profile-readonly-field teacher-profile-input-field">
-                  <span>Pincode</span>
-                  <input
-                    type="text"
-                    value={teacher.pincode}
-                    onChange={(event) => props.onFieldChange('pincode', event.target.value)}
-                    placeholder="500001"
-                  />
-                </label>
-
-                <label className="teacher-profile-readonly-field">
-                  <span>City</span>
-                  <input type="text" value={address.city || 'Not available'} readOnly />
-                </label>
-
-                <label className="teacher-profile-readonly-field">
-                  <span>State</span>
-                  <input type="text" value={address.state || 'Not available'} readOnly />
-                </label>
-
-                <label className="teacher-profile-readonly-field">
-                  <span>Country</span>
-                  <input type="text" value={address.country || 'Not available'} readOnly />
-                </label>
-
-                <label className="teacher-profile-readonly-field teacher-profile-input-field teacher-profile-field-span-3">
-                  <span>Address</span>
-                  <textarea
-                    rows={4}
-                    placeholder="Enter full address with city, state, country"
-                    value={teacher.address}
-                    onChange={(event) => props.onFieldChange('address', event.target.value)}
-                  />
-                </label>
-                </div>
               </div>
             </section>
 
             <section className="teacher-profile-section">
               <div className="teacher-profile-section-head">
                 <div>
-                  <h3>Account & Professional Details</h3>
-                  <p className="role-muted">Complete the account setup and staff details required to save this profile.</p>
+                  <h3>Other Details</h3>
+                  
                 </div>
               </div>
 
               <div className="teacher-profile-info-grid teacher-profile-form-grid">
                 <label className="teacher-profile-readonly-field teacher-profile-input-field">
-                  <span>Username</span>
+                  <span>Employee ID</span>
+                  <input
+                    type="text"
+                    value={teacher.employeeId}
+                    onChange={(event) => props.onFieldChange('employeeId', event.target.value)}
+                    placeholder="EMP-001"
+                  />
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>LinkedIn Profile</span>
+                  <input
+                    type="url"
+                    value={teacher.linkedInProfile}
+                    onChange={(event) => props.onFieldChange('linkedInProfile', event.target.value)}
+                    placeholder="https://www.linkedin.com/in/username"
+                  />
+                </label>
+
+                <label className="teacher-profile-readonly-field teacher-profile-input-field">
+                  <span>Login Username</span>
                   <input
                     type="text"
                     value={teacher.username}
@@ -319,8 +392,8 @@ function TeacherProfileView(props: TeacherProfileProps) {
 
             <SubjectAssignmentsSection
               teacher={teacher}
-              title="Subject Specialization"
-              description="Assign subject, class, and section using the same modal as the Teachers tab."
+              title="Assign Subjects"
+             
               emptyMessage="No assignments added yet. Use Assign to add one before saving."
               actionLabel="Assign"
               onOpenAssign={props.onOpenAssign}
@@ -337,8 +410,8 @@ function TeacherProfileView(props: TeacherProfileProps) {
             <section className="teacher-profile-section">
               <div className="teacher-profile-section-head">
                 <div>
-                  <h3>Roles & Access</h3>
-                  <p className="role-muted">Teacher stays enabled. Add parent or admin only if this profile needs it.</p>
+                  <h3>Roles</h3>
+                  
                 </div>
               </div>
 
@@ -356,93 +429,62 @@ function TeacherProfileView(props: TeacherProfileProps) {
                       aria-pressed={isActive}
                       disabled={isTeacherRole}
                     >
+                      <span className="teacher-role-chip-indicator" aria-hidden>
+                        {isActive ? <Check size={14} strokeWidth={3} /> : null}
+                      </span>
                       <span>{roleLabels[role]}</span>
                       {isTeacherRole ? <span className="teacher-role-chip-note">Required</span> : null}
                     </button>
                   )
                 })}
               </div>
-            </section>
 
-            {isParentRoleSelected ? (
-              <section className="teacher-profile-section">
-                <div className="teacher-profile-section-head">
-                  <div>
-                    <h3>Parent Relationships</h3>
-                    <p className="role-muted">Choose the students linked to this parent profile.</p>
-                  </div>
-                </div>
-
-                <div className="teacher-parent-search-wrap">
-                  <label className="teacher-profile-readonly-field teacher-profile-input-field">
-                    <span>Select Children</span>
+              {isParentRoleSelected ? (
+                <div className="teacher-inline-student-select">
+                  <label className="teacher-profile-readonly-field teacher-profile-input-field teacher-link-children-field">
+                    <span>Associate Student</span>
                     <input
                       type="text"
-                      placeholder="Search students by name, class, section, or roll number"
+                      placeholder="Search by student name, class, section, or roll number"
                       value={studentSearchTerm}
                       onChange={(event) => setStudentSearchTerm(event.target.value)}
                     />
                   </label>
 
-                  <div className="teacher-parent-chip-row">
-                    {teacher.parentRelationships.length ? (
-                      teacher.parentRelationships.map((relationship) => {
-                        const student = props.students.find((item) => item.id === relationship.studentId)
-                        if (!student) return null
+                  {linkedChildren.length ? (
+                    <div className="teacher-parent-chip-row">
+                      {linkedChildren.map((student) => (
+                        <button
+                          key={student.id}
+                          type="button"
+                          className="teacher-parent-chip"
+                          onClick={() => props.onToggleParentStudent(student.id)}
+                        >
+                          {getStudentOptionLabel(student)}
+                          <span aria-hidden>x</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="role-muted">No students associated yet.</p>
+                  )}
 
-                        const classSection = getStudentClassSection(student)
-                        return (
-                          <button
-                            key={relationship.studentId}
-                            type="button"
-                            className="teacher-parent-chip"
-                            onClick={() => props.onToggleParentStudent(relationship.studentId)}
-                          >
-                            {`${student.firstName} - ${classSection.compact}`}
-                            <span aria-hidden>x</span>
-                          </button>
-                        )
-                      })
-                    ) : (
-                      <p className="role-muted">No children selected yet.</p>
-                    )}
-                  </div>
-
-                  <div className="teacher-parent-student-list">
+                  <div className="teacher-inline-student-list" role="listbox" aria-label="Student options">
                     {filteredStudents.length ? (
                       filteredStudents.map((student) => {
-                        const classSection = getStudentClassSection(student)
                         const isSelected = teacher.parentRelationships.some((item) => item.studentId === student.id)
-                        const selectedRelationship = teacher.parentRelationships.find((item) => item.studentId === student.id)
 
                         return (
-                          <div key={student.id} className={`teacher-parent-student-row ${isSelected ? 'is-selected' : ''}`}>
-                            <label className="teacher-parent-student-option">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => props.onToggleParentStudent(student.id)}
-                              />
-                              <span>{`${getStudentFullName(student)} - ${classSection.full}`}</span>
-                            </label>
-
-                            {isSelected ? (
-                              <label className="teacher-profile-readonly-field teacher-profile-input-field teacher-parent-relation-field">
-                                <span>Relation</span>
-                                <select
-                                  value={selectedRelationship?.relation || ''}
-                                  onChange={(event) => props.onParentRelationChange(student.id, event.target.value as ParentRelation)}
-                                >
-                                  <option value="">Select relation</option>
-                                  {relationOptions.map((relation) => (
-                                    <option key={relation} value={relation}>
-                                      {relation}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            ) : null}
-                          </div>
+                          <button
+                            key={student.id}
+                            type="button"
+                            className={`teacher-inline-student-option ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => props.onToggleParentStudent(student.id)}
+                            aria-pressed={isSelected}
+                          >
+                            <span>{getStudentOptionLabel(student)}</span>
+                            <strong>{isSelected ? 'Selected' : 'Add'}</strong>
+                          </button>
                         )
                       })
                     ) : (
@@ -452,8 +494,8 @@ function TeacherProfileView(props: TeacherProfileProps) {
                     )}
                   </div>
                 </div>
-              </section>
-            ) : null}
+              ) : null}
+            </section>
 
             <div className="teacher-modal-actions teacher-modal-actions-end">
               <button type="button" className="role-secondary-btn" onClick={onBack}>
@@ -468,6 +510,94 @@ function TeacherProfileView(props: TeacherProfileProps) {
         ) : (
           <>
             <BasicInfoSection teacher={teacher} />
+            <section className="teacher-profile-section">
+              <div className="teacher-profile-section-head">
+                <div>
+                  <h3>Contact Information</h3>
+                  <p className="role-muted">The preferred contact person and direct communication details for this profile.</p>
+                </div>
+              </div>
+
+              <div className="teacher-profile-info-grid">
+                <label className="teacher-profile-readonly-field">
+                  <span>Contact Person</span>
+                  <input type="text" value={contactPersonLabels[teacher.contactPerson] || 'Self'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Email</span>
+                  {teacher.email ? (
+                    <a className="profile-clickable-field" href={`mailto:${teacher.email}`}>
+                      {teacher.email}
+                    </a>
+                  ) : (
+                    <input type="text" value="Not available" readOnly />
+                  )}
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>WhatsApp</span>
+                  <input type="text" value={teacher.whatsAppPhone || 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Phone</span>
+                  <input type="text" value={teacher.phone || 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Home Phone</span>
+                  <input type="text" value={teacher.homePhone || 'Not available'} readOnly />
+                </label>
+              </div>
+            </section>
+
+            <section className="teacher-profile-section">
+              <div className="teacher-profile-section-head">
+                <div>
+                  <h3>Other Details</h3>
+                  <p className="role-muted">Login and employment details for this teacher.</p>
+                </div>
+              </div>
+
+              <div className="teacher-profile-info-grid">
+                <label className="teacher-profile-readonly-field">
+                  <span>Employee ID</span>
+                  <input type="text" value={teacher.employeeId || 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>LinkedIn Profile</span>
+                  <input type="text" value={teacher.linkedInProfile || 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Login Username</span>
+                  <input type="text" value={teacher.username || 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Password</span>
+                  <input type="text" value={teacher.password ? 'Saved' : 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Joining Date</span>
+                  <input type="text" value={teacher.joiningDate || 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Prior Experience</span>
+                  <input type="text" value={teacher.priorExperience ? `${teacher.priorExperience} years` : 'Not available'} readOnly />
+                </label>
+
+                <label className="teacher-profile-readonly-field">
+                  <span>Relieving Date</span>
+                  <input type="text" value={teacher.relievingDate || 'Not available'} readOnly />
+                </label>
+              </div>
+            </section>
+
             <SubjectAssignmentsSection
               teacher={teacher}
               title="Subject Specialization"
@@ -481,6 +611,41 @@ function TeacherProfileView(props: TeacherProfileProps) {
               onAddQualification={props.onAddQualification}
               onDeleteQualification={props.onDeleteQualification}
             />
+
+            <section className="teacher-profile-section">
+              <div className="teacher-profile-section-head">
+                <div>
+                  <h3>Roles</h3>
+                  <p className="role-muted">Teacher stays enabled. Parent and admin appear only when assigned.</p>
+                </div>
+              </div>
+
+              <div className="teacher-role-chip-row">
+                {teacher.roles.map((role) => (
+                  <div key={role} className="teacher-role-chip is-active">
+                    <span className="teacher-role-chip-indicator" aria-hidden>
+                      <Check size={14} strokeWidth={3} />
+                    </span>
+                    <span>{roleLabels[role]}</span>
+                    {role === 'teacher' ? <span className="teacher-role-chip-note">Required</span> : null}
+                  </div>
+                ))}
+              </div>
+
+              {teacher.roles.includes('parent') ? (
+                linkedChildren.length ? (
+                  <div className="teacher-parent-chip-row">
+                    {linkedChildren.map((student) => (
+                      <div key={student.id} className="teacher-parent-chip">
+                        {getStudentOptionLabel(student)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="role-muted">No students associated yet.</p>
+                )
+              ) : null}
+            </section>
           </>
         )}
       </section>

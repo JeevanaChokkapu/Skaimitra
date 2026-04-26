@@ -1,6 +1,6 @@
 import { type ChangeEvent, type FormEvent } from 'react'
 import { X } from 'lucide-react'
-import type { TeacherQualificationFormValues } from './teacherTypes'
+import { teacherDegreeOptions, teacherQualificationOptions, type TeacherQualificationFormValues } from './teacherTypes'
 
 type AddQualificationModalProps = {
   isOpen: boolean
@@ -46,24 +46,34 @@ function AddQualificationModal({
           <div className="teacher-form-grid">
             <label>
               <span>Qualification</span>
-              <input
-                type="text"
-                placeholder="Bachelor's"
+              <select
                 value={values.qualification}
                 onChange={(event) => onFieldChange('qualification', event.target.value)}
                 required
-              />
+              >
+                <option value="">Select qualification</option>
+                {teacherQualificationOptions.map((qualification) => (
+                  <option key={qualification} value={qualification}>
+                    {qualification}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>
               <span>Degree</span>
-              <input
-                type="text"
-                placeholder="B.Sc Computer Science"
+              <select
                 value={values.degree}
                 onChange={(event) => onFieldChange('degree', event.target.value)}
                 required
-              />
+              >
+                <option value="">Select degree</option>
+                {teacherDegreeOptions.map((degree) => (
+                  <option key={degree} value={degree}>
+                    {degree}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>

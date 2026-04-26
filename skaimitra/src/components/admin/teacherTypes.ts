@@ -21,6 +21,13 @@ export type TeacherQualification = {
 
 export type TeacherRole = 'teacher' | 'parent' | 'admin'
 export type ParentRelation = 'Father' | 'Mother' | 'Guardian' | ''
+export type TeacherContactPerson = 'self' | 'parent' | 'guardian'
+
+export const teacherContactPersonOptions: Array<{ value: TeacherContactPerson; label: string }> = [
+  { value: 'self', label: 'Self' },
+  { value: 'parent', label: 'Parent' },
+  { value: 'guardian', label: 'Guardian' },
+]
 
 export type TeacherParentRelationship = {
   studentId: number
@@ -32,12 +39,18 @@ export type TeacherProfile = {
   username: string
   email: string
   password: string
+  employeeId: string
+  linkedInProfile: string
   firstName: string
   middleName: string
   lastName: string
   address: string
+  city: string
   pincode: string
+  state: string
+  country: string
   profilePhoto: string
+  contactPerson: TeacherContactPerson
   phone: string
   homePhone: string
   whatsAppPhone: string
@@ -69,16 +82,61 @@ export type TeacherQualificationFormValues = {
   institutionName: string
 }
 
+export const teacherQualificationOptions = [
+  "High School",
+  "Intermediate",
+  "Diploma",
+  "Bachelor's",
+  "Master's",
+  'M.Phil',
+  'Ph.D',
+  'B.Ed',
+  'M.Ed',
+  'Teaching Certification',
+  'Professional Certification',
+  'Other',
+]
+
+export const teacherDegreeOptions = [
+  'B.A',
+  'B.Sc',
+  'B.Com',
+  'BCA',
+  'BBA',
+  'B.Tech',
+  'B.E',
+  'B.Ed',
+  'B.El.Ed',
+  'M.A',
+  'M.Sc',
+  'M.Com',
+  'MCA',
+  'MBA',
+  'M.Tech',
+  'M.Ed',
+  'M.Phil',
+  'Ph.D',
+  'Diploma in Education',
+  'D.El.Ed',
+  'Other',
+]
+
 export const createEmptyTeacherForm = (): TeacherFormValues => ({
   username: '',
   email: '',
   password: '',
+  employeeId: '',
+  linkedInProfile: '',
   firstName: '',
   middleName: '',
   lastName: '',
   address: '',
+  city: '',
   pincode: '',
+  state: '',
+  country: 'India',
   profilePhoto: '',
+  contactPerson: 'self',
   phone: '',
   homePhone: '',
   whatsAppPhone: '',
@@ -121,6 +179,11 @@ const normalizeTeacherRoles = (value: unknown): TeacherRole[] => {
     : []
 
   return roles.includes('teacher') ? Array.from(new Set(roles)) : ['teacher', ...roles]
+}
+
+const normalizeTeacherContactPerson = (value: unknown): TeacherContactPerson => {
+  const normalized = toSafeString(value).trim().toLowerCase()
+  return normalized === 'parent' || normalized === 'guardian' ? normalized : 'self'
 }
 
 const normalizeTeacherParentRelationships = (value: unknown): TeacherParentRelationship[] => {
@@ -261,35 +324,46 @@ export const normalizeTeacherProfile = (value: unknown, fallbackId: number): Tea
   const lastName = toSafeString(record.lastName).trim() || derivedLastName.join(' ')
   const subjectSpecializations = toSafeStringArray(record.subjectSpecializations ?? record.subjects)
   const legacySubject = toSafeString(record.subject).trim()
-  const parentRelationships = normalizeTeacherParentRelationships((record as { parentRelationships?: unknown }).parentRelationships)
-  const children = Array.from(
+  const normalizedParentRelationships = normalizeTeacherParentRelationships((record as { parentRelationships?: unknown }).parentRelationships)
+  const normalizedChildren = Array.from(
     new Set([
       ...(Array.isArray((record as { children?: unknown }).children)
         ? ((record as { children?: unknown[] }).children ?? [])
             .map((item) => Number(item))
             .filter((item) => Number.isFinite(item))
         : []),
-      ...parentRelationships.map((item) => item.studentId),
+      ...normalizedParentRelationships.map((item) => item.studentId),
     ]),
   )
+  const parentRelationships = normalizedParentRelationships.length
+    ? normalizedParentRelationships
+    : normalizedChildren.map((studentId) => ({ studentId, relation: '' as ParentRelation }))
+
+  const addressParts = splitTeacherAddress(toSafeString(record.address).trim())
 
   return {
     id: typeof record.id === 'number' && Number.isFinite(record.id) ? record.id : fallbackId,
     username: toSafeString(record.username).trim(),
     email: toSafeString(record.email).trim(),
     password: toSafeString(record.password),
+    employeeId: toSafeString((record as { employeeId?: unknown }).employeeId).trim(),
+    linkedInProfile: toSafeString((record as { linkedInProfile?: unknown }).linkedInProfile).trim(),
     firstName,
     middleName,
     lastName,
     address: toSafeString(record.address).trim(),
+    city: toSafeString((record as { city?: unknown }).city).trim() || addressParts.city,
     pincode: toSafeString((record as { pincode?: unknown }).pincode).trim(),
+    state: toSafeString((record as { state?: unknown }).state).trim() || addressParts.state,
+    country: toSafeString((record as { country?: unknown }).country).trim() || addressParts.country,
     profilePhoto: toSafeString(record.profilePhoto).trim(),
+    contactPerson: normalizeTeacherContactPerson((record as { contactPerson?: unknown }).contactPerson),
     phone: toSafeString(record.phone).trim(),
     homePhone: toSafeString(record.homePhone).trim(),
     whatsAppPhone: toSafeString(record.whatsAppPhone).trim(),
     gender: record.gender === 'Male' || record.gender === 'Female' || record.gender === 'Other' ? record.gender : '',
     roles: normalizeTeacherRoles((record as { roles?: unknown }).roles),
-    children,
+    children: normalizedChildren,
     parentRelationships,
     subjectSpecializations: subjectSpecializations.length ? subjectSpecializations : legacySubject ? [legacySubject] : [],
     joiningDate: toSafeString(record.joiningDate),
@@ -304,7 +378,7 @@ export const getTeacherFullName = (teacher: Pick<TeacherProfile, 'firstName' | '
   `${teacher.firstName || ''} ${teacher.middleName || ''} ${teacher.lastName || ''}`.replace(/\s+/g, ' ').trim() || 'Unnamed Teacher'
 
 export const getTeacherInitials = (teacher: Pick<TeacherProfile, 'firstName' | 'lastName'>) =>
-  `${(teacher.firstName || '').charAt(0)}${(teacher.lastName || '').charAt(0)}`.toUpperCase() || 'NA'
+  `${(teacher.firstName || '').trim().charAt(0)}${(teacher.lastName || '').trim().slice(-1)}`.toUpperCase() || 'NA'
 
 export const getTeacherPrimarySubject = (teacher: Pick<TeacherProfile, 'subjectSpecializations'>) =>
   teacher.subjectSpecializations?.[0] || 'Not assigned'

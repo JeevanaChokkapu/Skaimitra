@@ -23,7 +23,7 @@ function GuardianSection({
         </div>
         <button type="button" className="role-secondary-btn student-inline-add-btn" onClick={onAddGuardian}>
           <Plus size={16} />
-          Add Guardian
+          Add
         </button>
       </div>
 

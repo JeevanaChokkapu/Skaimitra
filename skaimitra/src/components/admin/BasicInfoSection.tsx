@@ -1,5 +1,5 @@
 import { UserCircle2 } from 'lucide-react'
-import { getTeacherFullName, getTeacherInitials, splitTeacherAddress, type TeacherProfile } from './teacherTypes'
+import { getTeacherFullName, splitTeacherAddress, type TeacherProfile } from './teacherTypes'
 
 type BasicInfoSectionProps = {
   teacher: TeacherProfile
@@ -7,21 +7,18 @@ type BasicInfoSectionProps = {
 
 function BasicInfoSection({ teacher }: BasicInfoSectionProps) {
   const fullName = getTeacherFullName(teacher)
-  const address = splitTeacherAddress(teacher.address)
+  const fallbackAddress = splitTeacherAddress(teacher.address)
 
   const items = [
     { label: 'First Name', value: teacher.firstName || 'Not available' },
     { label: 'Middle Name', value: teacher.middleName || 'Not available' },
     { label: 'Last Name', value: teacher.lastName || 'Not available' },
-    { label: 'Email', value: teacher.email || 'Not available' },
-    { label: 'Phone', value: teacher.phone || 'Not available' },
-    { label: 'Home Phone', value: teacher.homePhone || 'Not available' },
-    { label: 'WhatsApp Phone', value: teacher.whatsAppPhone || 'Not available' },
     { label: 'Gender', value: teacher.gender || 'Not available' },
-    { label: 'City', value: address.city || 'Not available' },
-    { label: 'State', value: address.state || 'Not available' },
-    { label: 'Country', value: address.country || 'Not available' },
+    { label: 'Address', value: teacher.address || 'Not available' },
+    { label: 'City', value: teacher.city || fallbackAddress.city || 'Not available' },
     { label: 'Pincode', value: teacher.pincode || 'Not available' },
+    { label: 'State', value: teacher.state || fallbackAddress.state || 'Not available' },
+    { label: 'Country', value: teacher.country || fallbackAddress.country || 'Not available' },
   ]
 
   return (
@@ -29,7 +26,7 @@ function BasicInfoSection({ teacher }: BasicInfoSectionProps) {
       <div className="teacher-profile-section-head">
         <div>
           <h3>Basic Information</h3>
-          <p className="role-muted">Core contact and location details for the teacher profile.</p>
+          <p className="role-muted">Identity and location details for the teacher profile.</p>
         </div>
       </div>
 
@@ -40,7 +37,6 @@ function BasicInfoSection({ teacher }: BasicInfoSectionProps) {
           ) : (
             <div className="student-profile-photo-placeholder">
               <UserCircle2 size={56} />
-              <strong>{getTeacherInitials(teacher)}</strong>
             </div>
           )}
           <span>Profile Photo</span>

@@ -1,6 +1,6 @@
-import { Mail, Pencil, Phone, UserPlus } from 'lucide-react'
+import { Mail, Pencil, Phone, UserCircle2, UserPlus } from 'lucide-react'
 import AssignmentTag from './AssignmentTag'
-import { getTeacherFullName, getTeacherInitials, getTeacherPrimarySubject, type TeacherProfile } from './teacherTypes'
+import { getTeacherFullName, type TeacherProfile } from './teacherTypes'
 
 type TeacherCardProps = {
   teacher: TeacherProfile
@@ -12,7 +12,6 @@ type TeacherCardProps = {
 
 function TeacherCard({ teacher, onView, onAssign, onEditAssignment, onRemoveAssignment }: TeacherCardProps) {
   const fullName = getTeacherFullName(teacher)
-  const primarySubject = getTeacherPrimarySubject(teacher)
 
   return (
     <article className="teacher-card">
@@ -31,7 +30,9 @@ function TeacherCard({ teacher, onView, onAssign, onEditAssignment, onRemoveAssi
           {teacher.profilePhoto ? (
             <img src={teacher.profilePhoto} alt={fullName} className="teacher-card-avatar teacher-card-avatar-image" />
           ) : (
-            <div className="teacher-card-avatar">{getTeacherInitials(teacher)}</div>
+            <div className="teacher-card-avatar teacher-card-avatar-empty" aria-label="No teacher profile photo">
+              <UserCircle2 size={28} />
+            </div>
           )}
 
           <div className="teacher-card-copy">
@@ -40,7 +41,6 @@ function TeacherCard({ teacher, onView, onAssign, onEditAssignment, onRemoveAssi
                 <button type="button" className="teacher-card-name-btn" onClick={() => onView(teacher)}>
                   {fullName}
                 </button>
-                <p className="teacher-card-subject">{primarySubject}</p>
               </div>
             </div>
 
@@ -60,7 +60,7 @@ function TeacherCard({ teacher, onView, onAssign, onEditAssignment, onRemoveAssi
       </div>
 
       <div className="teacher-card-assignment-block">
-        <h5>Current Assignments:</h5>
+        <h5>Assign Subjects</h5>
         {teacher.assignments.length ? (
           <div className="teacher-assignment-list teacher-card-assignment-summary">
             {teacher.assignments.map((assignment) => (

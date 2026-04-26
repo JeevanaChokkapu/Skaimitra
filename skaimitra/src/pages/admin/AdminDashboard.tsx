@@ -5,6 +5,7 @@ import {
   Bell,
   BookOpen,
   ClipboardList,
+  Eye,
   Home,
   LogOut,
   MessageSquare,
@@ -21,10 +22,12 @@ import {
 } from 'lucide-react'
 import AddQualificationModal from '../../components/admin/AddQualificationModal'
 import AssignTeacherModal from '../../components/admin/AssignTeacherModal'
-import StudentCard from '../../components/admin/StudentCard'
 import TeacherCard from '../../components/admin/TeacherCard'
 import TeacherProfilePage from '../../components/admin/TeacherProfile'
 import StudentProfilePage from '../../components/admin/StudentProfilePage'
+import RolePermissionsPage from '../../components/admin/RolePermissionsPage'
+import ThemeGrid from '../../components/admin/ThemeGrid'
+import ThemePreview from '../../components/admin/ThemePreview'
 import CommunicationsHub from '../../components/dashboard/CommunicationsHub'
 import {
   createCalendarEvent,
@@ -85,12 +88,20 @@ import {
   type GuardianContact,
   type StudentProfile,
 } from '../../components/admin/studentTypes'
+import {
+  createDefaultRolePermissionsState,
+  type PermissionAction,
+  type PermissionRole,
+  type RolePermissionsState,
+  type RolePermissionRoleMeta,
+} from '../../components/admin/rolePermissionsTypes'
+import { useTheme } from '../../components/admin/useTheme'
 import '../role-dashboard.css'
 
 type Role = 'student' | 'teacher' | 'admin' | 'parent'
 type UserStatus = 'active' | 'inactive'
 type ViewMode = 'dashboard' | 'userManagement'
-type SystemSettingsView = 'grid' | 'schoolSettings' | 'systemConfig' | 'preferences'
+type SystemSettingsView = 'grid' | 'schoolSettings' | 'systemConfig' | 'themes' | 'rolePermissions'
 
 type UserRow = {
   id: number
@@ -129,7 +140,7 @@ const quickActions = [
 ]
 
 const systemSettingsCards: Array<{
-  key: SystemSettingsView | 'userManagement'
+  key: SystemSettingsView
   title: string
   desc: string
   icon: typeof Settings
@@ -147,21 +158,23 @@ const systemSettingsCards: Array<{
     icon: Settings,
   },
   {
-    key: 'preferences',
-    title: 'System Preferences',
-    desc: 'Customize UI behavior and application preferences',
+    key: 'themes',
+    title: 'Themes',
+    desc: 'Customize dashboard themes and visual preferences',
     icon: BarChart3,
   },
   {
-    key: 'userManagement',
-    title: 'User Management',
-    desc: 'Manage users, roles, and permissions',
+    key: 'rolePermissions',
+    title: 'Role Permissions',
+    desc: 'Manage role access, permissions, and controls',
     icon: Users,
   },
 ]
 
 const ADMIN_TEACHERS_KEY = 'skaimitra_admin_teachers'
 const ADMIN_STUDENTS_KEY = 'skaimitra_admin_students'
+const ADMIN_ROLE_PERMISSIONS_KEY = 'skaimitra_admin_role_permissions'
+const ADMIN_THEME_PREFERENCE_KEY = 'skaimitra_admin_theme_preference'
 const teacherSubjectOptions = [
   'Mathematics',
   'Science',
@@ -180,12 +193,18 @@ const defaultTeacherRecords: TeacherProfile[] = [
     username: 'rajesh.kumar',
     email: 'rajesh@school.edu',
     password: 'Teacher@123',
+    employeeId: 'EMP-001',
+    linkedInProfile: 'https://www.linkedin.com/in/rajesh-kumar',
     firstName: 'Dr. Rajesh',
     middleName: '',
     lastName: 'Kumar',
-    address: '12 Knowledge Park Road, Hyderabad',
+    address: '12 Knowledge Park Road',
+    city: 'Hyderabad',
     pincode: '500084',
+    state: 'Telangana',
+    country: 'India',
     profilePhoto: '',
+    contactPerson: 'self',
     phone: '+91 98765 43211',
     homePhone: '+91 040 4000 4201',
     whatsAppPhone: '+91 98765 43211',
@@ -211,12 +230,18 @@ const defaultTeacherRecords: TeacherProfile[] = [
     username: 'priya.patel',
     email: 'priya@school.edu',
     password: 'Teacher@123',
+    employeeId: 'EMP-002',
+    linkedInProfile: 'https://www.linkedin.com/in/priya-patel',
     firstName: 'Ms. Priya',
     middleName: '',
     lastName: 'Patel',
-    address: '8 Lake View Colony, Hyderabad',
+    address: '8 Lake View Colony',
+    city: 'Hyderabad',
     pincode: '500081',
+    state: 'Telangana',
+    country: 'India',
     profilePhoto: '',
+    contactPerson: 'self',
     phone: '+91 98765 43213',
     homePhone: '+91 040 4000 4202',
     whatsAppPhone: '+91 98765 43213',
@@ -242,12 +267,18 @@ const defaultTeacherRecords: TeacherProfile[] = [
     username: 'meera.joshi',
     email: 'meera@school.edu',
     password: 'Teacher@123',
+    employeeId: 'EMP-003',
+    linkedInProfile: 'https://www.linkedin.com/in/meera-joshi',
     firstName: 'Meera',
     middleName: '',
     lastName: 'Joshi',
-    address: '22 Green Valley Street, Hyderabad',
+    address: '22 Green Valley Street',
+    city: 'Hyderabad',
     pincode: '500032',
+    state: 'Telangana',
+    country: 'India',
     profilePhoto: '',
+    contactPerson: 'self',
     phone: '+91 98765 43215',
     homePhone: '+91 040 4000 4203',
     whatsAppPhone: '+91 98765 43215',
@@ -273,6 +304,10 @@ const defaultStudentRecords: StudentProfile[] = [
     rollNumber: '06-A-01',
     dateOfBirth: '2013-08-12',
     gender: 'Male',
+    category: 'General',
+    religion: 'Hindu',
+    reports: 'https://example.com/reports/rahul-sharma.pdf',
+    admissionYear: '2024',
     className: 'Class 6',
     section: 'A',
     addressLine: '12 Lake View Colony',
@@ -310,6 +345,10 @@ const defaultStudentRecords: StudentProfile[] = [
     rollNumber: '07-A-12',
     dateOfBirth: '2012-03-04',
     gender: 'Female',
+    category: 'OBC',
+    religion: 'Hindu',
+    reports: 'https://example.com/reports/priya-reddy.pdf',
+    admissionYear: '2024',
     className: 'Class 7',
     section: 'A',
     addressLine: '4 Green Meadows',
@@ -347,6 +386,10 @@ const defaultStudentRecords: StudentProfile[] = [
     rollNumber: '08-B-05',
     dateOfBirth: '2011-11-19',
     gender: 'Male',
+    category: 'General',
+    religion: 'Hindu',
+    reports: 'https://example.com/reports/arjun-kumar.pdf',
+    admissionYear: '2024',
     className: 'Class 8',
     section: 'B',
     addressLine: '22 Temple Road',
@@ -468,6 +511,27 @@ const loadStudentRecords = (): StudentProfile[] => {
   }
 }
 
+const loadRolePermissions = (): RolePermissionsState => {
+  const fallback = createDefaultRolePermissionsState()
+
+  if (typeof window === 'undefined') return fallback
+
+  try {
+    const raw = window.localStorage.getItem(ADMIN_ROLE_PERMISSIONS_KEY)
+    if (!raw) return fallback
+
+    const parsed = JSON.parse(raw) as Partial<RolePermissionsState>
+    return {
+      administrator: parsed.administrator || fallback.administrator,
+      teacher: parsed.teacher || fallback.teacher,
+      student: parsed.student || fallback.student,
+      parent: parsed.parent || fallback.parent,
+    }
+  } catch {
+    return fallback
+  }
+}
+
 const getTeacherGuardianContact = (
   teacherId: number,
   teacher: Pick<TeacherProfile, 'firstName' | 'middleName' | 'lastName' | 'email' | 'phone' | 'homePhone' | 'whatsAppPhone'>,
@@ -541,6 +605,8 @@ const getDefaultSchoolSettings = (): SchoolSettingsData => ({
   logoName: getStoredValue('skaimitra_school_logo_name', 'SkaiMitra_LogoV2.0.jpg'),
 })
 
+const getDefaultAdminThemePreference = () => getStoredValue(ADMIN_THEME_PREFERENCE_KEY, 'light')
+
 function AdminDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('Home')
@@ -549,6 +615,8 @@ function AdminDashboard() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [teachers, setTeachers] = useState<TeacherProfile[]>(() => loadTeacherRecords())
   const [students, setStudents] = useState<StudentProfile[]>(() => loadStudentRecords())
+  const [rolePermissions, setRolePermissions] = useState<RolePermissionsState>(() => loadRolePermissions())
+  const [selectedPermissionRole, setSelectedPermissionRole] = useState<PermissionRole>('administrator')
   const [searchTerm, setSearchTerm] = useState('')
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('')
   const [studentSearchTerm, setStudentSearchTerm] = useState('')
@@ -628,6 +696,13 @@ function AdminDashboard() {
   const [studentPageMode, setStudentPageMode] = useState<'create' | 'edit' | 'view' | null>(null)
   const [selectedStudentProfileId, setSelectedStudentProfileId] = useState<number | null>(null)
   const [studentForm, setStudentForm] = useState<StudentFormValues>(() => createEmptyStudentForm())
+  const {
+    themes: dashboardThemeOptions,
+    themeId: adminThemePreference,
+    activeTheme: activeAdminTheme,
+    setThemeId: setAdminThemePreference,
+    saveTheme: saveAdminThemePreference,
+  } = useTheme(getDefaultAdminThemePreference(), ADMIN_THEME_PREFERENCE_KEY)
 
   useEffect(() => {
     if (!uiNotice) return
@@ -644,6 +719,11 @@ function AdminDashboard() {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(ADMIN_STUDENTS_KEY, JSON.stringify(students))
   }, [students])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(ADMIN_ROLE_PERMISSIONS_KEY, JSON.stringify(rolePermissions))
+  }, [rolePermissions])
 
   useEffect(() => {
     const syncSharedData = () => {
@@ -768,16 +848,14 @@ function AdminDashboard() {
   const teacherStats = useMemo(() => {
     const totalAssignments = teachers.reduce((sum, teacher) => sum + teacher.assignments.length, 0)
     const activeCourses = new Set(teachers.flatMap((teacher) => teacher.assignments.map((assignment) => assignment.subject))).size
-    const studentCount = dashboardCounts.students || 120
-    const ratio = teachers.length ? `${Math.max(1, Math.round(studentCount / teachers.length))}:1` : '0:1'
 
     return {
       totalTeachers: teachers.length,
       totalAssignments,
       activeCourses,
-      studentTeacherRatio: ratio,
+      totalStudents: students.length,
     }
-  }, [dashboardCounts.students, teachers])
+  }, [students.length, teachers])
 
   const selectedTeacherProfile = useMemo(
     () => teachers.find((teacher) => teacher.id === selectedTeacherProfileId) || null,
@@ -809,11 +887,13 @@ function AdminDashboard() {
   )
 
   const studentStats = useMemo(() => {
+    const countByClass = (className: string) => students.filter((student) => student.className === className).length
+
     return {
       totalStudents: students.length,
-      totalGuardians: students.reduce((count, student) => count + student.guardians.length, 0),
-      studentsWithPhotos: students.filter((student) => Boolean(student.profilePhoto)).length,
-      accountReady: students.filter((student) => student.username && student.password).length,
+      class6: countByClass('Class 6'),
+      class7: countByClass('Class 7'),
+      class8: countByClass('Class 8'),
     }
   }, [students])
 
@@ -846,6 +926,44 @@ function AdminDashboard() {
         )
       }),
     [studentSearchTerm, students],
+  )
+
+  const rolePermissionRoles = useMemo<RolePermissionRoleMeta[]>(
+    () => [
+      {
+        role: 'administrator',
+        name: 'Administrator',
+        icon: 'shield',
+        userCount: 1,
+        description: 'Full system access and management',
+        accentClass: 'is-admin',
+      },
+      {
+        role: 'teacher',
+        name: 'Teacher',
+        icon: 'graduation',
+        userCount: teachers.length,
+        description: 'Manage courses, grading, and classroom workflows',
+        accentClass: 'is-teacher',
+      },
+      {
+        role: 'student',
+        name: 'Student',
+        icon: 'student',
+        userCount: students.length,
+        description: 'Access courses, assignments, and announcements',
+        accentClass: 'is-student',
+      },
+      {
+        role: 'parent',
+        name: 'Parent',
+        icon: 'parent',
+        userCount: students.reduce((total, student) => total + student.guardians.length, 0),
+        description: 'Review student progress, reports, and announcements',
+        accentClass: 'is-parent',
+      },
+    ],
+    [students, teachers.length],
   )
 
   const filteredCourses = useMemo(
@@ -1158,20 +1276,6 @@ function AdminDashboard() {
     })
   }
 
-  const handleTeacherParentRelationChange = (studentId: number, relation: ParentRelation) => {
-    setTeacherForm((prev) => {
-      const parentRelationships = prev.parentRelationships.map((item) =>
-        item.studentId === studentId ? { ...item, relation } : item,
-      )
-
-      return {
-        ...prev,
-        parentRelationships,
-        children: parentRelationships.map((item) => item.studentId),
-      }
-    })
-  }
-
   const handleTeacherPhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -1224,12 +1328,18 @@ function AdminDashboard() {
       username: teacherForm.username.trim(),
       email: teacherForm.email.trim(),
       password: teacherForm.password.trim(),
+      employeeId: teacherForm.employeeId.trim(),
+      linkedInProfile: teacherForm.linkedInProfile.trim(),
       firstName: teacherForm.firstName.trim(),
       middleName: teacherForm.middleName.trim(),
       lastName: teacherForm.lastName.trim(),
       address: teacherForm.address.trim(),
+      city: teacherForm.city.trim(),
       pincode: teacherForm.pincode.trim(),
+      state: teacherForm.state.trim(),
+      country: teacherForm.country.trim(),
       profilePhoto: teacherForm.profilePhoto,
+      contactPerson: teacherForm.contactPerson,
       phone: teacherForm.phone.trim(),
       homePhone: teacherForm.homePhone.trim(),
       whatsAppPhone: teacherForm.whatsAppPhone.trim(),
@@ -1247,10 +1357,14 @@ function AdminDashboard() {
       !normalizedTeacher.email ||
       !normalizedTeacher.firstName ||
       !normalizedTeacher.lastName ||
+      !normalizedTeacher.employeeId ||
       !normalizedTeacher.phone ||
-      !normalizedTeacher.homePhone ||
+      !normalizedTeacher.whatsAppPhone ||
       !normalizedTeacher.address ||
+      !normalizedTeacher.city ||
       !normalizedTeacher.pincode ||
+      !normalizedTeacher.state ||
+      !normalizedTeacher.country ||
       !normalizedTeacher.gender ||
       !normalizedTeacher.username ||
       !normalizedTeacher.joiningDate ||
@@ -1258,6 +1372,29 @@ function AdminDashboard() {
     ) {
       setUiNotice({ type: 'error', message: 'Fill in all required teacher details before saving.' })
       return
+    }
+
+    const isDuplicateEmployeeId = teachers.some(
+      (teacher) =>
+        teacher.id !== editingTeacherId &&
+        teacher.employeeId.trim().toLowerCase() === normalizedTeacher.employeeId.toLowerCase(),
+    )
+
+    if (isDuplicateEmployeeId) {
+      setUiNotice({ type: 'error', message: 'Employee ID must be unique for each teacher.' })
+      return
+    }
+
+    if (normalizedTeacher.linkedInProfile) {
+      try {
+        const linkedInUrl = new URL(normalizedTeacher.linkedInProfile)
+        if (!['http:', 'https:'].includes(linkedInUrl.protocol)) {
+          throw new Error('Invalid LinkedIn URL protocol')
+        }
+      } catch {
+        setUiNotice({ type: 'error', message: 'Enter a valid LinkedIn profile URL.' })
+        return
+      }
     }
 
     if (!editingTeacherId && !normalizedTeacher.password) {
@@ -1630,6 +1767,10 @@ function AdminDashboard() {
       rollNumber: student.rollNumber,
       dateOfBirth: student.dateOfBirth,
       gender: student.gender,
+      category: student.category,
+      religion: student.religion,
+      reports: student.reports,
+      admissionYear: student.admissionYear,
       className: student.className,
       section: student.section,
       addressLine: student.addressLine,
@@ -1666,6 +1807,10 @@ function AdminDashboard() {
       rollNumber: studentForm.rollNumber.trim(),
       dateOfBirth: studentForm.dateOfBirth.trim(),
       gender: studentForm.gender,
+      category: studentForm.category,
+      religion: studentForm.religion.trim(),
+      reports: studentForm.reports.trim(),
+      admissionYear: studentForm.admissionYear.trim(),
       className: studentForm.className.trim(),
       section: studentForm.section.trim(),
       addressLine: studentForm.addressLine.trim(),
@@ -1702,6 +1847,8 @@ function AdminDashboard() {
     const hasInvalidGuardianEmail = normalizedStudent.guardians.some(
       (guardian) => guardian.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guardian.email),
     )
+    const hasInvalidReportLink = normalizedStudent.reports && !/^https?:\/\/\S+\.\S+/.test(normalizedStudent.reports)
+    const hasInvalidAdmissionYear = normalizedStudent.admissionYear && !/^\d{4}$/.test(normalizedStudent.admissionYear)
     const hasIncompleteGuardian = normalizedStudent.guardians.some(
       (guardian) => !guardian.name || !guardian.relation || !guardian.phone || !guardian.email,
     )
@@ -1736,6 +1883,16 @@ function AdminDashboard() {
       return
     }
 
+    if (hasInvalidReportLink) {
+      setUiNotice({ type: 'error', message: 'Enter a valid report document URL.' })
+      return
+    }
+
+    if (hasInvalidAdmissionYear) {
+      setUiNotice({ type: 'error', message: 'Admission year must use YYYY format.' })
+      return
+    }
+
     setStudents((prev) => {
       if (editingStudentId) {
         return prev.map((student) =>
@@ -1765,6 +1922,36 @@ function AdminDashboard() {
 
     setStudents((prev) => prev.filter((student) => student.id !== studentId))
     setUiNotice({ type: 'success', message: 'Student removed successfully.' })
+  }
+
+  const handleToggleRolePermission = (role: PermissionRole, moduleKey: string, action: PermissionAction) => {
+    setRolePermissions((prev) => ({
+      ...prev,
+      [role]: {
+        ...prev[role],
+        [moduleKey]: {
+          ...prev[role][moduleKey],
+          [action]: !prev[role][moduleKey][action],
+        },
+      },
+    }))
+  }
+
+  const handleSaveRolePermissions = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ADMIN_ROLE_PERMISSIONS_KEY, JSON.stringify(rolePermissions))
+    }
+    setUiNotice({ type: 'success', message: 'Role permissions updated successfully.' })
+  }
+
+  const handleResetRolePermissions = () => {
+    setRolePermissions(createDefaultRolePermissionsState())
+    setUiNotice({ type: 'success', message: 'Role permissions reset to default.' })
+  }
+
+  const handleSaveThemePreferences = () => {
+    saveAdminThemePreference()
+    setUiNotice({ type: 'success', message: 'Theme preferences saved successfully.' })
   }
 
   const handleViewStudent = (student: StudentProfile) => {
@@ -2053,7 +2240,7 @@ function AdminDashboard() {
                     }
                     if (action.title === 'Role Permissions') {
                       setActiveTab('System Settings')
-                      setSystemSettingsView('grid')
+                      setSystemSettingsView('rolePermissions')
                       setViewMode('dashboard')
                     }
                     if (action.title === 'Course Management') setActiveTab('Courses')
@@ -2199,7 +2386,6 @@ function AdminDashboard() {
         onPhotoChange={handleTeacherPhotoChange}
         onToggleRole={handleToggleTeacherRole}
         onToggleParentStudent={handleToggleTeacherParentStudent}
-        onParentRelationChange={handleTeacherParentRelationChange}
         onOpenAssign={() => handleOpenAssignTeacher(draftTeacherProfile)}
         onEditAssignment={(assignmentId) => handleOpenEditAssignment(draftTeacherProfile, assignmentId)}
         onRemoveAssignment={(assignmentId) => handleRemoveTeacherAssignment(draftTeacherProfile.id, assignmentId)}
@@ -2210,6 +2396,7 @@ function AdminDashboard() {
       <TeacherProfilePage
         teacher={selectedTeacherProfile}
         subjectOptions={teacherSubjectOptions}
+        students={students}
         onBack={handleCloseTeacherProfile}
         onOpenAssign={() => handleOpenAssignTeacher(selectedTeacherProfile)}
         onEditAssignment={(assignmentId) => handleOpenEditAssignment(selectedTeacherProfile, assignmentId)}
@@ -2241,8 +2428,8 @@ function AdminDashboard() {
               <p className="role-muted">Active Courses</p>
             </article>
             <article className="role-card role-admin-summary-card">
-              <p className="role-admin-summary-value">{teacherStats.studentTeacherRatio}</p>
-              <p className="role-muted">Student-Teacher Ratio</p>
+              <p className="role-admin-summary-value">{teacherStats.totalStudents}</p>
+              <p className="role-muted">Total Number of Students</p>
             </article>
           </section>
 
@@ -2292,6 +2479,8 @@ function AdminDashboard() {
         <StudentProfilePage
           mode={studentPageMode}
           student={draftStudentProfile}
+          classOptions={gradeOptions}
+          sectionOptions={teacherSectionOptions}
           stateOptions={studentStateOptions}
           countryOptions={studentCountryOptions}
           onBack={handleCloseStudentProfile}
@@ -2338,16 +2527,16 @@ function AdminDashboard() {
             <p className="role-muted">Total Students</p>
           </article>
           <article className="role-card role-admin-summary-card">
-            <p className="role-admin-summary-value">{studentStats.totalGuardians}</p>
-            <p className="role-muted">Guardian Records</p>
+            <p className="role-admin-summary-value">{studentStats.class6}</p>
+            <p className="role-muted">Class 6</p>
           </article>
           <article className="role-card role-admin-summary-card">
-            <p className="role-admin-summary-value">{studentStats.studentsWithPhotos}</p>
-            <p className="role-muted">Profile Photos Added</p>
+            <p className="role-admin-summary-value">{studentStats.class7}</p>
+            <p className="role-muted">Class 7</p>
           </article>
           <article className="role-card role-admin-summary-card">
-            <p className="role-admin-summary-value">{studentStats.accountReady}</p>
-            <p className="role-muted">Accounts Ready</p>
+            <p className="role-admin-summary-value">{studentStats.class8}</p>
+            <p className="role-muted">Class 8</p>
           </article>
         </section>
 
@@ -2369,17 +2558,60 @@ function AdminDashboard() {
               </div>
             </div>
           </div>
-          <div className="student-card-grid">
+          <div className="role-table-wrap student-directory-table-wrap">
             {filteredStudents.length ? (
-              filteredStudents.map((student) => (
-                <StudentCard
-                  key={student.id}
-                  student={student}
-                  onEdit={handleOpenEditStudent}
-                  onDelete={handleDeleteStudent}
-                  onView={handleViewStudent}
-                />
-              ))
+              <table className="role-table student-directory-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Section</th>
+                    <th>Email</th>
+                    <th>Phone Number</th>
+                    <th>Roll Number</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStudents.map((student) => {
+                    const fullName = getStudentFullName(student)
+
+                    return (
+                      <tr key={student.id}>
+                        <td>
+                          <div className="student-directory-name">
+                            <strong>{fullName || 'Unnamed Student'}</strong>
+                            <span>{student.admissionNumber || student.username || 'No admission number'}</span>
+                          </div>
+                        </td>
+                        <td>{student.className || 'Not assigned'}</td>
+                        <td>{student.section || 'Not assigned'}</td>
+                        <td>{student.email || 'Not available'}</td>
+                        <td>{student.phoneNumber || student.whatsAppPhone || 'Not available'}</td>
+                        <td>{student.rollNumber || 'Not assigned'}</td>
+                        <td>
+                          <div className="student-directory-actions">
+                            <button type="button" className="role-icon-square-btn" onClick={() => handleViewStudent(student)} aria-label={`View ${fullName}`}>
+                              <Eye size={16} />
+                            </button>
+                            <button type="button" className="role-icon-square-btn" onClick={() => handleOpenEditStudent(student)} aria-label={`Edit ${fullName}`}>
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className="role-icon-square-btn student-delete-btn"
+                              onClick={() => handleDeleteStudent(student.id)}
+                              aria-label={`Delete ${fullName}`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             ) : (
               <p className="role-muted">No students match your search.</p>
             )}
@@ -2683,7 +2915,7 @@ function AdminDashboard() {
         )
       }
 
-      if (systemSettingsView === 'preferences') {
+      if (systemSettingsView === 'themes') {
         return (
           <main className="role-main role-main-detail">
             <section className="role-primary">
@@ -2695,31 +2927,77 @@ function AdminDashboard() {
                 </div>
                 <div className="planner-card-head profile-settings-head">
                   <div>
-                    <h2>System Preferences</h2>
-                    <p className="role-muted">Customize UI behavior and application preferences.</p>
+                    <h2>Themes</h2>
+                    <p className="role-muted">Customize dashboard themes and visual preferences.</p>
                   </div>
                 </div>
-                <div className="profile-settings-grid">
-                  <label>
-                    <span>Default Dashboard View</span>
-                    <input type="text" value="Overview with analytics widgets" readOnly />
-                  </label>
-                  <label>
-                    <span>Theme Preference</span>
-                    <input type="text" value="Light mode" readOnly />
-                  </label>
-                  <label>
-                    <span>Notifications Panel</span>
-                    <input type="text" value="Enabled for admins" readOnly />
-                  </label>
-                  <label>
-                    <span>Activity Summaries</span>
-                    <input type="text" value="Compact digest enabled" readOnly />
-                  </label>
+                <div className="theme-settings-panel">
+                  <div className="theme-settings-head">
+                    <div>
+                      <h3>Theme Settings</h3>
+                      <p className="role-muted">Choose a theme for your dashboard interface</p>
+                    </div>
+                    <div className="theme-settings-head-actions">
+                      <div className="theme-settings-current">
+                        <span>Current Theme</span>
+                        <strong>{activeAdminTheme.name}</strong>
+                      </div>
+                      <button type="button" className="role-primary-btn theme-settings-save-btn" onClick={handleSaveThemePreferences}>
+                        Save Preferences
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="theme-settings-layout">
+                    <section className="theme-settings-card">
+                      <div className="theme-settings-section-head">
+                        <div>
+                          <h4>Available Themes</h4>
+                          <p className="role-muted">Pick from a small set of clean, dashboard-friendly palettes.</p>
+                        </div>
+                      </div>
+                      <ThemeGrid themes={dashboardThemeOptions} selectedThemeId={adminThemePreference} onSelectTheme={setAdminThemePreference} />
+                    </section>
+
+                    <section className="theme-settings-card theme-settings-preview-card">
+                      <ThemePreview theme={activeAdminTheme} />
+                    </section>
+                  </div>
+
+                  <div className="theme-settings-footer">
+                    <div className="profile-settings-grid theme-settings-meta-grid">
+                      <label>
+                        <span>Default Dashboard View</span>
+                        <input type="text" value="Overview with analytics widgets" readOnly />
+                      </label>
+                      <label>
+                        <span>Notifications Panel</span>
+                        <input type="text" value="Enabled for admins" readOnly />
+                      </label>
+                      <label>
+                        <span>Activity Summaries</span>
+                        <input type="text" value="Compact digest enabled" readOnly />
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </section>
             </section>
           </main>
+        )
+      }
+
+      if (systemSettingsView === 'rolePermissions') {
+        return (
+          <RolePermissionsPage
+            roles={rolePermissionRoles}
+            selectedRole={selectedPermissionRole}
+            permissions={rolePermissions}
+            onSelectRole={setSelectedPermissionRole}
+            onTogglePermission={handleToggleRolePermission}
+            onSave={handleSaveRolePermissions}
+            onReset={handleResetRolePermissions}
+          />
         )
       }
 
@@ -2734,15 +3012,7 @@ function AdminDashboard() {
                     key={item.title}
                     type="button"
                     className="role-action-tile"
-                    onClick={() => {
-                      if (item.key === 'userManagement') {
-                        setActiveTab('Users')
-                        setViewMode('userManagement')
-                        return
-                      }
-
-                      setSystemSettingsView(item.key)
-                    }}
+                    onClick={() => setSystemSettingsView(item.key)}
                   >
                     <div className="role-action-content">
                       <div className="role-action-head">

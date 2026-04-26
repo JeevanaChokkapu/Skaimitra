@@ -40,8 +40,7 @@ function AssignmentTag({ assignment, onEdit, onRemove }: AssignmentTagProps) {
       <div className="teacher-assignment-group-list">
         {classGroups.map((classGroup) => (
           <div key={`${assignment.id}-${classGroup.className}`} className="teacher-assignment-group-row">
-            <strong>{classGroup.className}</strong>
-            <span className="role-muted">-&gt;</span>
+            <strong>{classGroup.className.replace(/^Class\s*/i, '')}</strong>
             <div className="teacher-assignment-chip-row">
               {(Array.isArray(classGroup.sections) ? classGroup.sections : []).map((section) => (
                 <span key={`${classGroup.className}-${section}`} className="teacher-assignment-chip">

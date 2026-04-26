@@ -1,5 +1,6 @@
 export type StudentGender = 'Male' | 'Female' | 'Other' | ''
 export type GuardianRelation = 'Father' | 'Mother' | 'Guardian' | ''
+export type StudentCategory = 'General' | 'OBC' | 'SC' | 'ST' | 'Others' | ''
 
 export type GuardianContact = {
   id: string
@@ -18,6 +19,10 @@ export type StudentProfile = {
   rollNumber: string
   dateOfBirth: string
   gender: StudentGender
+  category: StudentCategory
+  religion: string
+  reports: string
+  admissionYear: string
   className: string
   section: string
   addressLine: string
@@ -49,6 +54,10 @@ export type StudentFormValues = {
   rollNumber: string
   dateOfBirth: string
   gender: StudentGender
+  category: StudentCategory
+  religion: string
+  reports: string
+  admissionYear: string
   className: string
   section: string
   addressLine: string
@@ -98,6 +107,10 @@ export const createEmptyStudentForm = (): StudentFormValues => ({
   rollNumber: '',
   dateOfBirth: '',
   gender: '',
+  category: '',
+  religion: '',
+  reports: '',
+  admissionYear: '',
   className: '',
   section: '',
   addressLine: '',
@@ -144,6 +157,10 @@ export const normalizeStudentProfile = (value: unknown, fallbackId: number): Stu
     rollNumber?: unknown
     fullName?: unknown
     gender?: unknown
+    category?: unknown
+    religion?: unknown
+    reports?: unknown
+    admissionYear?: unknown
     dateOfBirth?: unknown
     className?: unknown
     section?: unknown
@@ -229,6 +246,10 @@ export const normalizeStudentProfile = (value: unknown, fallbackId: number): Stu
     rollNumber: toSafeString(record.rollNumber).trim(),
     dateOfBirth: toSafeString(record.dateOfBirth).trim(),
     gender: (toSafeString(record.gender).trim() as StudentGender) || '',
+    category: (toSafeString(record.category).trim() as StudentCategory) || '',
+    religion: toSafeString(record.religion).trim(),
+    reports: toSafeString(record.reports).trim(),
+    admissionYear: toSafeString(record.admissionYear).trim(),
     className: toSafeString(record.className).trim(),
     section: toSafeString(record.section).trim(),
     addressLine: toSafeString(record.addressLine).trim() || toSafeString(record.address).trim(),

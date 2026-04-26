@@ -527,11 +527,141 @@
 
 /* Admin-specific look: white surface + black section divider */
 .admin-dashboard-page {
-  background: #EEF1F5;
+  --admin-theme-primary: #7c3aed;
+  --admin-theme-bg: #eef1f5;
+  --admin-theme-surface: #ffffff;
+  --admin-theme-text: #111827;
+  --admin-theme-border: #dbe4ec;
+  --admin-theme-muted: #64748b;
+  --admin-theme-accent: #f8fafc;
+  --admin-theme-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  background: var(--admin-theme-bg);
+  color: var(--admin-theme-text);
 }
 
 .admin-dashboard-page.role-page {
-  background: #EEF1F5;
+  background: var(--admin-theme-bg);
+}
+
+.admin-dashboard-page .role-main,
+.admin-dashboard-page .role-topbar {
+  background: var(--admin-theme-bg);
+}
+
+.admin-dashboard-page .role-header,
+.admin-dashboard-page .role-card,
+.admin-dashboard-page .teacher-profile-section,
+.admin-dashboard-page .student-profile-section,
+.admin-dashboard-page .role-permission-side-panel,
+.admin-dashboard-page .role-permission-main-panel,
+.admin-dashboard-page .role-permission-card,
+.admin-dashboard-page .student-profile-photo-card,
+.admin-dashboard-page .student-profile-guardian-card,
+.admin-dashboard-page .teacher-card,
+.admin-dashboard-page .teacher-card-summary-item,
+.admin-dashboard-page .teacher-assignment-tag-card,
+.admin-dashboard-page .analytics-summary-card,
+.admin-dashboard-page .analytics-chart-card,
+.admin-dashboard-page .communications-stat-card,
+.admin-dashboard-page .communications-channel-card,
+.admin-dashboard-page .communications-table-card,
+.admin-dashboard-page .theme-preview-shell,
+.admin-dashboard-page .theme-card {
+  background: var(--admin-theme-surface);
+  border-color: var(--admin-theme-border);
+  box-shadow: var(--admin-theme-shadow);
+}
+
+.admin-dashboard-page .role-brand-title,
+.admin-dashboard-page .role-section-title,
+.admin-dashboard-page .role-card h2,
+.admin-dashboard-page .role-action-title,
+.admin-dashboard-page .teacher-profile-section-head h3,
+.admin-dashboard-page .student-profile-section-head h3,
+.admin-dashboard-page .role-permission-page-head h2,
+.admin-dashboard-page .role-permission-main-head h3,
+.admin-dashboard-page .role-permission-side-head h3,
+.admin-dashboard-page .role-permission-card-head h4,
+.admin-dashboard-page .theme-settings-head h3,
+.admin-dashboard-page .theme-preview-head h3,
+.admin-dashboard-page .theme-preview-card strong,
+.admin-dashboard-page .theme-preview-text-block h4 {
+  color: var(--admin-theme-text);
+}
+
+.admin-dashboard-page .role-brand-subtitle,
+.admin-dashboard-page .role-muted,
+.admin-dashboard-page .role-action-desc,
+.admin-dashboard-page .role-tab-note,
+.admin-dashboard-page .theme-preview-card span,
+.admin-dashboard-page .theme-preview-text-block p,
+.admin-dashboard-page .theme-preview-label {
+  color: var(--admin-theme-muted);
+}
+
+.admin-dashboard-page .role-tabs,
+.admin-dashboard-page .admin-role-tabs {
+  background: var(--admin-theme-bg);
+}
+
+.admin-dashboard-page .admin-role-tabs button,
+.admin-dashboard-page .role-tab-icon,
+.admin-dashboard-page .role-logout-btn,
+.admin-dashboard-page .role-icon-btn {
+  color: var(--admin-theme-text);
+}
+
+.admin-dashboard-page .role-logout-btn {
+  background: var(--admin-theme-surface);
+  border-color: var(--admin-theme-border);
+}
+
+.admin-dashboard-page .role-primary-btn {
+  background: linear-gradient(135deg, var(--admin-theme-primary) 0%, color-mix(in srgb, var(--admin-theme-primary) 72%, #ffffff 28%) 100%);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--admin-theme-primary) 28%, transparent 72%);
+}
+
+.admin-dashboard-page .role-secondary-btn,
+.admin-dashboard-page .role-icon-square-btn {
+  background: var(--admin-theme-surface);
+  border-color: var(--admin-theme-border);
+  color: var(--admin-theme-text);
+}
+
+.admin-dashboard-page .admin-role-tabs .is-active,
+.admin-dashboard-page .admin-role-tabs .is-active:hover {
+  color: var(--admin-theme-primary);
+}
+
+.admin-dashboard-page .admin-role-tabs .is-active .role-tab-icon {
+  color: var(--admin-theme-primary);
+}
+
+.admin-dashboard-page .admin-role-tabs button::after {
+  background: var(--admin-theme-primary);
+}
+
+.admin-dashboard-page input,
+.admin-dashboard-page select,
+.admin-dashboard-page textarea,
+.admin-dashboard-page .student-profile-field input,
+.admin-dashboard-page .student-profile-field select,
+.admin-dashboard-page .student-profile-field textarea,
+.admin-dashboard-page .teacher-profile-readonly-field input,
+.admin-dashboard-page .teacher-profile-readonly-field select,
+.admin-dashboard-page .role-permission-toggle-item,
+.admin-dashboard-page .teacher-parent-chip,
+.admin-dashboard-page .teacher-inline-student-option,
+.admin-dashboard-page .theme-preview-card,
+.admin-dashboard-page .theme-preview-secondary-btn {
+  background: var(--admin-theme-accent);
+  border-color: var(--admin-theme-border);
+  color: var(--admin-theme-text);
+}
+
+.admin-dashboard-page input[readonly] {
+  background: var(--admin-theme-accent);
+  color: var(--admin-theme-text);
 }
 
 .admin-dashboard-page .role-topbar {
@@ -4685,6 +4815,53 @@
   font-weight: 700;
 }
 
+.student-directory-table-wrap {
+  margin-top: 1rem;
+}
+
+.student-directory-table {
+  min-width: 920px;
+}
+
+.student-directory-table th,
+.student-directory-table td {
+  padding: 0.8rem 0.75rem;
+  vertical-align: middle;
+}
+
+.student-directory-table th:nth-child(2),
+.student-directory-table th:nth-child(3),
+.student-directory-table th:nth-child(6),
+.student-directory-table td:nth-child(2),
+.student-directory-table td:nth-child(3),
+.student-directory-table td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.student-directory-name {
+  display: grid;
+  gap: 3px;
+  min-width: 150px;
+}
+
+.student-directory-name strong {
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.student-directory-name span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.student-directory-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 .role-inline-action {
   border: 1px solid #1d4ed8;
   background: #1d4ed8;
@@ -6034,6 +6211,11 @@
   flex: 0 0 auto;
 }
 
+.teacher-card-avatar-empty {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
 .teacher-card-copy {
   display: grid;
   gap: 6px;
@@ -6271,6 +6453,32 @@
   padding: 0.85rem 0.95rem;
 }
 
+.profile-clickable-field {
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid #dbe4ec;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #2563eb;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.85rem 0.95rem;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.profile-clickable-field:hover,
+.profile-clickable-field:focus-visible {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  outline: none;
+  text-decoration: underline;
+}
+
 .teacher-profile-input-field input,
 .teacher-profile-input-field select,
 .teacher-profile-input-field textarea {
@@ -6316,14 +6524,39 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.teacher-role-chip.is-active,
 .teacher-parent-chip {
   border-color: #c7d6ea;
   background: #ffffff;
   color: #0f172a;
+}
+
+.teacher-role-chip.is-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16);
+}
+
+.teacher-role-chip-indicator {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.teacher-role-chip.is-active .teacher-role-chip-indicator {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
 }
 
 .teacher-role-chip:disabled {
@@ -6342,16 +6575,68 @@
 
 .teacher-role-chip:hover:not(:disabled),
 .teacher-role-chip:focus-visible {
-  border-color: #c7d6ea;
-  background: #ffffff;
+  border-color: #2563eb;
+  background: #eff6ff;
   color: #0f172a;
   outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
 }
 
 .teacher-parent-search-wrap,
 .teacher-parent-student-list {
   display: grid;
   gap: 14px;
+}
+
+.teacher-inline-student-select {
+  display: grid;
+  gap: 14px;
+}
+
+.teacher-link-children-field {
+  max-width: 100%;
+}
+
+.teacher-inline-student-list {
+  display: grid;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.teacher-inline-student-option {
+  border: 1px solid #d8e1eb;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.teacher-inline-student-option strong {
+  color: #0f766e;
+  font-size: 0.82rem;
+}
+
+.teacher-inline-student-option.is-selected {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
+}
+
+.teacher-inline-student-option:hover,
+.teacher-inline-student-option:focus-visible {
+  outline: none;
+  border-color: #99f6e4;
+  background: #f8fffe;
 }
 
 .teacher-parent-student-row {
@@ -6493,7 +6778,7 @@
 .teacher-assignment-group-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -6505,6 +6790,10 @@
 
 .teacher-assignment-group-row .role-muted {
   font-size: 0.85rem;
+}
+
+.teacher-assignment-group-row .teacher-assignment-chip-row {
+  gap: 6px;
 }
 
 .teacher-assignment-chip {
@@ -8488,16 +8777,574 @@
   line-height: 1.6;
 }
 
+.role-permission-page {
+  display: grid;
+  gap: 24px;
+}
+
+.role-permission-page-head h2,
+.role-permission-main-head h3,
+.role-permission-side-head h3,
+.role-permission-summary-head h3,
+.role-permission-card-head h4 {
+  margin: 0;
+  color: #111827;
+}
+
+.role-permission-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.role-permission-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.role-permission-side-panel,
+.role-permission-main-panel,
+.role-permission-summary-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
+}
+
+.role-permission-side-panel,
+.role-permission-main-panel {
+  padding: 24px;
+}
+
+.role-permission-summary-section {
+  padding: 22px;
+}
+
+.role-permission-side-panel,
+.role-permission-main-panel,
+.role-permission-role-list,
+.role-permission-card-list,
+.role-permission-summary-section {
+  display: grid;
+  gap: 18px;
+}
+
+.role-permission-role-card {
+  width: 100%;
+  border: 1px solid #dbe4ec;
+  border-radius: 16px;
+  background: #f8fafc;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background-color 180ms ease;
+}
+
+.role-permission-role-card:hover,
+.role-permission-role-card.is-selected {
+  transform: translateY(-1px);
+}
+
+.role-permission-role-card.is-selected.is-admin {
+  border-color: #a855f7;
+  box-shadow: 0 14px 28px rgba(168, 85, 247, 0.14);
+  background: linear-gradient(180deg, #fcf5ff 0%, #ffffff 100%);
+}
+
+.role-permission-role-card.is-selected.is-teacher {
+  border-color: #3b82f6;
+  box-shadow: 0 14px 28px rgba(59, 130, 246, 0.14);
+  background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%);
+}
+
+.role-permission-role-card.is-selected.is-student {
+  border-color: #22c55e;
+  box-shadow: 0 14px 28px rgba(34, 197, 94, 0.14);
+  background: linear-gradient(180deg, #f2fff7 0%, #ffffff 100%);
+}
+
+.role-permission-role-card.is-selected.is-parent {
+  border-color: #f59e0b;
+  box-shadow: 0 14px 28px rgba(245, 158, 11, 0.14);
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.role-permission-role-icon,
+.role-permission-summary-icon,
+.role-permission-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.role-permission-role-card.is-admin .role-permission-role-icon,
+.role-permission-summary-card.is-admin .role-permission-summary-icon {
+  background: linear-gradient(135deg, #c084fc 0%, #9333ea 100%);
+  color: #ffffff;
+}
+
+.role-permission-role-card.is-teacher .role-permission-role-icon,
+.role-permission-summary-card.is-teacher .role-permission-summary-icon {
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  color: #ffffff;
+}
+
+.role-permission-role-card.is-student .role-permission-role-icon,
+.role-permission-summary-card.is-student .role-permission-summary-icon {
+  background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
+  color: #ffffff;
+}
+
+.role-permission-role-card.is-parent .role-permission-role-icon,
+.role-permission-summary-card.is-parent .role-permission-summary-icon {
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  color: #ffffff;
+}
+
+.role-permission-role-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.role-permission-role-copy strong {
+  font-size: 1.1rem;
+  color: #111827;
+}
+
+.role-permission-role-copy span,
+.role-permission-role-copy p {
+  margin: 0;
+  color: #64748b;
+}
+
+.role-permission-role-copy span {
+  font-weight: 700;
+}
+
+.role-permission-main-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.role-permission-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+  padding: 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.role-permission-card-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.role-permission-card-icon {
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+  color: #7c3aed;
+}
+
+.role-permission-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.role-permission-toggle-item {
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.role-permission-toggle-item span {
+  color: #111827;
+  font-weight: 700;
+}
+
+.permissions-toggle {
+  width: 48px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.permissions-toggle.is-on {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+}
+
+.permissions-toggle-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+  transition: transform 180ms ease;
+}
+
+.permissions-toggle.is-on .permissions-toggle-thumb {
+  transform: translateX(20px);
+}
+
+.role-permission-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.role-permission-save-btn,
+.role-permission-reset-btn {
+  min-width: 220px;
+  justify-content: center;
+}
+
+.role-permission-save-btn {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  border-color: #7c3aed;
+  box-shadow: 0 14px 28px rgba(124, 58, 237, 0.18);
+}
+
+.role-permission-reset-btn {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+}
+
+.role-permission-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.role-permission-summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #f8fafc;
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.role-permission-summary-card strong {
+  color: #111827;
+  font-size: 1.05rem;
+}
+
+.role-permission-summary-count {
+  color: #111827;
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.role-permission-summary-card p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.theme-settings-panel,
+.theme-settings-head,
+.theme-preview-section,
+.theme-settings-card,
+.theme-settings-footer {
+  display: grid;
+  gap: 16px;
+}
+
+.theme-settings-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+}
+
+.theme-settings-head h3,
+.theme-preview-head h3 {
+  margin: 0;
+}
+
+.theme-settings-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.theme-settings-current {
+  min-width: 170px;
+  border: 1px solid var(--admin-theme-border);
+  border-radius: 14px;
+  background: var(--admin-theme-accent);
+  padding: 10px 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.theme-settings-current span {
+  color: var(--admin-theme-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.theme-settings-current strong {
+  color: var(--admin-theme-text);
+  font-size: 0.98rem;
+}
+
+.theme-settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.9fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.theme-settings-card {
+  border: 1px solid var(--admin-theme-border);
+  border-radius: 18px;
+  background: var(--admin-theme-surface);
+  padding: 18px;
+}
+
+.theme-settings-section-head h4 {
+  margin: 0 0 6px;
+  color: var(--admin-theme-text);
+  font-size: 1.02rem;
+}
+
+.theme-settings-save-btn {
+  min-width: 180px;
+  justify-content: center;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.theme-card {
+  border: 1px solid var(--admin-theme-border);
+  border-radius: 16px;
+  background: var(--admin-theme-surface);
+  padding: 12px;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  cursor: pointer;
+  min-height: 104px;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.theme-card:hover,
+.theme-card.is-selected {
+  transform: translateY(-1px);
+  border-color: var(--admin-theme-primary);
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--admin-theme-primary) 16%, transparent 84%);
+}
+
+.theme-card strong {
+  color: var(--admin-theme-text);
+  font-size: 0.92rem;
+}
+
+.theme-card-swatches {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--admin-theme-accent);
+}
+
+.theme-card-swatch {
+  width: 100%;
+  height: 24px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.theme-preview-shell {
+  border: 1px solid var(--admin-theme-border);
+  border-radius: 18px;
+  background: var(--preview-bg);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  min-height: 100%;
+}
+
+.theme-preview-topbar {
+  border: 1px solid var(--preview-border);
+  border-radius: 16px;
+  background: var(--preview-surface);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.theme-preview-topbar strong {
+  color: var(--preview-text);
+}
+
+.theme-preview-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.theme-preview-card,
+.theme-preview-text-block {
+  border: 1px solid var(--preview-border);
+  border-radius: 16px;
+  background: var(--preview-surface);
+  padding: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.theme-preview-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.theme-preview-card strong,
+.theme-preview-text-block h4 {
+  color: var(--preview-text);
+}
+
+.theme-preview-card span,
+.theme-preview-text-block p {
+  margin: 0;
+  color: var(--preview-muted);
+}
+
+.theme-preview-inline {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.theme-preview-primary-btn,
+.theme-preview-secondary-btn {
+  min-height: 46px;
+  border-radius: 14px;
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.theme-preview-primary-btn {
+  border: 0;
+  background: var(--preview-primary);
+  color: #ffffff;
+}
+
+.theme-preview-secondary-btn {
+  border: 1px solid var(--preview-border);
+  background: var(--preview-surface);
+  color: var(--preview-text);
+}
+
+.theme-settings-footer {
+  border-top: 1px solid var(--admin-theme-border);
+  padding-top: 16px;
+}
+
+.theme-settings-meta-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 @media (max-width: 1100px) {
   .communications-stats-grid,
-  .communications-channel-grid {
+  .communications-channel-grid,
+  .role-permission-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .theme-settings-layout,
+  .theme-settings-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .communications-page-shell {
     padding: 20px;
+  }
+
+  .role-permission-layout,
+  .role-permission-summary-grid,
+  .role-permission-toggle-row {
+    grid-template-columns: 1fr;
+  }
+
+  .role-permission-actions {
+    justify-content: stretch;
+  }
+
+  .role-permission-save-btn,
+  .role-permission-reset-btn {
+    width: 100%;
+  }
+
+  .theme-settings-head {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .theme-settings-head-actions,
+  .theme-preview-topbar,
+  .theme-preview-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .theme-settings-save-btn,
+  .theme-grid,
+  .theme-preview-mini-grid {
+    width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .communications-stats-grid,
@@ -8713,6 +9560,20 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.student-contact-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.student-contact-grid .student-profile-field-span-2 {
+  grid-column: auto;
+}
+
+.student-contact-grid .student-profile-checkbox {
+  min-height: 48px;
+  align-content: center;
 }
 
 .teacher-inline-section-list {
@@ -9006,6 +9867,31 @@
 .student-profile-actions .role-primary-btn {
   min-width: 170px;
   justify-content: center;
+}
+
+.student-emergency-contact-card {
+  border: 1px solid #fed7aa;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+  padding: 18px 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.student-emergency-contact-label {
+  color: #9a3412;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.student-emergency-contact-name,
+.student-emergency-contact-phone {
+  color: #7c2d12;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.3;
 }
 
 @media (max-width: 1200px) {
