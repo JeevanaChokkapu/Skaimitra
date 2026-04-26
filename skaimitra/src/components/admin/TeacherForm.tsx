@@ -14,7 +14,6 @@ function TeacherForm({ values, mode, subjectOptions, onFieldChange, onToggleSubj
       <section className="teacher-form-section">
         <div className="teacher-form-section-head">
           <h3>Primary Information</h3>
-          <p>Identity and location details for the teacher profile.</p>
         </div>
 
         <div className="teacher-form-grid">
@@ -120,7 +119,6 @@ function TeacherForm({ values, mode, subjectOptions, onFieldChange, onToggleSubj
       <section className="teacher-form-section">
         <div className="teacher-form-section-head">
           <h3>Contact Information</h3>
-          <p>Preferred contact person and communication details.</p>
         </div>
 
         <div className="teacher-form-grid">
@@ -183,7 +181,6 @@ function TeacherForm({ values, mode, subjectOptions, onFieldChange, onToggleSubj
       <section className="teacher-form-section">
         <div className="teacher-form-section-head">
           <h3>Other Details</h3>
-          <p>Login and employment details for this teacher.</p>
         </div>
 
         <div className="teacher-form-grid">

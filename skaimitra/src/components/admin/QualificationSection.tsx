@@ -74,7 +74,6 @@ function QualificationSection({ teacher, onAddQualification, onDeleteQualificati
       <div className="teacher-profile-section-head">
         <div>
           <h3>Academic Qualifications</h3>
-          <p className="role-muted">Manage degree records and supporting certificates.</p>
         </div>
         <button type="button" className="role-primary-btn teacher-profile-add-btn" onClick={onAddQualification}>
           <Plus size={16} />

@@ -144,19 +144,6 @@ function StudentProfilePage(props: StudentProfilePageProps) {
               <section className="student-profile-section">
                 <div className="student-profile-section-head">
                   <div>
-                    <h3>History</h3>
-                  </div>
-                </div>
-
-                <div className="student-profile-fields-grid">
-                  <StudentReadonlyField label="Reports" value={props.student.reports} href={props.student.reports} />
-                  <StudentReadonlyField label="Admission Year" value={props.student.admissionYear} />
-                </div>
-              </section>
-
-              <section className="student-profile-section">
-                <div className="student-profile-section-head">
-                  <div>
                     <h3>Contact Information</h3>
                   
                   </div>
@@ -214,6 +201,23 @@ function StudentProfilePage(props: StudentProfilePageProps) {
                   <StudentReadonlyField label="Password" value={props.student.password ? '********' : ''} />
                 </div>
               </section>
+
+              <section className="student-profile-section">
+                <div className="student-profile-section-head">
+                  <div>
+                    <h3>History</h3>
+                  </div>
+                </div>
+
+                <div className="student-profile-fields-grid">
+                  <StudentReadonlyField label="Reports" value={props.student.reports} href={props.student.reports} />
+                  <StudentReadonlyField label="Admission Year" value={props.student.admissionYear} />
+                  <StudentReadonlyField label="Class" value={props.student.historyClass} />
+                  <StudentReadonlyField label="Section" value={props.student.historySection} />
+                  <StudentReadonlyField label="Passed Out Year" value={props.student.historyPassedOutYear} />
+                  <StudentReadonlyField label="Marks / Grade" value={props.student.historyMarksOrGrade} />
+                </div>
+              </section>
             </>
           ) : (
             <form className="student-profile-form" onSubmit={props.onSubmit}>
@@ -221,7 +225,6 @@ function StudentProfilePage(props: StudentProfilePageProps) {
                 <div className="student-profile-section-head">
                   <div>
                     <h3>Primary Information</h3>
-                    <p className="role-muted">Add the student&apos;s identity, registration, address, and photo.</p>
                   </div>
                 </div>
 
@@ -390,40 +393,7 @@ function StudentProfilePage(props: StudentProfilePageProps) {
               <section className="student-profile-section">
                 <div className="student-profile-section-head">
                   <div>
-                    <h3>History</h3>
-                    <p className="role-muted">Track admission history and supporting reports.</p>
-                  </div>
-                </div>
-
-                <div className="student-profile-fields-grid">
-                  <label className="student-profile-field">
-                    <span>Reports</span>
-                    <input
-                      type="url"
-                      placeholder="https://example.com/report.pdf"
-                      value={props.student.reports}
-                      onChange={(event) => props.onFieldChange('reports', event.target.value)}
-                    />
-                  </label>
-                  <label className="student-profile-field">
-                    <span>Admission Year</span>
-                    <input
-                      type="number"
-                      min="1900"
-                      max="2100"
-                      placeholder="2026"
-                      value={props.student.admissionYear}
-                      onChange={(event) => props.onFieldChange('admissionYear', event.target.value)}
-                    />
-                  </label>
-                </div>
-              </section>
-
-              <section className="student-profile-section">
-                <div className="student-profile-section-head">
-                  <div>
                     <h3>Contact Information</h3>
-                    <p className="role-muted">Store mailing address, permanent address, and phone number.</p>
                   </div>
                 </div>
 
@@ -517,7 +487,6 @@ function StudentProfilePage(props: StudentProfilePageProps) {
                 <div className="student-profile-section-head">
                   <div>
                     <h3>Parent / Guardian</h3>
-                    <p className="role-muted">Add one or more guardian contacts for the student.</p>
                   </div>
                   <button type="button" className="role-primary-btn" onClick={props.onAddGuardian}>
                     <Plus size={16} />
@@ -590,7 +559,6 @@ function StudentProfilePage(props: StudentProfilePageProps) {
                 <div className="student-profile-section-head">
                   <div>
                     <h3>Account Information</h3>
-                    <p className="role-muted">Create the student&apos;s username and password.</p>
                   </div>
                 </div>
 
@@ -610,6 +578,79 @@ function StudentProfilePage(props: StudentProfilePageProps) {
                       value={props.student.password}
                       onChange={(event) => props.onFieldChange('password', event.target.value)}
                       required
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="student-profile-section">
+                <div className="student-profile-section-head">
+                  <div>
+                    <h3>History</h3>
+                  </div>
+                </div>
+
+                <div className="student-profile-fields-grid">
+                  <label className="student-profile-field">
+                    <span>Reports</span>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/report.pdf"
+                      value={props.student.reports}
+                      onChange={(event) => props.onFieldChange('reports', event.target.value)}
+                    />
+                  </label>
+                  <label className="student-profile-field">
+                    <span>Admission Year</span>
+                    <input
+                      type="number"
+                      min="1900"
+                      max="2100"
+                      placeholder="2026"
+                      value={props.student.admissionYear}
+                      onChange={(event) => props.onFieldChange('admissionYear', event.target.value)}
+                    />
+                  </label>
+                  <label className="student-profile-field">
+                    <span>Class</span>
+                    <select value={props.student.historyClass} onChange={(event) => props.onFieldChange('historyClass', event.target.value)}>
+                      <option value="">Select class</option>
+                      {props.classOptions.map((className) => (
+                        <option key={className} value={className}>
+                          {className}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="student-profile-field">
+                    <span>Section</span>
+                    <select value={props.student.historySection} onChange={(event) => props.onFieldChange('historySection', event.target.value)}>
+                      <option value="">Select section</option>
+                      {props.sectionOptions.map((section) => (
+                        <option key={section} value={section}>
+                          {section}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="student-profile-field">
+                    <span>Passed Out Year</span>
+                    <input
+                      type="number"
+                      min="1900"
+                      max="2100"
+                      placeholder="2026"
+                      value={props.student.historyPassedOutYear}
+                      onChange={(event) => props.onFieldChange('historyPassedOutYear', event.target.value)}
+                    />
+                  </label>
+                  <label className="student-profile-field">
+                    <span>Marks / Grade</span>
+                    <input
+                      type="text"
+                      placeholder="485/500 or A+"
+                      value={props.student.historyMarksOrGrade}
+                      onChange={(event) => props.onFieldChange('historyMarksOrGrade', event.target.value)}
                     />
                   </label>
                 </div>

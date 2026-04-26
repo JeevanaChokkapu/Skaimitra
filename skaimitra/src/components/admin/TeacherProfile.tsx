@@ -514,7 +514,6 @@ function TeacherProfileView(props: TeacherProfileProps) {
               <div className="teacher-profile-section-head">
                 <div>
                   <h3>Contact Information</h3>
-                  <p className="role-muted">The preferred contact person and direct communication details for this profile.</p>
                 </div>
               </div>
 
@@ -556,7 +555,6 @@ function TeacherProfileView(props: TeacherProfileProps) {
               <div className="teacher-profile-section-head">
                 <div>
                   <h3>Other Details</h3>
-                  <p className="role-muted">Login and employment details for this teacher.</p>
                 </div>
               </div>
 
@@ -600,7 +598,7 @@ function TeacherProfileView(props: TeacherProfileProps) {
 
             <SubjectAssignmentsSection
               teacher={teacher}
-              title="Subject Specialization"
+              title="Assign Subjects"
               actionLabel="Assign"
               onOpenAssign={props.onOpenAssign}
               onEditAssignment={props.onEditAssignment}
@@ -616,7 +614,6 @@ function TeacherProfileView(props: TeacherProfileProps) {
               <div className="teacher-profile-section-head">
                 <div>
                   <h3>Roles</h3>
-                  <p className="role-muted">Teacher stays enabled. Parent and admin appear only when assigned.</p>
                 </div>
               </div>
 

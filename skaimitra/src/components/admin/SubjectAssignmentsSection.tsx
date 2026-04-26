@@ -18,8 +18,8 @@ function SubjectAssignmentsSection({
   onOpenAssign,
   onEditAssignment,
   onRemoveAssignment,
-  title = 'Subject Specialization',
-  description = 'Compact subject-wise class and section assignments.',
+  title = 'Assign Subjects',
+  description = '',
   emptyMessage = 'No assignments added yet.',
   actionLabel = 'Assign',
 }: SubjectAssignmentsSectionProps) {
@@ -28,7 +28,7 @@ function SubjectAssignmentsSection({
       <div className="teacher-profile-section-head">
         <div>
           <h3>{title}</h3>
-          <p className="role-muted">{description}</p>
+          {description ? <p className="role-muted">{description}</p> : null}
         </div>
         <button type="button" className="role-primary-btn" onClick={onOpenAssign}>
           <Plus size={16} />

@@ -20,7 +20,6 @@ function PrimaryInfoSection({
     <section className="teacher-form-section">
       <div className="teacher-form-section-head">
         <h3>Primary Information</h3>
-        <p>Capture the student&apos;s core identity, location, and profile photo.</p>
       </div>
 
       <div className="teacher-form-grid">

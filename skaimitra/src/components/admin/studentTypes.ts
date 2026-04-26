@@ -23,6 +23,10 @@ export type StudentProfile = {
   religion: string
   reports: string
   admissionYear: string
+  historyClass: string
+  historySection: string
+  historyPassedOutYear: string
+  historyMarksOrGrade: string
   className: string
   section: string
   addressLine: string
@@ -58,6 +62,10 @@ export type StudentFormValues = {
   religion: string
   reports: string
   admissionYear: string
+  historyClass: string
+  historySection: string
+  historyPassedOutYear: string
+  historyMarksOrGrade: string
   className: string
   section: string
   addressLine: string
@@ -111,6 +119,10 @@ export const createEmptyStudentForm = (): StudentFormValues => ({
   religion: '',
   reports: '',
   admissionYear: '',
+  historyClass: '',
+  historySection: '',
+  historyPassedOutYear: '',
+  historyMarksOrGrade: '',
   className: '',
   section: '',
   addressLine: '',
@@ -161,6 +173,11 @@ export const normalizeStudentProfile = (value: unknown, fallbackId: number): Stu
     religion?: unknown
     reports?: unknown
     admissionYear?: unknown
+    historyClass?: unknown
+    historyGrade?: unknown
+    historySection?: unknown
+    historyPassedOutYear?: unknown
+    historyMarksOrGrade?: unknown
     dateOfBirth?: unknown
     className?: unknown
     section?: unknown
@@ -250,6 +267,10 @@ export const normalizeStudentProfile = (value: unknown, fallbackId: number): Stu
     religion: toSafeString(record.religion).trim(),
     reports: toSafeString(record.reports).trim(),
     admissionYear: toSafeString(record.admissionYear).trim(),
+    historyClass: toSafeString(record.historyClass).trim(),
+    historySection: toSafeString(record.historySection).trim() || toSafeString(record.historyGrade).trim(),
+    historyPassedOutYear: toSafeString(record.historyPassedOutYear).trim(),
+    historyMarksOrGrade: toSafeString(record.historyMarksOrGrade).trim(),
     className: toSafeString(record.className).trim(),
     section: toSafeString(record.section).trim(),
     addressLine: toSafeString(record.addressLine).trim() || toSafeString(record.address).trim(),

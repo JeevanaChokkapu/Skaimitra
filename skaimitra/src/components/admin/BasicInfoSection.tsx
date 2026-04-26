@@ -25,8 +25,7 @@ function BasicInfoSection({ teacher }: BasicInfoSectionProps) {
     <section className="teacher-profile-section">
       <div className="teacher-profile-section-head">
         <div>
-          <h3>Basic Information</h3>
-          <p className="role-muted">Identity and location details for the teacher profile.</p>
+          <h3>Primary Information</h3>
         </div>
       </div>
 

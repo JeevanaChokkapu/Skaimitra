@@ -308,6 +308,10 @@ const defaultStudentRecords: StudentProfile[] = [
     religion: 'Hindu',
     reports: 'https://example.com/reports/rahul-sharma.pdf',
     admissionYear: '2024',
+    historyClass: 'Class 5',
+    historySection: 'A',
+    historyPassedOutYear: '2024',
+    historyMarksOrGrade: '92%',
     className: 'Class 6',
     section: 'A',
     addressLine: '12 Lake View Colony',
@@ -349,6 +353,10 @@ const defaultStudentRecords: StudentProfile[] = [
     religion: 'Hindu',
     reports: 'https://example.com/reports/priya-reddy.pdf',
     admissionYear: '2024',
+    historyClass: 'Class 6',
+    historySection: 'A',
+    historyPassedOutYear: '2024',
+    historyMarksOrGrade: '90%',
     className: 'Class 7',
     section: 'A',
     addressLine: '4 Green Meadows',
@@ -390,6 +398,10 @@ const defaultStudentRecords: StudentProfile[] = [
     religion: 'Hindu',
     reports: 'https://example.com/reports/arjun-kumar.pdf',
     admissionYear: '2024',
+    historyClass: 'Class 7',
+    historySection: 'B',
+    historyPassedOutYear: '2024',
+    historyMarksOrGrade: '82%',
     className: 'Class 8',
     section: 'B',
     addressLine: '22 Temple Road',
@@ -1771,6 +1783,10 @@ function AdminDashboard() {
       religion: student.religion,
       reports: student.reports,
       admissionYear: student.admissionYear,
+      historyClass: student.historyClass,
+      historySection: student.historySection,
+      historyPassedOutYear: student.historyPassedOutYear,
+      historyMarksOrGrade: student.historyMarksOrGrade,
       className: student.className,
       section: student.section,
       addressLine: student.addressLine,
@@ -1811,6 +1827,10 @@ function AdminDashboard() {
       religion: studentForm.religion.trim(),
       reports: studentForm.reports.trim(),
       admissionYear: studentForm.admissionYear.trim(),
+      historyClass: studentForm.historyClass.trim(),
+      historySection: studentForm.historySection.trim(),
+      historyPassedOutYear: studentForm.historyPassedOutYear.trim(),
+      historyMarksOrGrade: studentForm.historyMarksOrGrade.trim(),
       className: studentForm.className.trim(),
       section: studentForm.section.trim(),
       addressLine: studentForm.addressLine.trim(),
@@ -1849,6 +1869,7 @@ function AdminDashboard() {
     )
     const hasInvalidReportLink = normalizedStudent.reports && !/^https?:\/\/\S+\.\S+/.test(normalizedStudent.reports)
     const hasInvalidAdmissionYear = normalizedStudent.admissionYear && !/^\d{4}$/.test(normalizedStudent.admissionYear)
+    const hasInvalidHistoryPassedOutYear = normalizedStudent.historyPassedOutYear && !/^\d{4}$/.test(normalizedStudent.historyPassedOutYear)
     const hasIncompleteGuardian = normalizedStudent.guardians.some(
       (guardian) => !guardian.name || !guardian.relation || !guardian.phone || !guardian.email,
     )
@@ -1890,6 +1911,11 @@ function AdminDashboard() {
 
     if (hasInvalidAdmissionYear) {
       setUiNotice({ type: 'error', message: 'Admission year must use YYYY format.' })
+      return
+    }
+
+    if (hasInvalidHistoryPassedOutYear) {
+      setUiNotice({ type: 'error', message: 'Passed out year must use YYYY format.' })
       return
     }
 

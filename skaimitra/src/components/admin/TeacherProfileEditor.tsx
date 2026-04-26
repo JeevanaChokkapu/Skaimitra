@@ -73,8 +73,7 @@ function TeacherProfileEditor({
           <section className="teacher-profile-section">
             <div className="teacher-profile-section-head">
               <div>
-                <h3>Basic Information</h3>
-                <p className="role-muted">Fill in the core identity and contact details for this teacher.</p>
+                <h3>Primary Information</h3>
               </div>
             </div>
 
@@ -118,7 +117,6 @@ function TeacherProfileEditor({
             <div className="teacher-profile-section-head">
               <div>
                 <h3>Professional Details</h3>
-                <p className="role-muted">Capture work experience and employment details.</p>
               </div>
             </div>
 
@@ -140,8 +138,7 @@ function TeacherProfileEditor({
           <section className="teacher-profile-section">
             <div className="teacher-profile-section-head">
               <div>
-                <h3>Subject Specializations</h3>
-                <p className="role-muted">Choose the subjects this teacher can be assigned to teach.</p>
+                <h3>Assign Subjects</h3>
               </div>
             </div>
 
